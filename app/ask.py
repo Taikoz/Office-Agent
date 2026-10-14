@@ -25,7 +25,7 @@ HERE = Path(__file__).resolve().parent
 def write(path: Path, data: dict) -> None:
     """Write a question file atomically, readable by the user only."""
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False))
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     os.chmod(tmp, 0o600)
     tmp.replace(path)
 
@@ -54,7 +54,7 @@ def wait(qid: str, timeout: float) -> int:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             print(f"ERROR: question {qid} introuvable")
             return 1

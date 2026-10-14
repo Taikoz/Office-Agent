@@ -106,6 +106,19 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(env, {"PATH": "/bin", "DISPLAY": ":0"})
 
 
+class ShimTests(unittest.TestCase):
+    def test_shim_compiles_with_a_windows_path(self) -> None:
+        import importlib.util
+        from pathlib import PureWindowsPath
+        spec = importlib.util.spec_from_file_location("office_cli", Path(__file__).resolve().parents[2] / "bin" / "office.py")
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        target = PureWindowsPath(r"C:\Users\alex\.claude\plugins\cache\agent-office\agent-office\0.3.1\bin\office.py")
+        body = cli.shim_body(target)
+        compile(body, "shim.py", "exec")
+        self.assertIn(repr(str(target)), body)
+
+
 class ConfigTests(unittest.TestCase):
     def test_backlog_query_is_one_or_several(self) -> None:
         tmp = Path(tempfile.mkdtemp()) / "agent-office.json"
