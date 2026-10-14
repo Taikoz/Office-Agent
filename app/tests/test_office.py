@@ -86,6 +86,20 @@ class LauncherTests(unittest.TestCase):
             self.assertEqual(launcher.launch("feature-builder", "  "), (False, "mission vide ou trop longue"))
             self.assertEqual(launcher.launch("feature-builder", "x" * 2001), (False, "mission vide ou trop longue"))
 
+    def test_windows_opens_claude_exe_in_a_new_console_and_refuses_cmd(self) -> None:
+        with mock.patch.object(launcher, "agent_files", lambda: {"feature-builder": Path("x.md")}), \
+                mock.patch.object(launcher.sys, "platform", "win32"), mock.patch.object(launcher.subprocess, "Popen") as popen:
+            with mock.patch.object(launcher.shutil, "which", lambda n: None if n == "claude.exe" else r"C:\npm\claude.cmd"):
+                ok, _ = launcher.launch("feature-builder", "Deliver ABC-1 & calc")
+                self.assertFalse(ok)
+                popen.assert_not_called()
+            with mock.patch.object(launcher.shutil, "which", lambda n: r"C:\Users\u\.local\bin\claude.exe"):
+                ok, _ = launcher.launch("feature-builder", "Deliver ABC-1 & calc")
+            self.assertTrue(ok)
+            argv = popen.call_args.args[0]
+            self.assertEqual(argv, [r"C:\Users\u\.local\bin\claude.exe", "--agent", "feature-builder", "Deliver ABC-1 & calc"])
+            self.assertIn("creationflags", popen.call_args.kwargs)
+
     def test_launched_claude_does_not_inherit_the_parent_session(self) -> None:
         env = launcher.clean_env({"PATH": "/bin", "DISPLAY": ":0", "CLAUDECODE": "1", "CLAUDE_PID": "1",
                                   "CLAUDE_CODE_CHILD_SESSION": "1", "CLAUDE_CODE_SESSION_ID": "x"})
