@@ -1,0 +1,50 @@
+{
+  "port": 8765,
+  "window_minutes": 120,
+  "open_browser": true,
+  "exclude": [
+    "private-project"
+  ],
+  "ticket_regex": "\\b([A-Z][A-Z0-9]+-\\d{2,6})\\b",
+  "chief_name": "Sam",
+  "team": [
+    "Alice",
+    "Bruno"
+  ],
+  "launch_dir": "~/repos",
+  "agents": {
+    "feature-builder": {
+      "label": "DÉVELOPPEUR",
+      "color": "#5aa9ff"
+    },
+    "mr-reviewer": {
+      "label": "REVIEWER",
+      "color": "#b48cff"
+    }
+  },
+  "phases": {
+    "feature-builder": [
+      [
+        "Lecture du ticket",
+        "ticket|[A-Z]+-\\d"
+      ],
+      [
+        "Implémentation",
+        "^(Edit|Write)\\b"
+      ],
+      [
+        "Tests",
+        "pytest|npm test"
+      ],
+      [
+        "Merge request",
+        "mr-create|gh pr create"
+      ]
+    ]
+  },
+  "mmx": null,
+  "youtrack_tools": null,
+  "youtrack_backlog_query": "Assignee: me #Unresolved State: Submitted, Open, Reopened Type: Task",
+  "gitlab_tools": null,
+  "audit_log": null
+}
