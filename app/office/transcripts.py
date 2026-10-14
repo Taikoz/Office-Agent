@@ -131,7 +131,7 @@ def subagent(path: Path, now: float, questions: list[dict[str, Any]] | None = No
     meta: dict[str, Any] = {}
     if meta_path.exists():
         try:
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
         except ValueError:
             pass
     prompt, first = first_prompt(path)

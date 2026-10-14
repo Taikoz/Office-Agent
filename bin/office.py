@@ -21,7 +21,7 @@ import sys
 import time
 import urllib.request
 import webbrowser
-from pathlib import Path
+from pathlib import Path, PurePath
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "app"
@@ -69,7 +69,7 @@ def start() -> bool:
         kw["creationflags"] = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     else:
         kw["start_new_session"] = True
-    proc = subprocess.Popen([sys.executable, "-I", str(APP / "server.py"), "--port", str(PORT)], **kw)
+    proc = subprocess.Popen([sys.executable, "-I", "-X", "utf8", str(APP / "server.py"), "--port", str(PORT)], **kw)
     PID.write_text(str(proc.pid))
     for _ in range(40):
         if up():
@@ -83,15 +83,20 @@ def open_page() -> None:
         webbrowser.open_new(URL)
 
 
+def shim_body(target: PurePath) -> str:
+    """Python source forwarding to `target`; the path is only ever written as a repr, so Windows backslashes are safe."""
+    return (f"# Shim written by the Agent Office plugin: forwards to {target.as_posix()}\nimport runpy, sys\n"
+            f"sys.argv[0] = {str(target)!r}\nrunpy.run_path({str(target)!r}, run_name=\"__main__\")\n")
+
+
 def write_shim() -> None:
     """Stable paths (~/.claude/agent-office/ask.py, office.py) whatever the plugin version folder is."""
     STATE.mkdir(parents=True, exist_ok=True)
     for name, target in (("ask.py", APP / "ask.py"), ("office.py", Path(__file__).resolve())):
         shim = STATE / name
-        body = (f'"""Shim written by the Agent Office plugin: forwards to {target}."""\nimport runpy, sys\n'
-                f'sys.argv[0] = {str(target)!r}\nrunpy.run_path({str(target)!r}, run_name="__main__")\n')
-        if not shim.exists() or shim.read_text() != body:
-            shim.write_text(body)
+        body = shim_body(target)
+        if not shim.exists() or shim.read_text(encoding="utf-8", errors="replace") != body:
+            shim.write_text(body, encoding="utf-8")
 
 
 def event() -> dict:
@@ -144,7 +149,7 @@ def main() -> int:
             return 2
     except Exception as err:  # a hook must never break the session
         STATE.mkdir(parents=True, exist_ok=True)
-        with LOG.open("a") as fh:
+        with LOG.open("a", encoding="utf-8") as fh:
             fh.write(f"office.py {cmd}: {err!r}\n")
         return 0 if cmd.startswith("hook-") else 1
     return 0
