@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Agent", "hooks": [ { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/bin/office.py\" hook-launch", "timeout": 15 } ] }
+    ],
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/bin/office.py\" hook-session", "timeout": 10 } ] }
+    ]
+  }
+}

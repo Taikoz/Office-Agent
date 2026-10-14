@@ -1,0 +1,16 @@
+{
+  "name": "agent-office",
+  "owner": {
+    "name": "Adrien Quennehen"
+  },
+  "plugins": [
+    {
+      "name": "agent-office",
+      "source": "./",
+      "description": "Bureau pixel art de vos agents Claude Code (local, lecture seule)."
+    }
+  ],
+  "metadata": {
+    "description": "Agent Office : bureau pixel art des agents Claude Code."
+  }
+}

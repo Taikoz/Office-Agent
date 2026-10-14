@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Office</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23081746%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%23fbaa08%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<header>
+  <h1><img id="logo" alt="" hidden><span id="office-name">AGENT <span>OFFICE</span></span></h1>
+  <nav id="tabs" aria-label="Sessions"></nav>
+  <button id="qbadge" hidden></button>
+  <div class="tools">
+    <button id="loungebtn" title="Les devs qui attendent d'être appelés">☕ SALLE DE REPOS</button>
+    <button id="wallbtn" title="Toutes les sessions actives d'un coup d'œil">🧱<span class="lbl"> MUR</span></button>
+    <button id="perfbtn" title="Statistiques des agents">📊<span class="lbl"> STATS</span></button>
+    <button id="answersbtn" title="Journal des questions des agents et de tes réponses (J)">💬<span class="lbl"> RÉPONSES</span></button>
+    <button id="searchbtn" title="Qui a touché à quel fichier, quelle commande… sur 7 jours (/)">🔎<span class="lbl"> RECHERCHE</span></button>
+    <button id="reportbtn" title="Ce que les agents ont fait aujourd'hui">📋<span class="lbl"> RAPPORT</span></button>
+    <button id="teambtn" title="L'équipe : fatigue, ennui, moral, café">👥<span class="lbl"> ÉQUIPE</span></button>
+    <button id="trophybtn" title="Succès, niveaux, employé de la semaine">🏆<span class="lbl"> SUCCÈS</span></button>
+    <button id="shopbtn" title="Dépense l'XP gagnée par les agents">🛒<span class="lbl"> BOUTIQUE</span></button>
+    <button id="emotionsbtn" title="Humeur et besoins de l'équipe, façon Sims (E)">💎<span class="lbl"> ÉMOTIONS</span></button>
+    <button id="focusbtn" title="Couper les animations d'ambiance (F)">🎯<span class="lbl"> FOCUS : OFF</span></button>
+    <button id="helpbtn" title="Raccourcis clavier (?)">?</button>
+    <button id="notifbtn" title="Notifications du navigateur : questions, blocages, livraisons, MR">🔕 ALERTES : OFF</button>
+    <button id="sndbtn" title="Sons 8-bit">♪ SON : OFF</button>
+  </div>
+</header>
+<main>
+<div id="stage"><canvas id="c" title="Maj + souris : pointeur laser pour Brume"></canvas>
+<div id="timeline" hidden></div>
+<section id="perf" hidden>
+  <div class="perfhead"><span>STATISTIQUES DES AGENTS</span>
+    <select id="perf-days" aria-label="Période"><option value="1">24 h</option><option value="7" selected>7 jours</option><option value="30">30 jours</option></select>
+    <button class="x" id="perf-close" title="Fermer (Échap)">×</button>
+  </div>
+  <div id="perf-session" class="stats"></div>
+  <div id="perf-global" class="stats"></div>
+  <div id="perf-records"></div>
+  <h4>BUDGET PAR MISSION <span class="muted">(coût estimé au tarif API — au-delà : carte rouge + alerte ; seulement si facturé au token)</span></h4>
+  <div id="perf-budgets"></div>
+  <h4>PAR SPÉCIALITÉ</h4>
+  <div id="perf-cards"></div>
+  <details><summary>Tableau détaillé</summary>
+  <table>
+    <thead><tr><th>Agent</th><th>Runs</th><th>Livrés</th><th>Abandonnés</th><th>Durée moy.</th><th>Tokens moy.</th><th>Outils moy.</th><th>Erreurs / run</th></tr></thead>
+    <tbody id="perf-rows"></tbody>
+  </table>
+  </details>
+</section>
+<section id="report" class="overlay" hidden>
+  <div class="perfhead"><span>RAPPORT DU JOUR</span>
+    <select id="report-day" aria-label="Jour"></select>
+    <button class="x" id="report-copy" title="Copier le rapport en Markdown">Copier en Markdown</button>
+    <button class="x" id="report-close" title="Fermer (Échap)">×</button>
+  </div>
+  <div id="report-body"></div>
+</section>
+<section id="answers" class="overlay" hidden>
+  <div class="perfhead"><span>JOURNAL DES RÉPONSES <span class="muted">(30 jours)</span></span>
+    <input id="answers-q" type="search" placeholder="Filtrer (ticket, mot…)" aria-label="Filtrer les réponses">
+    <button class="x" id="answers-close" title="Fermer (Échap)">×</button></div>
+  <div id="answers-body"></div>
+</section>
+<section id="search" class="overlay" hidden>
+  <div class="perfhead"><span>RECHERCHE <span class="muted">(7 jours)</span></span>
+    <input id="search-q" type="search" placeholder="fichier, commande, ticket… ex. src/api/routes.py" aria-label="Rechercher">
+    <button class="x" id="search-close" title="Fermer (Échap)">×</button></div>
+  <div id="search-body"></div>
+</section>
+<section id="setup" class="overlay" hidden>
+  <div class="perfhead"><span id="setup-title">BIENVENUE AU BUREAU</span><button class="x" id="setup-close" title="Fermer (Échap)">×</button></div>
+  <form id="setup-form" autocomplete="off">
+    <p class="muted" id="setup-intro">Avant d'ouvrir, crée ton équipe : chaque sous-agent lancé prendra le bureau d'un de ces devs. Tout reste sur ta machine (~/.claude/agent-office/).</p>
+    <div class="setup-grid">
+      <label>Ton prénom (le chef)<input id="setup-chief" maxlength="20" required></label>
+      <label>Nom du bureau <span class="muted">(optionnel)</span><input id="setup-office" maxlength="30" placeholder="ex. Équipe Data"></label>
+      <label>Le chat du bureau<input id="setup-cat" maxlength="20" placeholder="Brume"></label>
+    </div>
+    <h4>L'ÉQUIPE <span class="muted">(un dev par bureau)</span> <button type="button" class="x" id="setup-dice" title="Tirer des prénoms au sort">🎲 au hasard</button></h4>
+    <div class="setup-grid" id="setup-team"></div>
+    <h4>LOGO <span class="muted">(optionnel : enseigne au mur, en-tête, onglet · PNG, JPEG, WebP ou SVG, 300 ko max)</span></h4>
+    <div class="setup-logo">
+      <div id="setup-preview" class="logo-box"><span class="muted">pas de logo</span></div>
+      <label class="x file">Choisir une image<input id="setup-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>
+      <button type="button" class="x" id="setup-nologo">Retirer</button>
+    </div>
+    <p id="setup-msg" class="muted" role="status"></p>
+    <button type="submit" class="go" id="setup-go">C'EST PARTI ▶</button>
+  </form>
+</section>
+<section id="help" class="overlay" hidden>
+  <div class="perfhead"><span>RACCOURCIS CLAVIER</span><button class="x" id="help-close" title="Fermer (Échap)">×</button></div>
+  <div id="help-body"></div>
+</section>
+<section id="wall" class="overlay" hidden>
+  <div class="perfhead"><span>MUR — TOUTES LES SESSIONS</span><button class="x" id="wall-close" title="Fermer (Échap)">×</button></div>
+  <div id="wall-body"></div>
+</section>
+</div>
+<aside id="side">
+  <h2>EN MISSION <span id="count"></span></h2>
+  <div id="rows"></div>
+  <div id="empty"></div>
+  <h2>CONSO <span id="usage-ratio"></span></h2>
+  <div id="usage"></div>
+  <h2>QUÊTES DU JOUR <span id="qcount"></span></h2>
+  <div id="quests"></div>
+  <div id="status">connexion…</div>
+</aside>
+</main>
+<aside id="panel" aria-hidden="true">
+  <div class="head">
+    <div class="top"><span id="p-tag" class="tag"></span><span id="p-title" class="grow"></span><button class="x" id="p-close" title="Fermer (Échap)">×</button></div>
+    <div id="p-mission" class="mission"></div>
+  </div>
+  <div class="body">
+    <div id="p-q"></div>
+    <div id="p-game" hidden></div>
+    <div id="p-store" hidden>
+      <input id="store-q" type="search" placeholder="Filtrer (id, texte, tag)…" aria-label="Filtrer les archives">
+      <div id="store-msg" class="muted"></div>
+      <div id="store-list"></div>
+    </div>
+    <div id="p-main">
+    <h3>PROGRESSION</h3>
+    <div id="p-bar" class="bar"><i></i><b></b></div>
+    <div class="plabel"><span id="p-plabel"></span><span id="p-psrc"></span></div>
+    <ul id="p-steps" class="steps"></ul>
+    <h3>EN CE MOMENT</h3>
+    <div id="p-now" class="now"></div>
+    <h3>COMPTEURS</h3>
+    <div id="p-stats" class="stats"></div>
+    <h3>JOURNAL <span id="p-count"></span></h3>
+    <ul id="p-tl" class="tl"></ul>
+    </div>
+  </div>
+</aside>
+<div id="toasts" aria-live="polite"></div>
+<div id="pc" hidden role="dialog" aria-modal="true" aria-label="Écran du dev">
+  <div class="bezel"><span class="led"></span>
+    <div class="screen">
+      <div class="osbar"><span id="pc-title" class="grow"></span><span id="pc-clock"></span>
+        <button id="pc-details" title="Progression, compteurs, journal">DÉTAILS</button><button id="pc-close" title="Fermer (Échap)">×</button></div>
+      <div class="desk">
+        <div class="win monitor"><div class="tb"><i style="background:#ff6b6b"></i><i style="background:#fbaa08"></i><i style="background:#51cf66"></i><span id="scr-count">éditeur</span></div>
+          <div class="files" id="scr-files"></div><div class="path" id="scr-path"></div><pre id="scr-code"></pre></div>
+        <div class="win"><div class="tb"><i style="background:#ff6b6b"></i><i style="background:#fbaa08"></i><i style="background:#51cf66"></i><span id="term-title">terminal</span></div>
+          <div class="term" id="term"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="stand"></div><div class="foot"></div>
+</div>
+<script>const DEMO = new URLSearchParams(location.search).has("demo"), TOKEN = "__OFFICE_TOKEN__", OFFICE_CFG = __OFFICE_CFG__;</script>
+<script src="static/js/core.js"></script>
+<script src="static/js/sprites.js"></script>
+<script src="static/js/scene.js"></script>
+<script src="static/js/art.js"></script>
+<script src="static/js/entities.js"></script>
+<script src="static/js/crew.js"></script>
+<script src="static/js/chief.js"></script>
+<script src="static/js/lounge.js"></script>
+<script src="static/js/fun.js"></script>
+<script src="static/js/shop.js"></script>
+<script src="static/js/duel.js"></script>
+<script src="static/js/darts.js"></script>
+<script src="static/js/foosball.js"></script>
+<script src="static/js/cat.js"></script>
+<script src="static/js/data.js"></script>
+<script src="static/js/mmx.js"></script>
+<script src="static/js/panel.js"></script>
+<script src="static/js/progress.js"></script>
+<script src="static/js/screen.js"></script>
+<script src="static/js/pc.js"></script>
+<script src="static/js/questions.js"></script>
+<script src="static/js/perf.js"></script>
+<script src="static/js/demo.js"></script>
+<script src="static/js/budget.js"></script>
+<script src="static/js/report.js"></script>
+<script src="static/js/wall.js"></script>
+<script src="static/js/ticket.js"></script>
+<script src="static/js/events2.js"></script>
+<script src="static/js/insight.js"></script>
+<script src="static/js/ux.js"></script>
+<script src="static/js/sims.js"></script>
+<script src="static/js/notify.js"></script>
+<script src="static/js/timeline.js"></script>
+<script src="static/js/launch.js"></script>
+<script src="static/js/officelife.js"></script>
+<script src="static/js/setup.js"></script>
+<script src="static/js/main.js"></script>
+</body>
+</html>
