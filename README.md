@@ -17,11 +17,27 @@ Toutes tes sessions Claude Code sont réunies dans le même bureau.
 ## 1. Prérequis
 
 - **Claude Code**, avec la gestion des plugins (`/plugin`).
-- **Python 3.9 ou plus récent**, accessible avec la commande `python3`. Pour vérifier : `python3 --version`.
+- **Python 3.9 ou plus récent** (`python3`, `python` ou `py -3`). Pour vérifier : `python3 --version` (sous Windows : `python --version`).
 - **Un navigateur** : le bureau s'ouvre dans ton navigateur par défaut.
 - Optionnel, pour lancer des agents depuis le bureau : un terminal graphique.
   - Linux : `gnome-terminal`, `konsole`, `x-terminal-emulator` ou `xterm`.
   - macOS : Terminal.
+  - Windows : une nouvelle console s'ouvre.
+
+### Sous Windows
+
+Deux installations sont nécessaires avant le plugin :
+
+1. **Git for Windows** — https://git-scm.com/download/win (options par défaut).
+   - Sans git, `/plugin marketplace add` échoue : la commande clone le dépôt GitHub.
+   - Avec git, Claude Code exécute aussi les hooks du plugin dans Git Bash.
+2. **Python 3** — https://www.python.org/downloads/ : coche **« Add python.exe to PATH »** pendant l'installation.
+
+Le plugin essaie `python3`, puis `python`, puis `py -3` : pas besoin de commande `python3`. Ferme et rouvre ensuite le terminal et Claude Code.
+
+Vérification dans un nouveau terminal : `git --version` et `python --version` (ou `py -3 --version`).
+
+Pour lancer un agent depuis le bureau sous Windows, il faut la version native de Claude Code (`claude.exe`). Avec une installation par npm, lance les agents depuis Claude Code.
 
 ## 2. Installation
 
@@ -159,15 +175,18 @@ Ton équipe, ton logo, tes scores et tes réglages restent dans `~/.claude/agent
 | Problème | Solution |
 |---|---|
 | Le bureau ne s'ouvre pas | Lance `/office`. Vérifie que `python3 --version` donne 3.9 ou plus. Regarde `~/.claude/agent-office/server.log`. |
+| Windows : `Command 'git' not found` à l'ajout de la marketplace | Installe Git for Windows, rouvre Claude Code, relance `/plugin marketplace add Taikoz/Office-Agent`. |
+| Windows : rien ne se passe, aucun serveur | Installe Python depuis python.org en cochant « Add python.exe to PATH », puis redémarre Claude Code. |
 | « port déjà utilisé » ou mauvaise appli sur le port | Choisis un autre port : `{"port": 8790}` dans `~/.claude/agent-office.json`. |
 | Aucun dev n'apparaît | Seules les sessions actives depuis moins de `window_minutes` s'affichent. Après un `/clear`, seules les nouvelles activités apparaissent. Vérifie que le projet n'est pas dans `exclude`. |
-| « pas de terminal graphique disponible » au lancement d'un agent | Installe l'un des terminaux listés dans les prérequis. Sous Windows, lance les agents depuis Claude Code. |
+| « pas de terminal graphique disponible » au lancement d'un agent | Installe l’un des terminaux listés dans les prérequis. Sous Windows, il faut la version native de Claude Code (`claude.exe`). |
 | Le bouton 🚀 Lancer échoue après un redémarrage du serveur | Recharge la page (F5) : le jeton de sécurité change à chaque démarrage. |
 | Les notifications n'arrivent pas | Clique sur 🔔 ALERTES et autorise les notifications pour `127.0.0.1` dans le navigateur. |
 
 Commandes utiles :
 
 ```
+# sous Windows, remplace python3 par python ou py -3
 python3 -I ~/.claude/agent-office/office.py open     # démarre si besoin et ouvre la page
 python3 -I ~/.claude/agent-office/office.py status   # état du serveur
 python3 -I ~/.claude/agent-office/office.py stop     # arrête le serveur
