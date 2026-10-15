@@ -25,7 +25,7 @@ function hit(ev) {
     const box = e.seated ? [e.desk.x - 18, e.desk.y - 24, e.desk.x + 18, e.desk.y + 30] : [e.x - 7, e.y - 22, e.x + 7, e.y + 1];
     if (x >= box[0] && x <= box[2] && y >= box[1] && y <= box[3]) return e.agent.id;
   }
-  const thing = hitEvents(x, y) || hitShop(x, y);
+  const thing = hitEvents(x, y) || hitItem(x, y, "office");  // bought objects (build.js), desks included
   if (thing) return thing;
   const desk = hitDesk(x, y);
   if (desk) return desk;
@@ -52,6 +52,8 @@ cv.addEventListener("wheel", ev => {
 cv.addEventListener("mousemove", ev => { const p = canvasPoint(ev); laser.x = p.x; laser.y = p.y; laser.over = true; if (match) { match.mouseY = p.y; match.mouseX = p.x; } const id = hit(ev); cat.hover = id === "cat"; cv.classList.toggle("hover", !!id); cv.classList.toggle("hover-store", id === "store"); });
 cv.addEventListener("mouseleave", () => { cv.classList.remove("hover-store"); cat.hover = false; laser.over = false; if (match) match.mouseY = match.mouseX = null; });
 cv.addEventListener("click", ev => {
+  closePie();
+  if (buy.on && view !== "game") return buyClick(canvasPoint(ev));  // buy mode: place, pick, move, sell (build.js)
   if (view === "game") { if (match?.skin === "darts") dartsClick(canvasPoint(ev), performance.now()); else if (match?.skin === "babyfoot") footKick(performance.now()); return; }
   const id = hit(ev);
   if (!id) {  // an empty spot of the floor: the chief walks there
@@ -64,8 +66,7 @@ cv.addEventListener("click", ev => {
   if (id === "lounge") return chiefToLounge();                                        // the office door: he goes on a break
   if (id === "office") return chief.room === "lounge" ? chiefToOffice() : setView("office");  // the break-room door: back to work
   if (["fix-coffee", "clean", "croissants", "water"].includes(id)) return solveEvent(id);
-  if (id === "jukebox") return toggleJukebox();
-  if (id === "aquarium") return feedFish();
+  if (id.startsWith("item:")) return itemPieItems(id.slice(5)).length ? openPie("item", id.slice(5), canvasPoint(ev)) : null;  // Sims pie of the object
   if (id.startsWith("boss:")) return whackBoss(id.slice(5));
   if (id.startsWith("boardpg:")) { const [, st, dir] = id.split(":"); return flipBoard(st, +dir); }
   if (id.startsWith("chief:")) return chiefOrder(id.slice(6));
@@ -75,8 +76,14 @@ cv.addEventListener("click", ev => {
     const opp = here.find(l => l.spot?.act.id === skin) || here[Math.floor(Math.random() * here.length)];
     return opp ? challenge(opp.name, skin) : toast("SALLE DE REPOS", "Personne pour jouer", "Tout le monde est au bureau.");
   }
-  if (id.startsWith("mate:")) { loungeSay(id.slice(5), pick(["Salut chef !", "Oui ?", "Hey !", "Tu veux quelque chose ?"])); return openPanel(id); }
-  const a = curSession()?.agents.find(x => x.id === id);
+  if (id.startsWith("mate:")) {  // Sims pie menu around the dev (the needs window, when open, also switches to that dev)
+    if (simsOpen) selectSim(id.slice(5));
+    loungeSay(id.slice(5), pick(["Salut chef !", "Oui ?", "Hey !", "Tu veux quelque chose ?"]));
+    return openPie("mate", id.slice(5), canvasPoint(ev));
+  }
+  if (id === "kitchen" || id === "table") return openPie(id, null, canvasPoint(ev));
+  const a = curSession()?.agents.find(x => x.id === id), who = ents.get(id)?.who;
+  if (simsOpen && who && !a?.question) return selectSim(who);
   if (a && !a.question) openPc(id); else openPanel(id);  // a question is answered in the side panel
 });
 document.getElementById("rows").addEventListener("click", ev => {
@@ -120,7 +127,7 @@ async function loadDetail() {
     const tag = document.getElementById("p-tag");
     tag.textContent = "BOUTIQUE"; tag.style.background = "#fbaa08";
     document.getElementById("p-title").textContent = "Déco et chapeaux";
-    document.getElementById("p-mission").textContent = "Dépense l'XP gagnée par les vrais agents. Les achats restent dans ce navigateur.";
+    document.getElementById("p-mission").textContent = "Dépense l'argent du foyer (§), gagné à chaque mission livrée. Les achats restent dans ce navigateur.";
     if (!document.getElementById("p-game").contains(document.activeElement)) renderShop();
     return;
   }

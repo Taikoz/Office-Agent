@@ -146,27 +146,8 @@ function heroArt(frame) { return R(0.4, 0, 1.6, 0.8, "#ff6b6b") + R(0.2, 0.8, 2,
 const CONSOLE_ART = `<rect x="0" y="0" width="9" height="2.6" rx=".6" fill="#2a2a33"/>` + R(0.6, 0.6, 3, 0.5, "#51cf66") + R(6.6, 0.6, 1.6, 1.2, "#3d3d4a")
   + `<path fill="none" stroke="#1c1c24" stroke-width=".4" d="M9 1.6Q11 2 11.4 3.6"/><rect x="10.2" y="3.4" width="4.4" height="2" rx=".9" fill="#3d3d4a"/>` + R(10.8, 4, 0.8, 0.8, "#fbaa08") + R(13, 4, 0.8, 0.8, "#ff6b6b");
 
-/* 10. break room floor: soft carpet tiles, pile direction alternating, drawn once per scale */
-let loungeFloorCache = null;
-function loungeFloorCanvas() {
-  if (loungeFloorCache?.S === S) return loungeFloorCache.canvas;
-  const c = document.createElement("canvas"), g = c.getContext("2d"), h = H - 70, T = 16;
-  c.width = Math.ceil(W * S); c.height = Math.ceil(h * S);
-  const rect = (x, y, w, hh, col) => { g.fillStyle = col; g.fillRect(Math.round(x * S), Math.round(y * S), Math.ceil(w * S), Math.ceil(hh * S)); };
-  for (let ty = 0; ty < h; ty += T) for (let tx = 0; tx < W; tx += T) {
-    const odd = ((tx + ty) / T) % 2;
-    rect(tx, ty, T, T, odd ? "#34436a" : "#3a4a73");
-    for (let k = 1; k < T; k += 2) odd ? rect(tx + 0.5, ty + k, T - 1, 0.4, "rgba(255,255,255,0.05)") : rect(tx + k, ty + 0.5, 0.4, T - 1, "rgba(255,255,255,0.05)");
-    rect(tx, ty, T, 0.4, "rgba(0,0,0,0.25)"); rect(tx, ty, 0.4, T, "rgba(0,0,0,0.25)");
-  }
-  // a round warm rug in the middle of the room
-  g.fillStyle = "#b8643c"; g.beginPath(); g.ellipse(200 * S, 70 * S, 70 * S, 26 * S, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = "#d9824f"; g.beginPath(); g.ellipse(200 * S, 70 * S, 64 * S, 22 * S, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = "#fbaa08"; g.lineWidth = 0.8 * S; g.beginPath(); g.ellipse(200 * S, 70 * S, 56 * S, 18 * S, 0, 0, Math.PI * 2); g.stroke();
-  for (let k = 0; k < 8; k++) rect(0, k, W, 1, `rgba(5, 10, 40, ${0.3 - k * 0.037})`);
-  loungeFloorCache = { S, canvas: c };
-  return c;
-}
+/* 10. break room floor (decor.js: carpet tiles by default, a round rug in the middle), drawn once per scale and setting */
+function loungeFloorCanvas() { return roomFloorCanvas("lounge", H - 70, [[130, 44, 140, 52]]); }
 
 /* 11. the issue board: aluminium-framed whiteboard, tape headers per column, marker lines, a tray with markers */
 const BOARD_COLS = [["TO DO", "todo", "#9fb3d9"], ["EN COURS", "working", "#fbaa08"], ["BLOQUÉ", "blocked", "#ff6b6b"], ["LIVRÉ", "done", "#51cf66"]];
@@ -339,8 +320,9 @@ function coffeeMachineArt(frame, brewing) {
    Box: 58 × 41, the glass opening at (6, 8)–(52, 36). */
 // glints on the glass, drawn without the outline (an outline would turn them grey)
 const WINDOW_GLINTS = `<path fill="#ffffff" fill-opacity=".4" d="M10 9h3l-5 6v-3zM33 9h2l-4 5v-2.4zM40 24h4l-7 8.4v-4z"/>`;
-function windowArt() {
-  const red = "#8f2b46", redD = "#6a1d33", redL = "#b0405f", gold = "#d9a441";
+// style: velours (default), lin (straight linen panels), store (roller blind), aucun (bare window); color: the fabric (decor.js)
+function windowArt(style = "velours", color = "#8f2b46") {
+  const red = color, redD = shade(color, 0.74), redL = shade(color, 1.23), gold = "#d9a441";
   let g = "";
   // frame and glass
   g += `<path fill="#e8e6dc" fill-rule="evenodd" d="M4 6h50v32H4zM6 8h46v28H6z"/>` + R(4, 6, 50, 0.6, "#ffffff") + R(4, 37.4, 50, 0.6, "#b8b4a6")
@@ -363,6 +345,20 @@ function windowArt() {
       + R(Math.min(outer, outer - dir * bottom), 37.4, bottom, 0.6, redD);
     return c;
   };
+  if (style === "aucun") return g;
+  if (style === "store") {  // roller blind half down, with its pull cord, and a box at the top
+    g += `<path fill="${red}" d="M5 3h48v15H5z"/>` + R(5, 18, 48, 1.2, redD);
+    for (let y = 5; y < 18; y += 2.4) g += R(5, y, 48, 0.35, redD, ' fill-opacity=".6"');
+    g += R(28.6, 19.2, 0.4, 4, "#e8e6dc") + R(28.1, 23, 1.4, 1.4, "#c9a24b");
+    return g + R(3, 1, 52, 2.6, "#e8e6dc") + R(3, 1, 52, 0.6, "#ffffff") + R(3, 3, 52, 0.6, "#b8b4a6");
+  }
+  if (style === "lin") {  // straight, light linen panels on a thin rod
+    const panel = x => { let c = `<path fill="${red}" fill-opacity=".92" d="M${x} 2.4h9v35.6h-9z"/>`;
+      for (let k = 1; k < 4; k++) c += R(x + k * 2.3, 2.4, 0.5, 35.6, redD, ' fill-opacity=".5"') + R(x + k * 2.3 - 0.8, 2.4, 0.4, 35.6, redL, ' fill-opacity=".5"');
+      for (let k = 0; k < 4; k++) c += `<circle cx="${x + 1 + k * 2.4}" cy="2" r=".7" fill="none" stroke="#7a8094" stroke-width=".35"/>`;
+      return c; };
+    return g + panel(0.6) + panel(48.4) + R(0, 1.4, 58, 0.8, "#7a8094") + `<circle cx="0.6" cy="1.8" r="1" fill="#9aa0b4"/><circle cx="57.4" cy="1.8" r="1" fill="#9aa0b4"/>`;
+  }
   g += curtain(0, -1) + curtain(48, 1);
   // valance with scallops and a gold fringe, brass rod with finials
   let scallops = "M2 2.4H56V5.4";

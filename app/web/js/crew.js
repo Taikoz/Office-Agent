@@ -39,6 +39,7 @@ function stepCrew(dt) {
       : a.status === "done" ? { fatigue: -1, ennui: 3 }
       : a.idle > 45 ? { fatigue: 1, ennui: 2, cafe: -1 }
       : { fatigue: 3, ennui: -4, cafe: -2 };
+    if (!devHasDesk(n)) d.moral = (d.moral || 0) - (e && !e.leaving ? 4 : 0.6);  // no desk (sold in buy mode): not happy at all
     if (e && cat.mode === "sleep" && cat.desk === e.desk) { d.ennui = (d.ennui || 0) - 3; d.moral = (d.moral || 0) + 1; }  // Brume on the desk
     for (const key in d) d[key] *= k;
     crewAdd(n, d);
@@ -52,6 +53,7 @@ function moodWord(m) {
 // now and then, a seated dev says how they feel
 function moodLine(e, t) {
   if (focusMode) return null;
+  if (e.who && !devHasDesk(e.who) && (t / 1000 + hash(e.who) % 12) % 12 < 4) return ["😠 même pas de bureau…", "un carton, sérieux ?", "😤 rendez-moi mon bureau"][Math.floor(t / 12000) % 3];  // desk sold
   if (!e.who || (t / 1000 + hash(e.who) % 25) % 25 > 3) return "";
   const m = mate(e.who), st = e.agent.status;
   return m.fatigue >= 85 ? "*bâille*" : m.faim <= 15 ? "j'ai trop faim…" : m.cafe <= 15 ? "il me faut un café…" : m.ennui >= 75 && st !== "working" ? "je m'ennuie…"

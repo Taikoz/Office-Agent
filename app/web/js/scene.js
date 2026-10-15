@@ -2,70 +2,35 @@
 // Office room, desks, board and people drawing.
 
 /* ---------- scene ---------- */
-// oak parquet: staggered planks, grain, a few knots, darker near the wall; drawn once per scale into an offscreen canvas
-const FLOOR_Y = 70, PLANK_H = 6;
-const PLANK_TONES = ["#5c4735", "#634c39", "#57432f", "#6a5240", "#5f4936", "#544030"];
-let floorCache = null;
-function floorCanvas() {
-  if (floorCache?.S === S) return floorCache.canvas;
-  const c = document.createElement("canvas"), g = c.getContext("2d"), h = H - FLOOR_Y;
-  c.width = Math.ceil(W * S); c.height = Math.ceil(h * S);
-  const rect = (x, y, w, hh, col) => { g.fillStyle = col; g.fillRect(Math.round(x * S), Math.round(y * S), Math.ceil(w * S), Math.ceil(hh * S)); };
-  const rnd = n => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };  // stable "random" per plank
-  for (let row = 0; row * PLANK_H < h; row++) {
-    const y = row * PLANK_H;
-    let x = -rnd(row) * 30, i = 0;
-    while (x < W) {
-      const len = 26 + Math.floor(rnd(row * 31 + i) * 22), seed = row * 97 + i;
-      rect(x, y, len, PLANK_H, PLANK_TONES[Math.floor(rnd(seed) * PLANK_TONES.length)]);
-      rect(x, y, len, 0.5, "rgba(255, 230, 190, 0.07)");                    // light catching the top edge
-      for (let k = 0; k < 3; k++) {                                         // grain
-        const gy = y + 1.2 + rnd(seed + k * 7) * (PLANK_H - 2.4), gx = x + rnd(seed + k * 3) * len * 0.4;
-        rect(gx, gy, len * (0.35 + rnd(seed + k) * 0.5), 0.35, rnd(seed + k * 11) > 0.5 ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 220, 170, 0.06)");
-      }
-      if (rnd(seed * 5) > 0.86) { const kx = x + 4 + rnd(seed * 9) * (len - 8); rect(kx, y + 2.2, 1.6, 1.2, "rgba(40, 25, 15, 0.45)"); rect(kx + 0.4, y + 2.5, 0.8, 0.6, "rgba(20, 12, 6, 0.5)"); }
-      rect(x + len - 0.5, y, 0.5, PLANK_H, "#3b2c21");                     // end joint
-      x += len; i++;
-    }
-    rect(0, y + PLANK_H - 0.5, W, 0.5, "#3f3024");                         // seam between rows
-  }
-  // a navy rug under each row of desks (office colors), so the desks stand out from the wood
-  for (const dy of [...new Set(DESKS.map(d => d.y))]) {
-    const x0 = Math.min(...DESKS.map(d => d.x)) - 30, x1 = Math.max(...DESKS.map(d => d.x)) + 30, y0 = dy - 4 - FLOOR_Y, hh = 36;
-    rect(x0 + 1, y0 + 1.5, x1 - x0, hh, "rgba(0, 0, 0, 0.25)");                                  // shadow
-    rect(x0, y0, x1 - x0, hh, "#1b2a55"); rect(x0 + 1.5, y0 + 1.5, x1 - x0 - 3, hh - 3, "#22336a");
-    rect(x0 + 2.5, y0 + 2.5, x1 - x0 - 5, 0.5, "#fbaa08"); rect(x0 + 2.5, y0 + hh - 3, x1 - x0 - 5, 0.5, "#fbaa08");  // yellow thread
-    rect(x0 + 2.5, y0 + 2.5, 0.5, hh - 5, "#fbaa08"); rect(x1 - 3, y0 + 2.5, 0.5, hh - 5, "#fbaa08");
-    for (let x = x0 + 6; x < x1 - 5; x += 6) for (let y = y0 + 6; y < y0 + hh - 5; y += 6) rect(x, y, 0.6, 0.6, "rgba(255, 255, 255, 0.07)");
-    for (let x = x0 + 1; x < x1; x += 2) { rect(x, y0 - 1, 0.5, 1, "#c9c1a8"); rect(x, y0 + hh, 0.5, 1, "#c9c1a8"); }  // fringes
-  }
-  for (let k = 0; k < 8; k++) rect(0, k, W, 1, `rgba(10, 8, 30, ${0.28 - k * 0.035})`);  // shade cast by the wall
-  floorCache = { S, canvas: c };
-  return c;
+// the floor (decor.js: parquet, tiles, carpet… and a rug under each row of desks), drawn once per scale and setting
+const FLOOR_Y = 70;
+function floorCanvas(room = "office") {
+  const rows = [...new Set(DESKS.map(d => d.y))], x0 = Math.min(...DESKS.map(d => d.x)) - 30, x1 = Math.max(...DESKS.map(d => d.x)) + 30;
+  return roomFloorCanvas(room, H - FLOOR_Y, rows.map(dy => [x0, dy - 4 - FLOOR_Y, x1 - x0, 36]));
 }
 
-function drawRoom(t) {
-  px(0, 0, W, 70, "#0d2766");
-  for (let x = 0; x < W; x += 16) px(x, 0, 1, 70, "#0b2259");
-  px(0, 44, W, 0.8, "#0b2259"); px(0, 44.8, W, 0.5, "#16348a");             // chair rail on the wall
-  ctx.drawImage(floorCanvas(), 0, Math.round(FLOOR_Y * S));
+function drawRoom(t, room = "office") {
+  const mine = room === "office";
+  drawWall(room);
+  const wc = decor[room].wallColor;
+  if (decor[room].wall !== "boiserie") { px(0, 44, W, 0.8, shade(wc, 0.87)); px(0, 44.8, W, 0.5, shade(wc, 1.35)); }  // chair rail on the wall
+  ctx.drawImage(floorCanvas(room), 0, Math.round(FLOOR_Y * S));
   px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828"); px(0, 69.4, W, 0.6, "#1a130e");  // baseboard
   // window: sky following the real hour and the weather of today's tests (art.js drawSky)
   drawSky(234, 12, t);
-  art("window", 228, 4, 58, 41, windowArt); art("windowglints", 228, 4, 58, 41, WINDOW_GLINTS, { outline: false });
-  drawShelf(t); drawEmployee(t);
+  drawWindow(room, 228, 4); art("windowglints", 228, 4, 58, 41, WINDOW_GLINTS, { outline: false });
+  if (mine) { drawShelf(t); drawEmployee(t); }
   // door
-  sprite("door", 352, 20);
-  px(353, 10, 28, 8, "#f7f7f7"); text(`☕ REPOS ${loungers.size}`, 367, 10.6, "#081746", 4, "center");
+  sprite(doorSprite(room), 352, 20);
+  px(353, 10, 28, 8, "#f7f7f7"); text(mine ? `☕ REPOS ${loungers.size}` : "← MON BUREAU", 367, 10.6, "#081746", 4, "center");
   // plants
   sprite("plant", 298, 52);
-  drawTeamPlant(t);
-  // coffee machine
+  if (mine) drawTeamPlant(t);
   // espresso machine: brews while a dev or the chief takes a coffee
-  const brewing = [...ents.values()].some(e => e.pose === "coffee") || (chief.at === "coffee" && !chief.path.length && chief.coffeeUntil > 0);
+  const brewing = mine && ([...ents.values()].some(e => e.pose === "coffee") || (chief.at === "coffee" && !chief.path.length && chief.coffeeUntil > 0));
   const frame = brewing ? Math.floor(t / 600) % 4 : 0;
   art(`coffeemachine:${brewing}:${frame}`, 316, 44, 18, 22, () => coffeeMachineArt(frame, brewing));
-  sprite("sign", 314, 26);
+  if (mine) sprite("sign", 314, 26);
   if (!focusMode) drawSeason(t);
 }
 
@@ -250,7 +215,11 @@ function drawPersonPx(x, y, look, opts = {}) {
   }
 }
 
+// the desk bought for this spot, in its style (build.js); none: the dev works on a cardboard box
 function drawDesk(d, ent, t) {
+  const st = deskStyle(DESKS.indexOf(d));
+  if (!st) return drawNoDesk(d, ent, t);
+  const wood = st.wood || decor.office.wood;
   const col = ent ? typeColor(ent.agent.type) : "#555";
   const on = ent && ent.seated;
   if (on) {
@@ -265,8 +234,9 @@ function drawDesk(d, ent, t) {
     } else if (st === "done") text("✓", d.x, d.y - 12.5, "#51cf66", 9, "center");
     else if (st === "blocked") text("!", d.x, d.y - 12.5, "#ff6b6b", 9, "center");
   } else px(d.x - 8, d.y - 12, 16, 10, "#222230");
-  sprite("monitor", d.x - 10, d.y - 14);
-  sprite("desk", d.x - 18, d.y - 3);
+  sprite(monitorSprite(st.screen), d.x - 10, d.y - 14);
+  sprite(woodSprite("desk", wood), d.x - 18, d.y - 3);
+  if (st.rgb) for (let i = 0; i < 12; i++) px(d.x - 17 + i * 2.8, d.y + 15.2, 2.8, 0.8, `hsl(${(i * 30 + t / 8) % 360} 90% 60%)`);  // gamer LED strip
 }
 
 function bubble(x, y, msg, color = "#f4f2ea", fg = "#1c1c24") {

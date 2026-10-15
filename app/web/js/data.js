@@ -62,6 +62,7 @@ function renderHud() {
       ${collisionLine(a)}
       ${over ? `<div class="overline">💸 budget dépassé : ${money(g.cost)} pour ${money(budgetOf(a.type))}</div>` : ""}
       ${sum ? `<div class="sum">${sum}</div>` : ""}
+      ${salaryLine(a)}
       ${review ? `<div class="review">📝 attend une review <button data-review="${esc(a.ticket || "")}">Lancer la review</button></div>` : ""}
       ${ciLine(a)}
       ${g.cost ? budgetBar(a) : ""}
