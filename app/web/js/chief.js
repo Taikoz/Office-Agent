@@ -105,7 +105,8 @@ function stepChief(dt, t) {
 
 // the chief in the break room, drawn among the team (y-sorted by the lounge)
 function drawChiefLounge(t) {
-  const walking = chief.lpath.length > 0, act = !walking && chief.lspot?.act, pose = act?.pose || {};
+  const walking = chief.lpath.length > 0, act = !walking && chief.lspot?.act, g = chief.gesture && t < chief.gesture.until ? chief.gesture.pose : {};
+  const pose = { ...(act?.pose || {}), ...(act && chief.lspot.back ? { back: true } : {}), ...(walking ? {} : g) };
   drawPerson(chief.lx, chief.ly, CHIEF_LOOK, { tux: true, smile: true, frame: Math.floor(t / (walking ? 180 : 300)),
     seated: !!pose.seated, back: !!pose.back || (walking && chief.lpath[0].y < chief.ly), arms: pose.arms || "down" });
 }
@@ -126,7 +127,7 @@ function drawConsole(t) {
     px(168 - k, 70.2, 1.6, 1.2, "#7a3aa8"); px(168.2 - k, 70, 0.4, 0.4, "#fff");
     if (Math.floor(t / 300) % 2) { px(160, 66.6, 1.2, 1.2, "#ffd43b"); px(160.3, 66.9, 0.5, 0.5, "#fff7b8"); }
   } else px(152, 65, 16, 9, "#14141c");
-  sprite("tv", 148, 64);
+  sprite(woodSprite("tv", decor.office.wood), 148, 64);
   art("console", 150, 74.6, 14.6, 5.4, CONSOLE_ART);
   sprite("beanbag", 152, 85);
 }

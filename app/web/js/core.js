@@ -101,21 +101,12 @@ function text(t, x, y, c, size = 4, align = "left") {
 }
 function clip(t, n) { t = (t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; }
 
-// the session tabs need room: when they get squeezed, the tool buttons drop their labels
-function fitHeader() {
-  const head = document.querySelector("header"), tabs = document.getElementById("tabs");
-  head.classList.remove("compact");
-  if (tabs.clientWidth < 320) head.classList.add("compact");
-}
+// the office fills the whole window, Sims style: the bars and panels float over it
 function resize() {
-  fitHeader();
-  // the office fills the stage; on a narrow screen the page scrolls, so only the width counts
-  const stage = document.getElementById("stage"), narrow = matchMedia("(max-width: 1000px)").matches;
-  const tl = document.getElementById("timeline"), tlH = tl.hidden ? 0 : tl.offsetHeight + 6;
-  const availW = stage.clientWidth - 26, availH = narrow ? window.innerHeight * 0.75 : stage.clientHeight - 26 - tlH;
-  const w = Math.max(240, Math.min(availW, availH * W / H));
+  const stage = document.getElementById("stage"), tl = document.getElementById("timeline");
+  const w = Math.max(240, Math.min(stage.clientWidth - 12, (stage.clientHeight - 66) * W / H));
   cv.style.width = `${Math.round(w)}px`;
-  tl.style.width = `${Math.round(w) + 6}px`;  // the timeline lines up with the office
+  tl.style.width = `${Math.round(Math.min(w, 900))}px`;  // the timeline floats above the clock
   S = Math.max(1.2, w / W);
   const dpr = window.devicePixelRatio || 1;
   cv.width = Math.round(W * S * dpr); cv.height = Math.round(H * S * dpr);
@@ -124,5 +115,5 @@ function resize() {
   ctx.imageSmoothingEnabled = false;
   try { render(performance.now()); } catch (_) { /* first layout, before the scene exists */ }  // resizing clears the canvas: redraw now, even in a background tab
 }
-const stageObserver = new ResizeObserver(() => resize());  // window, side column, timeline height
-stageObserver.observe(document.getElementById("stage")); stageObserver.observe(document.getElementById("timeline"));
+const stageObserver = new ResizeObserver(() => resize());  // the window
+stageObserver.observe(document.getElementById("stage"));

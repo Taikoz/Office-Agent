@@ -129,8 +129,9 @@ def main() -> int:
         elif cmd == "open":
             write_shim()
             if not start():
+                # exit 0: the message is the answer, and /office must not fall through to the next interpreter
                 print(f"Agent Office n'a pas pu démarrer sur le port {PORT} (port pris par une autre appli ?). Journal : {LOG}")
-                return 1
+                return 0
             open_page()
             print(f"Agent Office : {URL}  (démo : {URL}?demo=1)")
         elif cmd == "status":
