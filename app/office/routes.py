@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import history, team
+from . import history, savegame, team
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, WEB, discover_agents
 from .detail import agent_detail
@@ -70,6 +70,9 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     self.reply(404, "application/json", b'{"error": "agent introuvable"}')
                 else:
                     self.reply(200, "application/json", json.dumps(detail).encode())
+            elif self.path.startswith("/api/costs"):
+                days = parse_qs(urlparse(self.path).query).get("days", ["30"])[0]
+                self.reply(200, "application/json", json.dumps(history.costs(GAME, min(90.0, max(1.0, float(days) if days.isdigit() else 30.0))), ensure_ascii=False).encode())
             elif self.path.startswith("/api/report"):
                 day = parse_qs(urlparse(self.path).query).get("day", [""])[0]
                 if not DAY_RE.match(day):
@@ -101,7 +104,9 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 self.reply(200, "application/json", json.dumps(perf(min(30.0, max(0.1, float(days) if days.replace(".", "", 1).isdigit() else 7.0)))).encode())
             elif self.path in ("/", "/index.html") or self.path.startswith("/?"):
                 cfg = json.dumps(office_config(window, tickets), ensure_ascii=False).replace("</", "<\\/")
-                page = (WEB / "index.html").read_bytes().replace(b"__OFFICE_TOKEN__", TOKEN.encode()).replace(b"__OFFICE_CFG__", cfg.encode())
+                saved = json.dumps(savegame.load(), ensure_ascii=False).replace("</", "<\\/")
+                page = (WEB / "index.html").read_bytes().replace(b"__OFFICE_TOKEN__", TOKEN.encode()).replace(b"__OFFICE_CFG__", cfg.encode()) \
+                    .replace(b"__OFFICE_SAVE__", saved.encode())
                 self.reply(200, "text/html; charset=utf-8", page)
             elif urlparse(self.path).path == "/logo" and (logo := team.logo_path()) is not None:
                 # an uploaded SVG could carry script: never let it run on this origin (it would read the token)
@@ -118,12 +123,17 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             # Answers and launches drive agents that can push code, validations write MMX: only this page (same origin + per-run token) may post them.
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
-            if self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team") or origin not in allowed or not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
+            if self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save") or origin not in allowed or not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                data = json.loads(self.rfile.read(min(size, 500_000 if self.path == "/api/team" else 16_000)))
+                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else 500_000 if self.path == "/api/team" else 16_000
+                data = json.loads(self.rfile.read(min(size, limit)))
+                if self.path == "/api/save":
+                    ok, output = savegame.save(data)
+                    self.reply(200 if ok else 400, "application/json", json.dumps({"ok": ok, "output": output}, ensure_ascii=False).encode())
+                    return
                 if self.path == "/api/team":
                     ok, output = team.save(data if isinstance(data, dict) else {})
                     self.reply(200 if ok else 400, "application/json", json.dumps({"ok": ok, "output": output}, ensure_ascii=False).encode())

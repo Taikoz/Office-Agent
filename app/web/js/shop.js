@@ -61,7 +61,7 @@ function giveKudos(name) {
   if (kudos.day !== today()) kudos = { day: today(), counts: {}, total: kudos.total };
   const before = crushOfDay();
   kudos.counts[name] = (kudos.counts[name] || 0) + 1; kudos.total[name] = (kudos.total[name] || 0) + 1; save("office-kudos", kudos);
-  crewAdd(name, { moral: 5 }); loungeSay(name, "Merci pour le kudos ! ⭐");
+  crewAdd(name, { moral: 5 }); loungeSay(name, "Merci pour le kudos ! ⭐"); wantEvent(name, "kudos");
   const e = [...ents.values()].find(x => x.who === name && x.seated); if (e) { e.fxKind = "verify"; e.fxMsg = "⭐ Kudos !"; e.fxUntil = performance.now() + 2600; }
   sfx("commit");
   const after = crushOfDay(); if (after && after !== before) toast("COUP DE CŒUR DU JOUR", after, `${kudos.counts[after]} kudos aujourd'hui`);

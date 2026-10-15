@@ -16,9 +16,13 @@ async function loadReport() {
   try {
     reportData = DEMO ? demoReport(reportDay.value) : await (await fetch(`/api/report?day=${reportDay.value}`)).json();
   } catch (err) { body.innerHTML = `<p class="muted">Serveur injoignable (${esc(err.message)})</p>`; return; }
-  const r = reportData, mr = x => x.mr ? ` — <a href="${esc(x.mr)}" target="_blank" rel="noopener">${mrLabel(x.mr)}</a>${pipeTag(x.mr)}` : "";
+  body.innerHTML = reportHtml(reportData);
+}
+// the report as HTML, also shown in the chief's office (chiefos.js)
+function reportHtml(r) {
+  const mr = x => x.mr ? ` — <a href="${esc(x.mr)}" target="_blank" rel="noopener">${mrLabel(x.mr)}</a>${pipeTag(x.mr)}` : "";
   const list = (items, f) => items.length ? `<ul>${items.map(f).join("")}</ul>` : `<p class="muted">—</p>`;
-  body.innerHTML = `<div class="rstats">
+  return `<div class="rstats">
       <div>runs<b>${r.runs.length}</b></div><div>livrés<b>${r.delivered.length}</b></div><div>MR ouvertes<b>${r.mrs.length}</b></div>
       <div>To Verify<b>${r.verified.length}</b></div><div>questions<b>${r.questions}</b></div><div>bloqués / abandonnés<b>${r.stuck.length}</b></div>
       <div>temps agents<b>${durH(r.seconds)}</b></div></div>

@@ -149,7 +149,7 @@ function paintRug(p, x0, y0, w, h, type, base) {
 // floor of a room (everything below the wall), with its rugs; cached per scale and setting
 const floorCaches = {};
 function roomFloorCanvas(room, h, rugs) {
-  const d = decor[room], sig = `${S}|${decorSig(room, ["floor", "floorColor", "rug", "rugColor"])}`;
+  const d = decor[room], sig = `${S}|${decorSig(room, ["floor", "floorColor", "rug", "rugColor"])}|${JSON.stringify(rugs)}`;
   if (floorCaches[room]?.sig === sig) return floorCaches[room].c;
   const p = decorPainter(W, h);
   paintFloor(p, W, h, d.floor, d.floorColor);

@@ -75,7 +75,7 @@ function dialSvg(d) {
 }
 let clockMin = -1;
 function renderClock() {
-  const d = new Date();
+  const d = clockNow();  // real clock, or ?hour= / ?day= (days.js)
   if (d.getMinutes() === clockMin) return;
   clockMin = d.getMinutes();
   const h = d.getHours();

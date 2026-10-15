@@ -54,7 +54,7 @@ function renderHud() {
     const g = a.game || {}, stuck = isStuck(a), over = overBudget(a), review = awaitingReview(a, s), sum = a.status === "done" ? missionSummary(a) : g.mr ? missionSummary(a) : "";
     const nowS = data.now || Date.now() / 1000;
     return `<div class="card${a.id === selected ? " sel" : ""}${stuck ? " stuck" : ""}${over ? " over" : ""}" data-id="${esc(a.id)}" style="--c:${typeColor(a.type)}" title="${esc(a.description)}">
-      <div class="top"><b>${esc(crew.ids[a.id] || specialty(a.type))}</b><span class="s-${a.status}">${STATUS_FR[a.status] || a.status}</span>
+      <div class="top"><b>${esc(crew.ids[a.id] || specialty(a.type))}</b>${crew.ids[a.id] ? `<small class="sk" title="compétence pour ce travail">${skillTag(crew.ids[a.id], a.type)}</small>` : ""}<span class="s-${a.status}">${STATUS_FR[a.status] || a.status}</span>
         <span class="tag" style="background:${typeColor(a.type)}" title="${esc(a.type)}">${esc(specialty(a.type))}</span></div>
       <div class="what">${a.ticket ? `${ticketLink(a.ticket)}${yt?.state ? ` · ${esc(yt.state)}` : ""} — ` : ""}${esc(a.description)}</div>
       <div class="act">${esc(now || "démarre…")}</div>

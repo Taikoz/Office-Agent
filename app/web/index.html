@@ -6,13 +6,14 @@
 <title>Agent Office</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23081746%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%23fbaa08%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 <header>
   <h1><img id="logo" alt="" hidden><span id="office-name">AGENT <span>OFFICE</span></span></h1>
   <nav id="tabs" aria-label="Sessions"></nav>
+  <nav id="rooms" aria-label="Pièces"></nav>
   <button id="qbadge" hidden></button>
   <button id="sidebtn" title="Agents en mission, conso, quêtes du jour" aria-expanded="true" aria-controls="side">📋<span class="lbl"> MISSIONS</span> <span id="sidecount"></span></button>
   <div class="menuwrap">
@@ -30,6 +31,11 @@
     <button id="decorbtn" title="Murs, sol, bois, tapis, rideaux et porte du bureau et de la salle de repos (D)" aria-expanded="false">🎨<span class="lbl"> DÉCO</span></button>
     <button id="emotionsbtn" title="Humeur et besoins de l'équipe, façon Sims (E)">💎<span class="lbl"> ÉMOTIONS</span></button>
     <button id="focusbtn" title="Couper les animations d'ambiance (F)">🎯<span class="lbl"> FOCUS : OFF</span></button>
+    <button id="osbtn" title="Ton bureau : questions, MR, tickets, rapport, comptes, équipe">🖥️<span class="lbl"> BUREAU DU CHEF</span></button>
+    <button id="savebtn" title="Sauvegarder la partie dans ~/.claude/agent-office/save.json (automatique toutes les 30 s)">💾<span class="lbl"> SAUVEGARDER</span></button>
+    <button id="exportbtn" title="Télécharger la partie dans un fichier">📤<span class="lbl"> EXPORTER</span></button>
+    <button id="importbtn" title="Charger une partie depuis un fichier exporté">📥<span class="lbl"> IMPORTER</span></button>
+    <button id="meteobtn" title="Les fenêtres montrent la vraie météo de ta ville (Open-Meteo)">🌦️<span class="lbl"> MÉTÉO RÉELLE : OFF</span></button>
     <button id="tlbtn" title="Chronologie de la session : questions, tests, push, MR">🕘<span class="lbl"> CHRONOLOGIE</span></button>
     <button id="helpbtn" title="Raccourcis clavier (?)">?<span class="lbl"> AIDE</span></button>
     <button id="notifbtn" title="Notifications du navigateur : questions, blocages, livraisons, MR">🔕 ALERTES : OFF</button>
@@ -49,10 +55,11 @@
 <section id="clock" aria-label="Jour et heure">
   <svg id="clock-dial" viewBox="0 0 64 34" aria-hidden="true"></svg>
   <div class="time"><b id="clock-time"></b><span id="clock-day"></span></div>
-  <span id="clock-phase"></span>
+  <span id="clock-phase"></span><span id="clock-temp"></span>
 </section>
 <button id="buybtn" title="Mode achat : acheter, placer, vendre des objets" aria-expanded="false" aria-controls="buy">🛒<span class="lbl">ACHAT</span></button>
 <section id="buy" hidden aria-label="Mode achat"></section>
+<div id="chiefos" hidden role="dialog" aria-label="ChiefOS"></div>
 <div id="buytool" hidden role="dialog" aria-label="Objet sélectionné"></div>
 <button id="simsbtn" title="Besoins façon Sims (B)" aria-expanded="false"><svg viewBox="0 0 12 20" aria-hidden="true"><path class="pb" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg><span class="lbl">BESOINS</span></button>
 <section id="sims" hidden aria-label="Besoins"></section>
@@ -182,6 +189,13 @@
   <div class="stand"></div><div class="foot"></div>
 </div>
 <script>const DEMO = new URLSearchParams(location.search).has("demo"), TOKEN = "__OFFICE_TOKEN__", OFFICE_CFG = __OFFICE_CFG__;</script>
+<script>
+// progress saved in ~/.claude/agent-office/save.json (office/savegame.py): restored before the game reads its storage, when newer
+(function () {
+  const saved = __OFFICE_SAVE__;
+  try { if (!DEMO && saved.savedAt > +(localStorage.getItem("office-saved-at") || 0)) { for (const [k, v] of Object.entries(saved.keys)) localStorage.setItem(k, v); localStorage.setItem("office-saved-at", String(saved.savedAt)); } } catch (_) { /* storage blocked: the game starts from the file next time */ }
+})();
+</script>
 <script src="static/js/core.js"></script>
 <script src="static/js/sprites.js"></script>
 <script src="static/js/scene.js"></script>
@@ -213,9 +227,24 @@
 <script src="static/js/events2.js"></script>
 <script src="static/js/insight.js"></script>
 <script src="static/js/ux.js"></script>
+<script src="static/js/skills.js"></script>
 <script src="static/js/money.js"></script>
 <script src="static/js/social.js"></script>
 <script src="static/js/build.js"></script>
+<script src="static/js/moods.js"></script>
+<script src="static/js/wants.js"></script>
+<script src="static/js/days.js"></script>
+<script src="static/js/happen.js"></script>
+<script src="static/js/construct.js"></script>
+<script src="static/js/chiefos.js"></script>
+<script src="static/js/careers.js"></script>
+<script src="static/js/bonds.js"></script>
+<script src="static/js/pets.js"></script>
+<script src="static/js/seasons.js"></script>
+<script src="static/js/debrief.js"></script>
+<script src="static/js/alerts.js"></script>
+<script src="static/js/planning.js"></script>
+<script src="static/js/weekly.js"></script>
 <script src="static/js/sims.js"></script>
 <script src="static/js/hud.js"></script>
 <script src="static/js/notify.js"></script>
@@ -223,6 +252,7 @@
 <script src="static/js/launch.js"></script>
 <script src="static/js/officelife.js"></script>
 <script src="static/js/setup.js"></script>
+<script src="static/js/persist.js"></script>
 <script src="static/js/main.js"></script>
 </body>
 </html>

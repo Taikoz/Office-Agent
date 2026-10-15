@@ -28,6 +28,16 @@ function salaryOf(a) {
   const base = parts.reduce((s, p) => s + p[1], 0), stars = STARS.find(([max]) => base < max)[1];
   const who = crew.ids[a.id], happy = who && mate(who).moral >= 80;
   if (happy) parts.push(["Bonne humeur +10 %", Math.round(base * 0.1)]);
+  // efficiency: fast, clean and cheap pays more; going round in circles or over budget costs (moods.js, budget.js)
+  if (mins > 0 && mins < 15 && (a.tools || 0) >= 5) parts.push(["Rapide (< 15 min) +15 %", Math.round(base * 0.15)]);
+  if (!a.errors && (a.tools || 0) >= 5) parts.push(["Zéro erreur +10 %", Math.round(base * 0.1)]);
+  if (budgetsOn() && g.cost > 0 && g.cost <= budgetOf(a.type) * 0.5) parts.push(["Économe (< 50 % du budget) +10 %", Math.round(base * 0.1)]);
+  if (overBudget(a)) parts.push(["Budget dépassé −15 %", -Math.round(base * 0.15)]);
+  if (wasStuck(a)) parts.push(["A tourné en rond −20 %", -Math.round(base * 0.2)]);
+  const grade = TEAM.includes(who) ? gradeOf(who) : 0;  // careers.js: +5 % per grade above Junior
+  if (grade) parts.push([`Grade ${CAREER[grade][0]} +${grade * 5} %`, Math.round(base * 0.05 * grade)]);
+  const lvl = TEAM.includes(who) ? skillLevel(who, skillOf(a.type)) : 1;  // expertise (skills.js): +5 % per level above 1
+  if (lvl > 1) parts.push([`Expertise ${skillInfo(skillOf(a.type))[2]} niv. ${lvl} +${(lvl - 1) * 5} %`, Math.round(base * 0.05 * (lvl - 1))]);
   const total = Math.max(50, Math.round(parts.reduce((s, p) => s + p[1], 0) / 10) * 10);
   return { total, stars, parts };
 }
@@ -67,6 +77,10 @@ function pay(a) {
   sfx("cash");
   toast("SALAIRE", `${who} a livré${a.ticket ? ` ${a.ticket}` : ""} : +${fmtSim(s.total)}`, `Complexité ${starText(s.stars)} · ${s.parts.slice(1, 4).map(p => p[0]).join(" · ")}`);
   if (crew.ids[a.id]) crewAdd(crew.ids[a.id], { moral: 4 + s.stars * 2 });
+  gainSkill(a, s.stars);
+  if (crew.ids[a.id]) careerMission(crew.ids[a.id]);  // careers.js
+  buildDebrief(a);  // debrief.js
+  if (crew.ids[a.id]) wantEvent(crew.ids[a.id], "deliver");
   const e = ents.get(a.id);
   if (e) { const x = e.seated ? e.desk.x : e.x, y = e.seated ? e.desk.y - 22 : e.y - 30; cashFx.push({ x, y, txt: `+${fmtSim(s.total)}`, born: performance.now() }); burst(x, y, ["#fbaa08", "#ffd43b", "#51cf66"], 14 + s.stars * 4); }
 }
@@ -123,3 +137,17 @@ function toggleLedger(open = ledger.hidden) { ledger.hidden = !open; fundsBtn.se
 fundsBtn.onclick = () => toggleLedger();
 ledger.addEventListener("click", ev => { if (ev.target.closest('[data-ledger="close"]')) toggleLedger(false); });
 document.addEventListener("pointerdown", ev => { if (!ledger.hidden && !ledger.contains(ev.target) && !fundsBtn.contains(ev.target)) toggleLedger(false); });
+
+// a mission going round in circles costs money while it lasts: § 10 a minute, shown over the desk (moods.js isStuck)
+setInterval(() => {
+  for (const a of curSession()?.agents || []) {
+    if (!isStuck(a) || a.status !== "working") continue;
+    const n = Math.min(10, wallet.funds); if (!n) continue;
+    wallet.funds -= n; saveWallet();
+    const who = crew.ids[a.id] || specialty(a.type), key = `drain:${a.id}`;
+    const row = wallet.log.find(l => l.key === key);
+    if (row) { row.total -= n; row.t = Date.now(); } else wallet.log.unshift({ key, t: Date.now(), who, spend: true, label: `Boucle de ${who} : tokens perdus`, total: -n });
+    const e = ents.get(a.id); if (e) cashFx.push({ x: e.desk.x, y: e.desk.y - 22, txt: `−${fmtSim(n)}`, born: performance.now() });
+    fundsFlash = { txt: `−${fmtSim(n)}`, up: false, at: performance.now() };
+  }
+}, 60000);

@@ -70,7 +70,7 @@ function drawReviewSign(x, y, t) {
 
 /* day/night: the office darkens in the evening; occupied desks keep their lamp on */
 function nightLevel() {
-  const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+  const d = clockNow(), h = d.getHours() + d.getMinutes() / 60;
   if (h >= 8 && h < 18) return 0;
   if (h >= 18 && h < 21) return 0.5 * (h - 18) / 3;
   if (h >= 6 && h < 8) return 0.5 * (8 - h) / 2;

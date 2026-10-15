@@ -85,6 +85,7 @@ const INTERACTIONS = {
   dance: { icon: "🕺", label: "Danse ridicule", cat: "drôle", ok: m => 0.5 + m.moral / 250, d: [5, -2], social: 6, fun: 18, lines: ["Regarde ça !"], yes: ["😂 Encore !", "J'en peux plus !"], no: ["Je ne connais pas cette personne."] },
   critique: { icon: "🧐", label: "Critiquer son code", cat: "méchant", ok: () => 0.1, d: [2, -10], social: 2, moral: -8, lines: ["Ta fonction de 400 lignes, là…", "Pas un seul test ? Vraiment ?"], yes: ["Bon… t'as pas tort."], no: ["Et le tien, on en parle ?", "C'est bon, lâche-moi."] },
   argue: { icon: "😠", label: "Se disputer", cat: "méchant", ok: () => 0, d: [0, -16], social: -5, moral: -12, lines: ["C'est TOI qui as cassé la CI !", "Tabs, pas espaces. Point."], no: ["N'importe quoi !", "Tu me fatigues 😤"] },
+  birthday: { icon: "🎁", label: "Souhaiter son anniversaire", ok: () => 1, d: [10, 0], social: 12, moral: 10, lines: ["Joyeux anniversaire ! 🎂"], yes: ["Merci, trop gentil ! 🥳", "Oh, vous y avez pensé !"] },
   apologize: { icon: "🙏", label: "S'excuser", cat: "amical", max: 15, ok: (m, r) => 0.55 + r / 300 + m.moral / 300, d: [10, -2], social: 8, moral: 4, lines: ["Désolé pour l'autre fois…"], yes: ["C'est oublié 🤝", "Allez, on repart à zéro."], no: ["C'est un peu tard."] },
 };
 // what a dev does by itself to a colleague, from their relationship
@@ -119,7 +120,8 @@ function stepConvos(t) {
     const m = mate(c.b), r = rel(c.a, c.b);
     const refused = (it.need !== undefined && r < it.need) || (it.max !== undefined && r > it.max);
     const ok = !refused && Math.random() < it.ok(m, r);
-    bond(c.a, c.b, it.d[ok ? 0 : 1]);
+    bond(c.a, c.b, Math.round(it.d[ok ? 0 : 1] * (it.d[ok ? 0 : 1] > 0 ? traitK(c.b, "talk") : 1)));  // traits (moods.js)
+    if (ok) { wantEvent(c.a, "talk", c.b); wantEvent(c.b, "talk", c.a); if (c.verb === "compliment") wantEvent(c.b, "compliment"); }
     say(c.b, refused ? pick(["On n'est pas si proches…", "Euh… non."]) : pick((ok ? it.yes : it.no) || it.no || it.yes), 2800);
     if (ok) gesture(c.b, ["joke", "dance", "hug", "highfive", "tease"].includes(c.verb) ? { arms: "up" } : {}, 1200);
     crewAdd(c.a, { social: Math.max(0, it.social || 0) * 0.8, ennui: -(it.fun || 0) / 2 });
@@ -202,6 +204,7 @@ function stepCooking(t, dt) {
   if (c.helper) social.cook[c.helper] = cookXp(c.helper) + 1;
   if (cookLevel(c.cook) > lvl0) { toast("CUISINE", `${c.cook} passe niveau ${cookLevel(c.cook)} en cuisine !`, nextRecipe(c.cook)); floatUp(STOVE.x, STOVE.y - 34, "⭐", "#fbaa08", 3); }
   dish = { recipe: c.recipe, portions: c.recipe.portions, burnt: !!c.burnRoll, cook: c.cook, helper: c.helper, at: t };
+  if (!c.burnRoll) wantEvent(c.cook, "cook");
   social.meals++;
   say(c.cook, c.burnRoll ? "Bon… c'est un peu cramé 😬" : `À table ! ${c.recipe.icon}`, 3200);
   burstLounge(TABLE.x + TABLE.w / 2, TABLE.y, c.burnRoll ? ["#555", "#333"] : ["#fbaa08", "#51cf66", "#ff6b9a"]);
@@ -270,6 +273,7 @@ function stepEaters(t, dt) {
     for (const [o] of eaters) if (o !== n && n < o && Math.random() < dt / 9000) bond(n, o, 1);
     if (t - e.start > EAT_MS) {
       eaters.delete(n); crewAdd(n, { moral: e.burnt ? -2 : 5 });
+      if (!e.burnt) { wantEvent(n, "eat", e.recipe.id); addMoodlet(n, "meal", "😋", "Bon repas", 4 * traitK(n, "eat"), 45); }
       if (l) { l.busy = false; l.next = 0; } else { chief.lspot = { ...e.seat, act: { id: "stand", label: "se pose", pose: {} } }; chiefTo({ x: e.seat.x + (e.seat.back ? -14 : 0), y: e.seat.back ? 214 : 160 }, null); }
     }
   }
@@ -434,11 +438,14 @@ pie.id = "pie"; pie.hidden = true; pie.setAttribute("role", "menu");
 document.body.append(pie);
 let pieCtx = null;
 function pieItems(kind, target, sub) {
+  if (kind === "worker") return workerPieItems(target);
+  if (kind === "dog") return dogPie();
   if (kind === "item") { const out = itemPieItems(target, sub); if (sub) out.push(["back", "↩", "Retour"]); return out; }  // build.js
   const items = [];
   if (kind === "mate") {
     const r = rel(CHIEF_NAME, target);
     if (!sub) {
+      if (isBirthday(target)) items.push(["v:birthday", "🎁", "Bon anniversaire !"]);  // happen.js
       items.push(["v:talk", "💬", "Discuter"], ["s:amical", "😊", "Amical…"], ["s:drôle", "😂", "Drôle…"], ["s:méchant", "😠", "Méchant…"],
         ["s:cook", "🍳", "Cuisiner ensemble…"], ["s:duel", "🎮", "Défier…"], ["fiche", "📋", "Fiche"]);
       if (dish?.portions) items.splice(5, 0, ["invite", "🍽️", "Inviter à manger"]);
@@ -464,6 +471,8 @@ function pieItems(kind, target, sub) {
   return items;
 }
 function pieCenter(kind, target) {
+  if (kind === "worker") { const e = ents.get(target), a = e?.agent; return `<b>${esc(e?.who || "")}</b><span class="muted">${esc(specialty(a?.type))}${a?.ticket ? ` · ${esc(a.ticket)}` : ""}</span><span class="muted">${esc(moodWord(mate(e?.who || "")))}</span>`; }
+  if (kind === "dog") return `<b>🐶 ${DOG_NAME}</b><span class="muted">faim ${Math.round(petBook.dog.faim)} · câlins ${Math.round(petBook.dog.love)}</span>`;
   if (kind === "item") return itemPieCenter(target);
   if (kind === "mate") {
     const r = rel(CHIEF_NAME, target), [, label, col] = relLevel(r), m = mate(target);
@@ -503,6 +512,8 @@ setInterval(() => {
 }, 500);
 
 function pieAction(kind, target, id) {
+  if (kind === "worker") return workerAction(target, id);
+  if (kind === "dog") return dogAction(id);
   if (kind === "item") return itemPieAction(target, id);
   if (id === "fiche") { loungeSay(target, pick(["Salut chef !", "Oui ?", "Hey !"])); return openPanel(`mate:${target}`); }
   if (id.startsWith("duel:")) return challenge(target, id.slice(5));
@@ -583,14 +594,14 @@ function chiefActivity() {
       arcade: { icon: "🕹️", label: "Joue à l'arcade" }, darts: { icon: "🎯", label: "Fléchettes" }, pingpong: { icon: "🏓", label: "Ping-pong" }, babyfoot: { icon: "⚽", label: "Baby-foot" } }[a]
       || { icon: "🛋️", label: "Se détend en salle de repos" };
   }
-  return { coffee: { icon: "☕", label: "Pause café" }, console: { icon: "🎮", label: "Joue à la console" }, pc: { icon: "💻", label: "Joue sur l'ordinateur" }, podium: { icon: "👑", label: "Dirige l'équipe" } }[chief.at] || { icon: "🧍", label: "Fait un tour" };
+  return { coffee: { icon: "☕", label: "Pause café" }, console: { icon: "🎮", label: "Joue à la console" }, pc: { icon: "💻", label: "Joue sur l'ordinateur" }, chiefos: { icon: "🖥️", label: "Sur ChiefOS" }, podium: { icon: "👑", label: "Dirige l'équipe" } }[chief.at] || { icon: "🧍", label: "Fait un tour" };
 }
 
 /* ---------- the Sims window: relationships and cooking skill of the shown sim ---------- */
 function simSocialHtml(name) {
   const rels = everyone().filter(o => o !== name).map(o => [o, rel(name, o)]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 4);
   const lvl = cookLevel(name), next = COOK_XP[lvl], cur = COOK_XP[lvl - 1], k = next === undefined ? 1 : (cookXp(name) - cur) / (next - cur);
-  return `<div class="social"><div class="skill"><span class="ic">🍳</span><span class="nl">CUISINE</span><span class="pips">${Array.from({ length: 10 }, (_, i) => `<i class="${i < lvl ? "on" : i === lvl ? "part" : ""}"${i === lvl ? ` style="--k:${Math.round(k * 100)}%"` : ""}></i>`).join("")}</span><span class="lv">niv. ${lvl}</span></div>
+  return `<div class="social">${workSkillsHtml(name)}<div class="skill"><span class="ic">🍳</span><span class="nl">CUISINE</span><span class="pips">${Array.from({ length: 10 }, (_, i) => `<i class="${i < lvl ? "on" : i === lvl ? "part" : ""}"${i === lvl ? ` style="--k:${Math.round(k * 100)}%"` : ""}></i>`).join("")}</span><span class="lv">niv. ${lvl}</span></div>
     <div class="rels">${rels.map(([o, r]) => { const [, label, col] = relLevel(r); return `<button data-sim="${esc(o)}" title="${esc(o)} · ${esc(label)} (${r})"><span class="pf">${simPortrait(o)}</span><span class="rn">${esc(o)}<small style="color:${col}">${esc(label)}</small></span><span class="rbar"><i style="left:${r < 0 ? 50 + r / 2 : 50}%;width:${Math.abs(r) / 2}%;background:${col}"></i></span></button>`; }).join("")}</div></div>`;
 }
 // the side panel of a dev: the chief's relationship and the dev's best friend
@@ -598,4 +609,37 @@ function mateSocialHtml(name) {
   const r = rel(CHIEF_NAME, name), [, label, col] = relLevel(r);
   const best = TEAM.filter(o => o !== name).map(o => [o, rel(name, o)]).sort((a, b) => b[1] - a[1])[0];
   return `<p class="muted">Avec toi : <b style="color:${col}">${esc(label)}</b> (${r}) · meilleur pote : ${esc(best[0])} (${esc(relLevel(best[1])[1].toLowerCase())}) · 🍳 cuisine niv. ${cookLevel(name)}</p>`;
+}
+
+/* ---------- a dev at work (office): the chief brings a coffee, cheers, whispers an idea — or opens its screen ---------- */
+function workerPieItems(id) {
+  const e = ents.get(id), a = e?.agent; if (!e) return [];
+  const hard = a.status === "blocked" || isStuck(a);
+  return [["screen", "🖥️", "Voir son écran"], ["coffee", "☕", "Lui apporter un café"], ["cheer", "🎉", "Encourager"],
+    ...(hard ? [["hint", "💡", "Lui souffler une idée"], ["relaunch", "🔁", "Relancer avec une consigne"]] : []), ["fiche", "📋", "Détails"]];
+}
+// the chief walks to the desk (from the break room through the door if need be), then `fn`
+function chiefToDev(e, fn) {
+  const go = () => chiefGo({ x: e.desk.x + DESK_SP / 2 - 4, y: e.desk.y + 24 }, () => { if (ents.get(e.agent.id) === e) fn(); });
+  if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
+}
+function workerAction(id, act) {
+  const e = ents.get(id); if (!e) return;
+  const who = e.who, fx = (msg, kind) => { e.fxKind = kind; e.fxMsg = msg; e.fxUntil = performance.now() + 2800; };
+  if (act === "screen") return openPc(id);
+  if (act === "fiche") return openPanel(id);
+  if (act === "relaunch") return relaunch(id);
+  if (act === "coffee") return enqueue("☕", `Café pour ${who}`, () => {  // by the coffee machine first
+    const brew = () => chiefGo("coffee", () => setTimeout(() => chiefToDev(e, served), 1500));
+    if (chief.room === "lounge") { chief.pendingOffice = brew; chiefToOffice(); } else brew();
+  });
+  function served() { crewAdd(who, { cafe: 45 }); addMoodlet(who, "chiefcoffee", "☕", "Café du chef", 6, 60); relAdd(CHIEF_NAME, who, 4); fx("☕ merci chef !", "commit"); say(CHIEF_NAME, "Tiens, un café.", 2000); }
+  if (act === "cheer") return enqueue("🎉", `Encourager ${who}`, () => chiefToDev(e, () => {
+    const hard = e.agent.status === "blocked" || isStuck(e.agent);
+    addMoodlet(who, "cheered", "🎉", "Encouragé par le chef", hard ? 12 : 8, 60); relAdd(CHIEF_NAME, who, 3); fx(hard ? "💪 je m'accroche !" : "🎉 merci !", "verify"); say(CHIEF_NAME, hard ? "Courage, tu vas y arriver !" : "Super boulot !", 2200);
+  }));
+  if (act === "hint") return enqueue("💡", `Une idée pour ${who}`, () => chiefToDev(e, () => {
+    addMoodlet(who, "hint", "💡", "Un coup de pouce", 6, 45); fx("💡 ah mais oui…", "pass"); say(CHIEF_NAME, "Et si tu prenais le problème autrement ?", 2600);
+    toast("COUP DE POUCE", `${who} a le moral`, "Pour vraiment débloquer l'agent : 🔁 Relancer avec une consigne.");
+  }));
 }

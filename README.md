@@ -110,6 +110,44 @@ Hors mode achat, les objets sont interactifs : lampe (allumer, éteindre ; elle 
 
 Les bureaux sont des objets : un dev dont le bureau a été vendu travaille sur un carton avec un portable, son humeur chute et il le fait savoir. Le chef envoie en priorité les devs qui ont un bureau.
 
+### Les compétences
+
+Chaque mission livrée fait monter une compétence du dev qui l'a faite, selon le type d'agent : 💻 Développement, 🧪 Tests, 🛡️ Sécurité, 🔍 Review, 🧭 Pilotage, 📋 Organisation, 🔭 Exploration (niveaux 1 à 10 ; une mission complexe, avec tests verts et MR, fait monter plus vite). Pour chaque nouvel agent, le chef envoie le dev libre le plus compétent pour ce travail (puis le moins fatigué), et l'annonce dans sa bulle. L'expertise rapporte +5 % de salaire par niveau. Les compétences s'affichent sur les cartes EN MISSION, dans la fenêtre des besoins et sur la fiche du dev.
+
+### La vie au bureau
+
+- **Traits** : chaque membre de l'équipe a deux traits (gourmand, fêtard, solitaire, perfectionniste, caféinomane, bavard, zen, sportif, lève-tôt, ambitieux) qui changent ses besoins et ses réactions.
+- **Humeurs (moodlets)** : des émotions temporaires pèsent sur l'humeur, la plupart venues du vrai travail des agents : tests rouges (déprime après 3 échecs d'affilée), tests enfin verts, CI cassée ou verte, MR ouverte, fusionnée ou refusée, bloqué, tourne en rond, mission livrée, heures sup le soir.
+- **Envies** : chaque dev a trois envies du moment (manger un plat, jouer au baby-foot, discuter avec un collègue, livrer une mission, monter de niveau…). Une envie réalisée rapporte de l'argent et des points de satisfaction, qui achètent des récompenses (potion d'énergie, inspiration, journée spa, bonne humeur d'équipe) dans la fenêtre des besoins.
+- **La journée** : l'équipe arrive à 8 h et rentre à 19 h (20 h le vendredi) ; seuls les devs en mission restent. La salle de repos est vide le soir et le week-end. Le vendredi à 17 h, afterwork (sur la terrasse si elle existe) ; après une semaine d'au moins 5 missions livrées, c'est la fête de la semaine, avec une prime d'équipe. Aperçu : `?hour=18&day=5` dans l'URL.
+- **Événements** : coupure de courant (réarmer le disjoncteur au mur), visite d'un client (l'accueillir avant qu'il reparte : bonus), pizzas livrées, anniversaire de chaque dev (un jour par an : gâteau, et 🎁 dans son menu). Aperçu : `?event=power|client|pizza|birthday`.
+- **Construction** (🏗️ dans le mode achat) : agrandir l'open space (10 puis 12 bureaux, avec des recrues), salle de réunion (réunir l'équipe autour de la table), terrasse, fenêtres sur n'importe quel mur. Une barre en haut passe d'une pièce à l'autre.
+- **Bureau du chef** : son bureau près du podium ouvre ChiefOS (aussi dans le menu) : questions en attente, merge requests et leur CI, tickets, rapport du jour, comptes, équipe d'un coup d'œil.
+- **Primes d'efficacité** : une mission rapide (moins de 15 min), sans erreur ou économe (moins de la moitié du budget) rapporte plus ; une mission qui a tourné en rond ou dépassé son budget, moins. Tant qu'un agent tourne en rond, il coûte § 10 par minute.
+
+### Encore plus de vie
+
+- **Carrières** : Junior → Confirmé → Senior → Expert → Lead, selon les missions livrées et la meilleure compétence. Une promotion est fêtée (gâteau) et augmente le salaire (+5 % par grade). Un dev malheureux depuis une heure pense à partir ; au bout de trois, il démissionne (jamais en pleine mission) : recrute quelqu'un dans ChiefOS → Équipe (§ 1 500).
+- **Devs au travail** : clic sur un dev à son bureau → voir son écran, lui apporter un café, l'encourager, et s'il est bloqué ou tourne en rond, lui souffler une idée ou relancer l'agent avec une consigne.
+- **Relations** : rivaux (amitié ≤ −40) qui se piquent quand ils travaillent en même temps, binômes (≥ 70) qui se motivent, et un parrain pour chaque nouveau pendant deux semaines (il apprend plus vite).
+- **Animaux** : Brume a faim et besoin de câlins, elle va manger à sa gamelle (à remplir) ; adopte Biscuit le chien (🐾 dans le mode achat) : il se promène, rend visite aux devs, et joue à la balle.
+- **Saisons et météo** : la terrasse suit la saison (neige, fleurs, barbecue, feuilles). ☰ MENU → MÉTÉO RÉELLE : les fenêtres montrent le vrai temps de ta ville (Open-Meteo, sans clé ; seules les coordonnées de la ville sont envoyées), la température s'affiche à côté de l'heure ; ville dans ChiefOS → Météo. Désactivé par défaut.
+
+### Les outils du chef (ChiefOS)
+
+ChiefOS ressemble à Ubuntu : barre du haut (Activités, date et heure, ⏻ pour fermer), dock à gauche, chaque outil dans une fenêtre (– réduit vers Activités, ▢ agrandit, × ferme), et Activités affiche la grille des applications avec une recherche (Entrée ouvre la première).
+
+- **🚨 Alertes** : un agent qui relit le même fichier en boucle, la même erreur chez plusieurs agents, une MR sans review depuis plus de 2 h, un agent qui tourne en rond ; chacune avec son action (relancer avec une consigne, lancer une review, voir l'écran). Toast et notification à l'apparition.
+- **📅 Planning** : choisis des tickets du backlog et un agent pour chacun, le nombre d'agents à la fois, puis « Lancer la journée » : le chef les lance l'un après l'autre (le lancement habituel, avec un terminal), 2 min au moins entre deux, jamais plus que le nombre choisi.
+- **🧾 Débriefs** : chaque mission livrée a sa fiche (mission, fichiers modifiés, commandes clés, erreurs, durée, coût, tests, MR), copiable en Markdown pour la MR ou le ticket ; aussi 🧾 sur la carte de la mission.
+- **💸 Coûts** : coût, temps et issue des runs sur 30 jours, par ticket et par projet ; les « gouffres » (plus du double de la médiane, ou bloqués deux fois) sont signalés.
+- **🗓️ Semaine** : le rapport de la semaine (livré, MR, To Verify, bloqués, temps, par jour), copiable en Markdown ; prêt le vendredi à 17 h (toast et notification).
+- **Mémoire des échecs** : un agent bloqué, abandonné ou qui tourne en rond laisse sa cause (délai, permission, dépendance, tests, réseau, boucle) ; au lancement suivant du même type d'agent, le formulaire propose la consigne qui évite le piège (➕ Ajouter la consigne).
+
+### La sauvegarde
+
+La partie (argent, objets, constructions, amitiés, compétences, envies, humeurs…) est sauvegardée dans `~/.claude/agent-office/save.json` toutes les 30 secondes et à la fermeture de la page ; à l'ouverture, la sauvegarde la plus récente l'emporte (navigateur ou fichier). Menu : 💾 SAUVEGARDER, 📤 EXPORTER (un fichier à garder ou emporter sur une autre machine), 📥 IMPORTER.
+
 ### L'argent (§)
 
 Chaque mission livrée par un agent rapporte un salaire au foyer, d'autant plus gros qu'elle est complexe : type d'agent, outils utilisés, fichiers modifiés, durée, tokens, tests verts, merge request (les erreurs en retirent un peu ; +10 % si le dev est de bonne humeur). La complexité est notée de ★ à ★★★★★. La carte de la mission affiche le salaire estimé pendant le travail, puis le montant versé ; à la livraison, le montant s'envole au-dessus du bureau du dev. L'argent paie la BOUTIQUE et les courses pour cuisiner. Gardé dans le navigateur, jamais en mode démo ; les missions déjà livrées à la première ouverture ne sont pas payées.

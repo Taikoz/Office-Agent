@@ -337,7 +337,7 @@
   #sims .acts button:hover { border-color: var(--accent); }
   /* relationships and cooking skill in the needs window, pie menu of the break room (social.js) */
   #sims .social { margin: 0 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
-  #sims .skill { display: grid; grid-template-columns: 20px 70px 1fr auto; gap: 4px; align-items: center; font-size: 17px; }
+  #sims .skill { display: grid; grid-template-columns: 20px 112px 1fr auto; gap: 4px; align-items: center; font-size: 17px; }
   #sims .skill .nl { color: var(--muted); } #sims .skill .lv { color: var(--accent); font-size: 15px; }
   #sims .pips { display: flex; gap: 2px; } #sims .pips i { flex: 1; height: 9px; background: #17161d; border: 1px solid var(--line); }
   #sims .pips i.on { background: #51cf66; } #sims .pips i.part { background: linear-gradient(90deg, #51cf6688 var(--k), #17161d var(--k)); }
@@ -507,3 +507,108 @@
   #buytool button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
   #buytool button:hover { border-color: var(--accent); }
   @media (max-width: 760px) { #buy .bdetail { display: none; } #buy .bcats .lbl, #buybtn .lbl { display: none; } }
+  .card .top .sk { color: var(--accent); font-size: 15px; white-space: nowrap; }
+  #sims .skill + .skill { margin-top: 3px; } #sims .skill.muted { display: flex; gap: 6px; font-size: 15px; }
+
+  /* rooms bar (construct.js) */
+  #rooms { display: flex; gap: 4px; flex: none; padding: 3px; background: var(--glass); border: 2px solid var(--line); border-radius: 999px; box-shadow: 0 6px 18px #0007; }
+  #rooms button { padding: 1px 12px; border-radius: 999px; border: 2px solid transparent; background: transparent; color: var(--muted); }
+  #rooms button:hover { color: var(--text); } #rooms button.on { color: var(--accent); border-color: var(--accent); background: var(--panel-2); }
+  /* traits, moodlets, wants, rewards in the needs window (moods.js, wants.js) */
+  #sims .traits { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  #sims .trait { padding: 0 8px; font-size: 15px; background: #ffffff10; border: 1px solid var(--line); border-radius: 999px; cursor: help; }
+  #sims .moodlets { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  #sims .ml { padding: 0 8px; font-size: 14px; border-radius: 999px; cursor: help; } #sims .ml b { font-weight: normal; }
+  #sims .ml.up { background: #1f3326; color: #9dffb5; border: 1px solid #4f8a5c; } #sims .ml.dn { background: #3a1a20; color: #ffb3b3; border: 1px solid #8a3a44; }
+  #sims .wants, #sims .rewards { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0 0 8px; }
+  #sims .wants .nl, #sims .rewards .nl { color: var(--muted); font-size: 15px; letter-spacing: 1px; }
+  #sims .want { display: flex; align-items: center; gap: 4px; padding: 1px 10px 1px 6px; font-size: 18px; background: #2f2a1a; border: 2px solid #c9a24b; border-radius: 999px; cursor: help; }
+  #sims .want small { font-size: 14px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sims .want.done { opacity: .45; text-decoration: line-through; }
+  #sims .rewards button { font: inherit; font-size: 14px; padding: 0 8px; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: 999px; cursor: pointer; }
+  #sims .rewards button[disabled] { opacity: .4; cursor: not-allowed; } #sims .rewards button:hover:not([disabled]) { border-color: var(--accent); }
+
+  /* careers, bonds (careers.js, bonds.js) */
+  .career { font-size: 15px; color: var(--muted); letter-spacing: 0; }
+  #sims .bonds { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; } #sims .bonds span { padding: 0 8px; font-size: 14px; background: #2a2440; border: 1px solid #5a4a8a; border-radius: 999px; }
+  /* ChiefOS: lists, Markdown previews, costs, week chart, pets (debrief.js, weekly.js, pets.js) */
+  /* traps already met, in the launch form (debrief.js) */
+  .launch .hints { margin: 6px 0; padding: 6px 10px; background: #2f2a1a; border: 2px solid #c9a24b; border-radius: var(--r-sm); font-size: 16px; }
+  .launch .hints b { font-weight: normal; color: var(--accent); } .launch .hints div { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 3px; }
+  .launch .hints button { font: inherit; font-size: 14px; padding: 0 8px; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
+  #clock-temp { color: var(--muted); font-size: 16px; } #clock-temp:empty { display: none; }
+
+  /* ChiefOS, Ubuntu style (GNOME + Yaru dark): top bar, dock, window, Activités grid (chiefos.js) */
+  #chiefos { --ub-orange: #e95420; --ub-bg: #2c2c2c; --ub-head: #303030; --ub-card: #383838; --ub-line: #1e1e1e; --ub-text: #f6f5f4; --ub-dim: #b9b6b0;
+    position: fixed; z-index: 30; inset: 64px max(14px, calc(50vw - 600px)) 92px; display: flex; flex-direction: column; overflow: hidden;
+    font: 14px/1.45 "Ubuntu", system-ui, sans-serif; color: var(--ub-text); border-radius: 12px; box-shadow: 0 24px 70px #000e, 0 0 0 1px #000;
+    background: radial-gradient(120% 140% at 85% 110%, #e95420 0%, #c7162b 22%, #77216f 48%, #2c001e 80%); }
+  #chiefos.max { inset: 52px 8px 8px; }
+  #chiefos[hidden] { display: none; }
+  #chiefos button { font: inherit; }
+  #chiefos .ubtop { flex: none; display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; gap: 12px; height: 30px; padding: 0 8px; background: #000; font-weight: 500; font-size: 13.5px; }
+  #chiefos .ubact { padding: 1px 12px; color: var(--ub-text); background: transparent; border: 0; border-radius: 999px; cursor: pointer; }
+  #chiefos .ubact:hover, #chiefos .ubact.on { background: #ffffff26; }
+  #chiefos .ubtitle { color: var(--ub-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #chiefos .ubclock { white-space: pre; }
+  #chiefos .ubsys { grid-column: 5; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  #chiefos .ubsys button { padding: 0 8px; color: var(--ub-text); background: transparent; border: 0; border-radius: 999px; cursor: pointer; font-size: 14px; }
+  #chiefos .ubsys button:hover { background: #ffffff26; }
+  #chiefos .ubdesk { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 12px 14px 12px 0; }
+  #chiefos .ubdock { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 64px; padding: 8px 0; background: #000000a8; border-radius: 0 14px 14px 0; overflow-y: auto; scrollbar-width: none; }
+  #chiefos .ubdock button { position: relative; flex: none; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 12px; cursor: pointer; background: transparent; }
+  #chiefos .ubdock button .ic, #chiefos .ubgrid .ic, #chiefos .ubappic { display: grid; place-items: center; border-radius: 11px; background: linear-gradient(160deg, color-mix(in srgb, var(--tint) 85%, #fff), var(--tint) 55%, color-mix(in srgb, var(--tint) 70%, #000)); box-shadow: inset 0 1px 0 #ffffff40, 0 2px 6px #0006; }
+  #chiefos .ubdock button .ic { width: 40px; height: 40px; margin: 3px; font-size: 22px; }
+  #chiefos .ubdock button:hover { background: #ffffff1f; } #chiefos .ubdock button.on { background: #ffffff2e; }
+  #chiefos .ubdock button.on::before { content: ""; position: absolute; left: -9px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--ub-orange); }
+  #chiefos .ubdock .ubsep { flex: 1; min-height: 6px; }
+  #chiefos .ubdock .ubshow { color: var(--ub-text); font-size: 15px; letter-spacing: -2px; line-height: 1; }
+  #chiefos .osbadge { position: absolute; right: -2px; top: -2px; min-width: 18px; padding: 0 5px; font-size: 11px; font-weight: 700; line-height: 18px; color: #fff; background: var(--ub-orange); border-radius: 999px; box-shadow: 0 0 0 2px #000; }
+  #chiefos .ubwin { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--ub-bg); border-radius: 12px; box-shadow: 0 12px 34px #000c, 0 0 0 1px #000; overflow: hidden; }
+  #chiefos .ubhead { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 12px; background: var(--ub-head); border-bottom: 1px solid var(--ub-line); }
+  #chiefos .ubhead b { font-weight: 700; text-align: center; }
+  #chiefos .ubappic { width: 26px; height: 26px; font-size: 15px; border-radius: 7px; }
+  #chiefos .ubctl { display: flex; gap: 8px; }
+  #chiefos .ubctl button { width: 24px; height: 24px; padding: 0; color: var(--ub-text); background: #ffffff1a; border: 0; border-radius: 50%; cursor: pointer; line-height: 24px; font-size: 13px; }
+  #chiefos .ubctl button:hover { background: #ffffff33; } #chiefos .ubctl .x:hover { background: var(--ub-orange); }
+  #chiefos .osapp { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 20px; scrollbar-width: thin; scrollbar-color: #5e5c64 transparent; }
+  #chiefos .osapp h4 { margin: 18px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--ub-dim); text-transform: uppercase; }
+  #chiefos .osapp p { margin: 6px 0; } #chiefos .muted { color: var(--ub-dim); }
+  #chiefos .osrow { display: grid; grid-template-columns: minmax(150px, 240px) 1fr auto; gap: 12px; align-items: center; padding: 9px 14px; margin: 0; background: var(--ub-card); border-bottom: 1px solid #2a2a2a; }
+  #chiefos .osrow:first-of-type, #chiefos h4 + .osrow { border-radius: 10px 10px 0 0; } #chiefos .osrow:last-of-type { border-radius: 0 0 10px 10px; margin-bottom: 8px; }
+  #chiefos .osrow:only-of-type { border-radius: 10px; }
+  #chiefos .osrow b { font-weight: 500; } #chiefos .osrow span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  #chiefos .osrow button, #chiefos .osacts button { padding: 4px 14px; color: #fff; background: #4a4a4a; border: 0; border-radius: 6px; cursor: pointer; font-weight: 500; }
+  #chiefos .osrow button:hover:not([disabled]), #chiefos .osacts button:hover:not([disabled]) { background: #5a5a5a; }
+  #chiefos .osrow button[data-recruit], #chiefos .osrow button[data-os-q], #chiefos [data-plan="go"], #chiefos [data-copy-debrief], #chiefos [data-week="copy"] { background: var(--ub-orange); }
+  #chiefos .osrow button[data-recruit]:hover, #chiefos .osrow button[data-os-q]:hover, #chiefos [data-plan="go"]:hover, #chiefos [data-copy-debrief]:hover, #chiefos [data-week="copy"]:hover { background: #f06b3b !important; }
+  #chiefos button[disabled] { opacity: .45; cursor: not-allowed; }
+  #chiefos select, #chiefos input:not([type=checkbox]) { padding: 4px 8px; color: var(--ub-text); background: #1e1e1e; border: 1px solid #4a4a4a; border-radius: 6px; font: inherit; }
+  #chiefos input[type=checkbox] { accent-color: var(--ub-orange); }
+  #chiefos a { color: #ff7f4f; } #chiefos a:hover { color: #ffa07a; }
+  #chiefos .rstats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  #chiefos .rstats div { min-width: 110px; padding: 8px 14px; color: var(--ub-dim); font-size: 12px; background: var(--ub-card); border-radius: 10px; }
+  #chiefos .rstats b { display: block; margin-top: 2px; font-size: 20px; font-weight: 500; color: var(--ub-text); }
+  #chiefos .osacts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  #chiefos .osgrid { display: grid; grid-template-columns: minmax(190px, 250px) 1fr; gap: 14px; }
+  #chiefos .oslist { display: flex; flex-direction: column; gap: 2px; max-height: 62vh; overflow-y: auto; padding: 4px; background: #242424; border-radius: 10px; }
+  #chiefos .oslist button { display: flex; flex-direction: column; align-items: flex-start; padding: 6px 10px; text-align: left; color: var(--ub-text); background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
+  #chiefos .oslist button:hover { background: #ffffff12; } #chiefos .oslist button.on { background: var(--ub-orange); } #chiefos .oslist small { color: inherit; opacity: .75; }
+  #chiefos pre.md { white-space: pre-wrap; margin: 0; padding: 12px 14px; font: 13.5px/1.45 "Ubuntu Mono", ui-monospace, monospace; color: #e8e6e3; background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 10px; max-height: 55vh; overflow-y: auto; }
+  #chiefos .pit { color: #f99b11; font-size: 12px; }
+  #chiefos .pbar { display: inline-block; width: 70px; height: 6px; margin: 0 8px 0 4px; background: #1e1e1e; border-radius: 999px; overflow: hidden; vertical-align: middle; } #chiefos .pbar i { display: block; height: 100%; }
+  #chiefos .weekbars { display: flex; align-items: flex-end; gap: 12px; height: 110px; margin: 8px 0 12px; padding: 10px 14px; background: var(--ub-card); border-radius: 10px; }
+  #chiefos .weekbars div { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  #chiefos .weekbars i, #chiefos .weekbars b { position: absolute; bottom: 18px; width: 60%; border-radius: 5px 5px 0 0; } #chiefos .weekbars i { background: #5e5c64; } #chiefos .weekbars b { background: var(--ub-orange); width: 38%; }
+  #chiefos .weekbars span { position: absolute; bottom: 0; font-size: 12px; color: var(--ub-dim); }
+  /* Activités: the grid of applications */
+  #chiefos .ubover { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 18px; overflow-y: auto; }
+  #chiefos .ubsearch { width: min(360px, 90%); padding: 8px 16px !important; text-align: center; background: #1e1e1ee6 !important; border: 1px solid #ffffff22 !important; border-radius: 999px !important; }
+  #chiefos .ubgrid { display: grid; grid-template-columns: repeat(auto-fill, 112px); justify-content: center; gap: 18px 10px; width: 100%; }
+  #chiefos .ubgrid button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 4px; color: var(--ub-text); background: transparent; border: 0; border-radius: 14px; cursor: pointer; }
+  #chiefos .ubgrid button:hover { background: #ffffff1f; }
+  #chiefos .ubgrid .ic { width: 64px; height: 64px; font-size: 34px; border-radius: 16px; }
+  #chiefos .ubgrid small { font-size: 13px; text-shadow: 0 1px 3px #000; }
+  #chiefos .ubgrid .osbadge { right: 22px; top: 4px; }
+  @media (max-width: 760px) { #chiefos .ubtitle, #chiefos .ubsys span { display: none; } #chiefos .osrow, #chiefos .osgrid { grid-template-columns: 1fr; } #chiefos .ubdock { width: 54px; } }
+  @media (max-width: 760px) { #rooms button { padding: 1px 6px; } }

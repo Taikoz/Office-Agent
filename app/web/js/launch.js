@@ -58,10 +58,12 @@ async function renderLaunch(arg) {
     <label>Agent <select id="l-agent">${launchAgents.map(a => `<option${a === pick ? " selected" : ""}>${esc(a)}</option>`).join("")}</select></label>
     <label>Mission <textarea id="l-prompt" rows="4" maxlength="2000"></textarea></label>
     <p class="muted">Ouvre un terminal avec <code>claude --agent …</code> dans le dossier <code>launch_dir</code> de la config. La session est interactive : tu valides chaque permission comme d'habitude. Le dev arrivera au bureau ${esc(TEAM[+desk] || "")} ou à un autre bureau libre.</p>
+    <div id="l-hints"></div>
     <div class="acts"><button id="l-go">🚀 Lancer</button></div><div id="l-msg" class="muted"></div></div>`;
   const agentSel = box.querySelector("#l-agent"), prompt = box.querySelector("#l-prompt");
-  const fill = () => { prompt.value = (LAUNCH_PROMPTS[agentSel.value] || (t => t))(ticket); };
-  if (preset) prompt.value = preset.prompt; else fill();
+  const hints = () => { const h = box.querySelector("#l-hints"); if (h) h.innerHTML = failHintsHtml(agentSel.value); };  // traps already met (debrief.js)
+  const fill = () => { prompt.value = (LAUNCH_PROMPTS[agentSel.value] || (t => t))(ticket); hints(); };
+  if (preset) { prompt.value = preset.prompt; hints(); } else fill();
   agentSel.onchange = fill;
   box.querySelector("#l-go").onclick = () => launchGo(agentSel.value, prompt.value);
 }

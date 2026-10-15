@@ -87,7 +87,8 @@ const COFFEE = { x: 325, y: 76 };                        // in front of the coff
 const ARRIVAL_GAP = 2600;                                // ms between two devs coming in through the door
 const arrivals = [];                                    // ids waiting outside, in launch order
 let doorFree = 0;
-const aisle = d => d.x - 44;
+let DESK_SP = 88;                                        // desk spacing, 88 / 68 / 56 as the open space grows (construct.js)
+const aisle = d => d.x - DESK_SP / 2;
 const toDesk = d => [{ x: aisle(d), y: LANE }, { x: aisle(d), y: d.y + 28 }, { x: d.x, y: d.y + 28 }, { x: d.x, y: d.y + 22 }];
 const fromDesk = d => [{ x: d.x, y: d.y + 28 }, { x: aisle(d), y: d.y + 28 }, { x: aisle(d), y: LANE }];
 const STATE_COLORS = { "Submitted": "#9aa3b5", "Open": "#9aa3b5", "In Progress": "#fbaa08", "To review": "#b48cff",
