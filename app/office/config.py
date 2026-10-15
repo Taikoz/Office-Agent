@@ -14,6 +14,17 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent  # app/
 WEB = ROOT / "web"
+
+
+def plugin_version(root: Path = ROOT.parent) -> str:
+    """The version in .claude-plugin/plugin.json ("0" when unreadable): a newer plugin replaces an older running server."""
+    try:
+        return str(json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return "0"
+
+
+VERSION = plugin_version()
 HOME_CLAUDE = Path.home() / ".claude"
 STATE_DIR = HOME_CLAUDE / "agent-office"  # questions, clear marker, ask.py / office.py shims, log
 CONFIG_PATH = Path(os.environ.get("AGENT_OFFICE_CONFIG") or HOME_CLAUDE / "agent-office.json")
