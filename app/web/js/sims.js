@@ -149,8 +149,8 @@ function simLook(name) {
 const simPortraits = new Map();
 function simPortrait(name) {
   const chiefSim = name === CHIEF_NAME, smile = mate(name).moral >= 50;
-  const hat = chiefSim ? (shop.crown && shop.owned.includes("crown") ? "crown" : "") : shop.hat;
-  const look = simLook(name), key = `${name}|${look.shirt}|${smile}|${hat}`;
+  const hat = chiefSim ? chiefHat() : shop.hat;
+  const look = simLook(name), key = `${name}|${lookKey(look)}|${smile}|${hat}`;
   if (!simPortraits.has(key)) {
     const svg = personSvg(look, { tux: chiefSim, smile, hat }).replace(/viewBox="[^"]*" width="\d+" height="\d+"/, 'viewBox="-7 -25 14 16"');
     simPortraits.set(key, `<img alt="" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}">`);
@@ -187,7 +187,7 @@ function renderSims() {
   }).join("");
   const house = [CHIEF_NAME, ...TEAM].map(n => `<button data-sim="${esc(n)}" class="${n === name ? "on" : ""}" title="${esc(n)} · ${esc(moodWord(mate(n)))}" style="--m:${moodColor(mate(n).moral)}">${simPortrait(n)}</button>`).join("");
   const acts = isChief
-    ? `<span class="muted">👑 C'est toi : clique sur le sol, la machine à café, la console, le podium ou la porte ; en salle de repos, sur un dev, la cuisine ou la table.</span>`
+    ? `<button data-simact="cas">✏️ Personnaliser</button><span class="muted">👑 C'est toi : clique sur le sol, la machine à café, la console, le podium ou la porte ; en salle de repos, sur un dev, la cuisine ou la table.</span>`
     : `<button data-simact="chief">👑 Revenir au chef</button><button data-simact="mate">💬 Fiche</button>${e && e.agent.id ? `<button data-simact="pc">🖥️ Écran</button>` : ""}`;
   const html = `<div class="who"><div class="face" style="--m:${col}"><svg class="crystal" viewBox="0 0 12 20" aria-hidden="true"><path fill="${col}" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg>${simPortrait(name)}</div>
     <div class="id"><b>${esc(isChief ? `${name} 👑` : nameTag(name))} <small class="career">${esc(careerTitle(name))}</small></b><span class="muted">${simStatus(name)}</span>
@@ -207,6 +207,7 @@ simsBox.addEventListener("click", ev => {
   const a = ev.target.closest("[data-simact]")?.dataset.simact;
   if (a === "close") toggleSims(false);
   else if (a === "chief") selectSim(CHIEF_NAME, true);
+  else if (a === "cas") openCas();  // chiefedit.js
   else if (a === "mate") openPanel(`mate:${simSel}`);
   else if (a === "pc") { const e = [...ents.values()].find(x => x.who === simSel && !x.leaving); if (e) openPc(e.agent.id); }
 });

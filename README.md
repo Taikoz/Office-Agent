@@ -125,6 +125,10 @@ Chaque mission livrée fait monter une compétence du dev qui l'a faite, selon l
 - **Bureau du chef** : son bureau près du podium ouvre ChiefOS (aussi dans le menu) : questions en attente, merge requests et leur CI, tickets, rapport du jour, comptes, équipe d'un coup d'œil.
 - **Primes d'efficacité** : une mission rapide (moins de 15 min), sans erreur ou économe (moins de la moitié du budget) rapporte plus ; une mission qui a tourné en rond ou dépassé son budget, moins. Tant qu'un agent tourne en rond, il coûte § 10 par minute.
 
+### Créer ton chef
+
+☰ MENU → 👑 CRÉER TON CHEF (ou ✏️ près de son portrait, ou « Personnaliser » dans la fenêtre des besoins) : un éditeur façon Créer un Sim, avec un grand aperçu (de face ou de dos, debout, bras levés, au podium, assis). Visage (peau, barbe et sa couleur), cheveux (9 coupes, couleurs), tenue (smoking, costume, chemise, polo, sweat, t-shirt ; veste ou haut, cravate ou nœud papillon, pantalon, chaussures), accessoires (lunettes carrées, rondes ou solaires ; couronne si achetée, casquette, bonnet, feutre, casque-micro), et personnalité (deux traits au choix et une phrase fétiche qu'il dit quand l'équipe n'a besoin de rien). Chaque couleur a aussi un nuancier libre ; 🎲 tire un chef au hasard.
+
 ### Encore plus de vie
 
 - **Carrières** : Junior → Confirmé → Senior → Expert → Lead, selon les missions livrées et la meilleure compétence. Une promotion est fêtée (gâteau) et augmente le salaire (+5 % par grade). Un dev malheureux depuis une heure pense à partir ; au bout de trois, il démissionne (jamais en pleine mission) : recrute quelqu'un dans ChiefOS → Équipe (§ 1 500).
