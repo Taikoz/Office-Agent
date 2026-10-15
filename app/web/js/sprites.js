@@ -87,15 +87,14 @@ const SPRITES = {
     ${[0, 1, 2].map(r => { const y = 2 + r * 12; const books = [["#ff6b6b", 3], ["#4090d7", 2], ["#fbaa08", 3], ["#51cf66", 2], ["#e9e4f5", 3], ["#b48cff", 2], ["#ff8f6b", 3]];
       let x = 3, out = ""; for (const [c, w] of books) { if (x + w > 23) break; const h = 7 + ((x * 7 + r * 3) % 3); out += `<rect x="${x}" y="${y + 10 - h}" width="${w}" height="${h}" fill="${c}"/>`; x += w + 0.4; }
       return out + `<rect x="2" y="${y + 10}" width="22" height="2" fill="#6d5238"/>`; }).join("")}`],
-  kitchen: [76, 38, `
+  kitchen: [56, 38, `
     <rect x="0" y="0" width="56" height="9" fill="#11379e"/><rect x="0" y="8" width="56" height="1" fill="#081746"/><path fill="#c8c8c8" d="M13 6h3v1h-3zM40 6h3v1h-3z"/><rect x="28" y="0" width="0.6" height="8" fill="#081746"/>
     <rect x="0" y="22" width="56" height="2" fill="#dadada"/><rect x="0" y="24" width="56" height="14" fill="#11379e"/><rect x="18.5" y="24" width="0.6" height="14" fill="#081746"/><rect x="37.5" y="24" width="0.6" height="14" fill="#081746"/>
     <path fill="#c8c8c8" d="M8 27h3v1H8zM27 27h3v1h-3zM46 27h3v1h-3z"/>
     <rect x="6" y="18" width="6" height="4" fill="#2a2a33"/><rect x="7" y="16" width="4" height="2" fill="#2a2a33"/><rect x="7.5" y="19" width="3" height="1.5" fill="#4090d7"/>
     <rect x="20" y="21" width="10" height="1.5" fill="#8d8aa0"/><rect x="24" y="17" width="1" height="4" fill="#c8c8c8"/><rect x="24" y="17" width="3" height="1" fill="#c8c8c8"/>
     <rect x="38" y="19" width="8" height="3" fill="#d6a77f"/><rect x="39" y="17.5" width="2" height="2" fill="#ff6b6b"/><rect x="41.5" y="17" width="2" height="2.5" fill="#fbaa08"/><rect x="43.5" y="18" width="2" height="2" fill="#51cf66"/>
-    <rect x="58" y="0" width="18" height="38" fill="#f7f7f7"/><rect x="58" y="14" width="18" height="0.8" fill="#adadad"/><rect x="74" y="0" width="2" height="38" fill="#dadada"/>
-    <rect x="60" y="5" width="1" height="6" fill="#888"/><rect x="60" y="17" width="1" height="8" fill="#888"/><rect x="65" y="3" width="2" height="2" fill="#ff6b6b"/><rect x="69" y="6" width="2" height="2" fill="#fbaa08"/>`],
+`],
   armchair: [20, 16, `
     <rect x="2" y="0" width="16" height="10" fill="#b85905"/><rect x="2" y="0" width="16" height="1" fill="#de8001"/><rect x="2" y="9" width="16" height="5" fill="#95440b"/>
     <rect x="0" y="5" width="3" height="10" fill="#7b380c"/><rect x="17" y="5" width="3" height="10" fill="#7b380c"/><rect x="0" y="5" width="3" height="1" fill="#b85905"/><rect x="17" y="5" width="3" height="1" fill="#b85905"/>

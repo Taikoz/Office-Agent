@@ -23,7 +23,7 @@ renderFocusBtn();
 const SHORTCUTS = [
   ["?", "cette aide"], ["A", "aller à la question en attente"], ["M", "mur de toutes les sessions"],
   ["S", "statistiques"], ["R", "rapport du jour"], ["J", "journal des réponses"], ["/", "recherche"], ["L", "salle de repos"],
-  ["E", "émotions (besoins façon Sims)"], ["F", "mode focus"], ["Échap", "fermer"],
+  ["B", "besoins façon Sims"], ["D", "déco du bureau et de la salle de repos"], ["E", "émotions (losanges au-dessus des têtes)"], ["F", "mode focus"], ["Échap", "fermer"],
 ];
 document.getElementById("help-body").innerHTML = `<table>${SHORTCUTS.map(([k, d]) => `<tr><td><kbd>${k}</kbd></td><td>${d}</td></tr>`).join("")}</table>
   <p class="muted">Astuces : glisse un ticket du tableau sur un bureau libre pour lancer un agent ; clic sur un ticket = son historique ; Maj + souris = laser pour Brume.</p>`;
@@ -36,7 +36,7 @@ addEventListener("keydown", ev => {
   const actions = {
     "?": () => openOverlay("help", document.getElementById("help").hidden),
     a: () => click("qbadge"), m: () => click("wallbtn"), s: () => click("perfbtn"), r: () => click("reportbtn"),
-    j: () => click("answersbtn"), "/": () => click("searchbtn"), l: () => click("loungebtn"), f: toggleFocus, e: toggleEmotions,
+    j: () => click("answersbtn"), "/": () => click("searchbtn"), l: () => click("loungebtn"), f: toggleFocus, e: toggleEmotions, b: () => toggleSims(), d: () => toggleDecor(),
   };
   const f = actions[k.toLowerCase?.() === k ? k : k.toLowerCase()];
   if (f) { ev.preventDefault(); f(); }

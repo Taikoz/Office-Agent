@@ -84,18 +84,18 @@ function stepLounge(dt, t) {
       if (dist > sp) { l.x += dx / dist * sp; l.y += dy / dist * sp; }
       else { l.x = tgt.x; l.y = tgt.y; l.path.shift(); }
       if (!l.path.length && l.called) loungers.delete(name);
-    } else if (!l.called && t > l.next) sendTo(l, pickSpot(name) || l.spot, t);
+    } else if (!l.called && !l.busy && t > l.next) sendTo(l, pickSpot(name) || l.spot, t);
   }
   // conversations
   while (chatQueue.length && t >= chatQueue[0].at) { const c = chatQueue.shift(); loungeSay(c.name, c.text, t); }
   if (t > nextChat) {
     nextChat = t + 5000 + Math.random() * 5000;
-    const idle = [...loungers.values()].filter(l => !l.called && !l.path.length && t > l.sayUntil);
+    const idle = [...loungers.values()].filter(l => !l.called && !l.busy && !l.path.length && t > l.sayUntil);
     if (idle.length) {
       const a = idle[Math.floor(Math.random() * idle.length)];
       const b = idle.filter(x => x !== a).sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y))[0];
       loungeSay(a.name, chatLine(a, b), t);
-      if (b) chatQueue.push({ name: b.name, text: replyLine(b, a), at: t + 2600 });
+      if (b) { chatQueue.push({ name: b.name, text: replyLine(b, a), at: t + 2600 }); if (Math.hypot(a.x - b.x, a.y - b.y) < 60) relAdd(a.name, b.name, 1); }
     }
   }
 }
@@ -119,6 +119,7 @@ function chatLine(a, b) {
   const m = mate(a.name), opts = [];
   if (a.spot?.act.lines) opts.push(pick(a.spot.act.lines));
   if (m.fatigue >= 70) opts.push("Je suis lessivé…");
+  if (!devHasDesk(a.name)) opts.push("On m'a vendu mon bureau… 😠", "Je bosse sur un carton maintenant.");
   if (m.ennui >= 70) opts.push("On s'ennuie, appelez-nous !");
   if (m.cafe <= 25) opts.push("Il me faut un café, vite.");
   if (m.moral >= 80) opts.push("Quelle équipe, franchement !");
@@ -127,6 +128,9 @@ function chatLine(a, b) {
   if (a.lastDuel === "won") opts.push(`J'ai battu ${CHIEF_NAME}, vous auriez vu ça !`);
   const crush = crushOfDay(); if (crush && crush !== a.name) opts.push(`Bravo ${crush} pour le coup de cœur du jour !`);
   if (events.coffee) opts.push("La machine du bureau est en panne, heureusement qu'on a celle-ci.");
+  if (b && rel(a.name, b.name) >= 70) opts.push(pick([`${b.name}, t'es vraiment le meilleur.`, `On se fait un resto ce soir, ${b.name} ?`]));
+  if (b && rel(a.name, b.name) < -20) opts.push(pick([`Tiens, ${b.name}… 🙄`, `${b.name}, rends-moi mon mug.`]));
+  if (dish?.portions) opts.push(`Il reste ${dish.recipe.label.toLowerCase()}, merci ${dish.cook} !`);
   if (b) opts.push(pick([`${b.name}, revanche au baby ?`, `${b.name}, tu bosses sur quoi ?`, `${b.name}, t'as vu Brume ce matin ?`, `${b.name}, on se fait un café ?`]));
   opts.push(pick(["Qui a cassé la pipeline ?", "Vivement vendredi.", "J'ai rêvé en Python cette nuit.", "Brume a encore dormi sur mon clavier.", "Le tableau est plein aujourd'hui."]));
   return pick(opts);
@@ -159,11 +163,12 @@ function renderMate(name) {
   box.innerHTML = `<div class="mate" style="--c:${e ? typeColor(e.agent.type) : "#4090d7"}"><div class="top"><b>${name}</b><span class="muted">${where}</span></div>
     <div class="muted">${moodWord(m)}${l?.say && performance.now() < l.sayUntil ? ` · « ${esc(l.say)} »` : ""}</div>
     ${needMeters(m)}</div>
+    ${mateSocialHtml(name)}
     <div class="acts"><button data-act="talk"${l ? "" : " disabled"}>💬 Discuter</button><button data-act="cheer">🎉 Encourager</button><button data-act="kudos">⭐ Kudos</button></div>
     ${l && !l.called ? `<div class="acts"><button data-act="duel:pingpong">🏓 Défier au ping-pong</button><button data-act="duel:babyfoot">⚽ Défier au baby-foot</button><button data-act="duel:darts">🎯 Défier aux fléchettes</button></div>` : ""}
     <p class="muted">⭐ ${kudos.total[name] || 0} kudos au total${crushOfDay() === name ? " · ♥ coup de cœur du jour" : ""} · duels : ${(duels.scores[name]?.w || 0)} victoire(s) pour toi, ${(duels.scores[name]?.l || 0)} pour ${name}</p>
     <p class="muted">${esc(mateIntent(name, l, e))}</p>
-    <p class="muted">${e ? "Au travail : il ne parle qu'en salle de repos." : "Clique sur les devs dans la salle de repos pour leur parler."}</p>`;
+    <p class="muted">${e ? "Au travail : il ne parle qu'en salle de repos." : "Clique sur un dev en salle de repos : menu d'actions façon Sims (discuter, blagues, câlin, cuisiner ensemble…)."}</p>`;
 }
 document.getElementById("p-game").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-act]");
@@ -182,8 +187,11 @@ function hitLounge(x, y) {
   if (x >= 298 && x <= 346 && y >= 166 && y <= 190) return "duel:babyfoot";
   if (x >= 293 && x <= 313 && y >= 15 && y <= 35) return "duel:darts";
   for (const l of [...loungers.values()].sort((a, b) => b.y - a.y)) if (Math.abs(x - l.x) <= 7 && y >= l.y - 22 && y <= l.y + 3) return `mate:${l.name}`;
+  const itm = hitItem(x, y, "lounge"); if (itm) return itm;                                           // bought objects (build.js)
+  if (x >= 158 && x <= 214 && y >= 30 && y <= 70) return "kitchen";                                  // pie menu: cook, snack, fire
+  if (x >= TABLE.x - 2 && x <= TABLE.x + TABLE.w + 2 && y >= TABLE.y - 2 && y <= TABLE.y + TABLE.h) return "table";
   if (chief.room === "lounge") {  // the chief is here: the furniture is for him too
-    const spotAt = [["kitchen", 158, 30, 76, 38], ["sofa", 58, 110, 56, 16], ["arcade", 350, 34, 22, 36], ["read", 240, 28, 34, 66], ["chat", 50, 176, 70, 14]]
+    const spotAt = [["sofa", 58, 110, 56, 16], ["arcade", 350, 34, 22, 36], ["read", 240, 28, 34, 66], ["chat", 50, 176, 70, 14]]
       .find(([, ax, ay, w, h]) => x >= ax && x <= ax + w && y >= ay && y <= ay + h);
     if (spotAt) return `chiefact:${spotAt[0]}`;
   }
@@ -192,17 +200,17 @@ function hitLounge(x, y) {
 
 function renderLounge(t) {
   // room
-  px(0, 0, W, 70, "#14317a");
-  for (let x = 0; x < W; x += 16) px(x, 0, 1, 70, "#122c6e");
+  drawWall("lounge");
   px(0, 66, W, 4, "#081746");
   ctx.drawImage(loungeFloorCanvas(), 0, Math.round(70 * S));
+  drawRoomItems("lounge", t, "rug");
   px(0, 66.5, W, 3.5, "#1a2340"); px(0, 66.5, W, 0.6, "#2c3a66");  // baseboard
   text("SALLE DE REPOS", 200, 4, "#fbaa08", 6, "center");
-  drawSky(100, 12, t); art("window", 94, 4, 58, 41, windowArt); art("windowglints", 94, 4, 58, 41, WINDOW_GLINTS, { outline: false });
-  sprite("door", 8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
+  drawSky(100, 12, t); drawWindow("lounge", 94, 4); art("windowglints", 94, 4, 58, 41, WINDOW_GLINTS, { outline: false });
+  sprite(doorSprite("lounge"), 8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
   const darting = [...loungers.values()].some(l => l.spot?.act.id === "darts" && !l.path.length) || chief.lspot?.act.id === "darts";
   art(`dartboard:${darting ? Math.floor(t / 1500) % 4 : 0}`, 296, 18, 14, 14, () => dartboardArt(darting ? Math.floor(t / 1500) % 4 : 0));
-  sprite("bookshelf", 240, 28); sprite("kitchen", 158, 30);
+  sprite(woodSprite("bookshelf", decor.lounge.wood), 240, 28); sprite("kitchen", 158, 30); drawRoomItems("lounge", t, "wall");
   drawTournament(t);
   for (const [x, y] of [[372, 200], [6, 206], [140, 54]]) sprite("plant", x - 2, y - 2);
   art("cornerrug", 30, 150, 128, 62, () => cornerRugArt(128, 62), { outline: false });  // the beanbag corner
@@ -210,7 +218,7 @@ function renderLounge(t) {
   const watching = [...loungers.values()].some(l => l.spot?.act.id === "sofa" && !l.path.length);
   if (watching) { const f = Math.floor(t / 700) % 4; art(`tvshow:${f}`, 77, 65, 16, 9, () => tvShowArt(f), { outline: false }); }
   else px(77, 65, 16, 9, "#14141c");
-  sprite("tv", 73, 64);
+  sprite(woodSprite("tv", decor.lounge.wood), 73, 64);
   // arcade screen
   const arcading = [...loungers.values()].some(l => l.spot?.act.id === "arcade" && !l.path.length) || chief.lspot?.act.id === "arcade";
   const pinging = [...loungers.values()].filter(l => l.spot?.act.id === "pingpong" && !l.path.length).length;
@@ -224,14 +232,18 @@ function renderLounge(t) {
     { y: 176, draw: () => { const sh = footing ? Math.round(Math.sin(t / 160) * 2) / 2 : 0; art(`babyfoot:${sh}`, 298, 166, 48, 24, () => babyfootArt(sh)); } },
     { y: 180, draw: () => { sprite("beanbag", 50, 176); sprite("beanbag", 100, 176); } },
   ];
+  items.push(...socialItems(t), ...roomDepthItems("lounge", t));
+  items.push({ y: 70, draw: () => drawKitchenFx(t) });  // pan, flames, over the stove (build.js)
   for (const l of loungers.values()) items.push({ y: l.y, draw: () => drawLounger(l, t) });
   if (chief.room === "lounge") items.push({ y: chief.ly, draw: () => drawChiefLounge(t) });
   items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
   for (const l of loungers.values()) badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");
   for (const l of loungers.values()) drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25), t);
+  drawSocialOver(t);
   if (chief.room === "lounge") drawChiefLoungeOver(t);
   for (const l of loungers.values()) if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24), l.say, "#f7f7f7", "#081746");
   if (!loungers.size) text("Tout le monde est au bureau !", W / 2, 150, "#d5eeff", 5, "center");
+  drawBuyOverlay("lounge", t);
 }
 function drawPingBall(t) {
   const players = [...loungers.values()].filter(l => l.spot?.act.id === "pingpong" && !l.path.length).length;
@@ -246,7 +258,9 @@ function drawLounger(l, t) {
     opts = { ...opts, ...act.pose, frame: act.pose.arms === "type" ? f : 0 };
     if (act.id === "darts" && (t / 1000 + hash(l.name)) % 3 < 0.5) opts.arms = "up";
     if (act.id === "babyfoot" && l.spot.y > 180) opts.back = true;
+    if (l.spot.back) opts.back = true;
   }
+  if (l.gesture && t < l.gesture.until) opts = { ...opts, ...l.gesture.pose, frame: f };  // social gestures (social.js)
   drawPerson(l.x, l.y, l.look, opts);
   if (act?.cup) { px(l.x + 4, l.y - 13, 2.5, 3, "#f4f2ea"); px(l.x + 4, l.y - 13, 2.5, 0.8, "#6d4a2e"); }
   if (act?.id === "read") px(l.x - 3, l.y - 9, 6, 3.5, "#ff6b6b");
