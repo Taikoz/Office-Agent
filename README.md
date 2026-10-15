@@ -5,7 +5,7 @@ Un bureau en pixel art, dans ton navigateur, où tu vois travailler tes agents C
 - **Le chef**, c'est toi (la session principale) : tu le pilotes à la souris.
 - **Les devs**, ce sont tes sous-agents : chacun s'assoit à un bureau avec sa spécialité, et un clic montre son écran (code modifié + terminal).
 - **Le tableau** suit les tickets : TO DO, EN COURS, BLOQUÉ, LIVRÉ.
-- **La salle de repos** accueille les devs libres : ping-pong, baby-foot, fléchettes, arcade, besoins façon Sims.
+- **La salle de repos** accueille les devs libres : ping-pong, baby-foot, fléchettes, arcade, besoins façon Sims, amitiés et cuisine : clic sur un dev = menu d'actions en cercle (discuter, blague, câlin, taquiner, dispute, cuisiner ensemble…), les devs se rendent visite et se lient d'amitié seuls, et on cuisine pour l'équipe (préparation, poêle, vapeur, plats servis à table, compétence cuisine, risque de feu).
 - Et aussi : coûts estimés et budgets par mission, alertes navigateur, rapport du jour, recherche, XP, succès, quêtes et boutique.
 
 Toutes tes sessions Claude Code sont réunies dans le même bureau.
@@ -95,24 +95,48 @@ Tu n'as rien à lancer. Dès qu'une session Claude Code démarre un sous-agent (
 | Clic sur le sol | Le chef y marche. Machine à café, console et porte REPOS ont chacune leur action. |
 | **SALLE DE REPOS** (touche `L`) | Les devs libres. Clic sur un dev : discuter, offrir un café, ou le défier au ping-pong, au baby-foot ou aux fléchettes. |
 
-### Les boutons de la barre du haut
+### L'écran, façon Sims
+
+La scène occupe toute la fenêtre ; le reste flotte par-dessus :
+
+- **En haut** : le nom du bureau, les sessions, 📋 MISSIONS (panneau repliable à droite : agents en mission, conso, quêtes) et ☰ MENU (toutes les options ci-dessous, en menu déroulant).
+- **En bas à gauche** : ton personnage (le chef), son humeur, sa file d'actions (l'action en cours avec sa progression, puis les ordres en attente ; clic = annuler) et l'argent du foyer (clic = relevé des salaires et dépenses).
+
+### Le mode achat (🛒, bouton rond en bas à droite)
+
+Un catalogue façon Sims : bureaux + ordinateur, lampes, réfrigérateurs, gazinières, plantes, posters, tapis, aquarium, jukebox, et la garde-robe (chapeaux, couronne). Chaque objet existe en plusieurs styles (pastilles de couleur). « Placer » : l'objet suit la souris, vert là où il rentre, clic pour le poser (clic droit ou Échap pour annuler) ; « Placement auto » le pose tout seul. Clic sur un objet de la scène en mode achat : changer son style, le déplacer, le vendre (75 % du prix).
+
+Hors mode achat, les objets sont interactifs : lampe (allumer, éteindre ; elle éclaire le soir), frigo (encas, cuisiner), gazinière (cuisiner : il faut un frigo et une gazinière, la cuisine se fait devant la gazinière, où qu'elle soit), aquarium (nourrir), jukebox (musique), plante (arroser), bureau libre (lancer un agent, ou le chef y joue sur l'ordinateur).
+
+Les bureaux sont des objets : un dev dont le bureau a été vendu travaille sur un carton avec un portable, son humeur chute et il le fait savoir. Le chef envoie en priorité les devs qui ont un bureau.
+
+### L'argent (§)
+
+Chaque mission livrée par un agent rapporte un salaire au foyer, d'autant plus gros qu'elle est complexe : type d'agent, outils utilisés, fichiers modifiés, durée, tokens, tests verts, merge request (les erreurs en retirent un peu ; +10 % si le dev est de bonne humeur). La complexité est notée de ★ à ★★★★★. La carte de la mission affiche le salaire estimé pendant le travail, puis le montant versé ; à la livraison, le montant s'envole au-dessus du bureau du dev. L'argent paie la BOUTIQUE et les courses pour cuisiner. Gardé dans le navigateur, jamais en mode démo ; les missions déjà livrées à la première ouverture ne sont pas payées.
+- **En bas au centre** : jour, date, heure, et le soleil ou la lune qui suit l'heure réelle.
+- **En bas à droite** : le bouton rond 💎 BESOINS.
+
+### Les options du menu
 
 | Bouton | Rôle |
 |---|---|
+| 🕘 CHRONOLOGIE | Chronologie de la session (questions, tests, push, MR), au-dessus de l'horloge |
 | 🧱 MUR | Toutes les sessions actives en mini-bureaux |
 | 📊 STATS | Statistiques par spécialité |
 | 💬 RÉPONSES | Journal des questions des agents et de tes réponses |
 | 🔎 RECHERCHE | Qui a touché à quel fichier, quelle commande, sur 7 jours |
 | 📋 RAPPORT | Ce que les agents ont fait aujourd'hui (copie en Markdown) |
 | 👥 ÉQUIPE | Fatigue, ennui, moral ; modifier l'équipe |
-| 🏆 SUCCÈS · 🛒 BOUTIQUE | Niveaux, succès, déco achetée avec l'XP des agents |
+| 🏆 SUCCÈS · 🛒 BOUTIQUE | Niveaux, succès ; la boutique ouvre le mode achat (ci-dessous) |
+| 🎨 DÉCO | Murs, sol, bois des meubles, tapis, rideaux et porte, pour le bureau et la salle de repos (type + couleur, gardé dans le navigateur) |
+| 💎 BESOINS (bouton rond en bas à droite) | Fenêtre façon Sims 4 : besoins du chef ou d'un dev, compétence cuisine, relations, foyer |
 | 🔔 ALERTES | Notifications du navigateur : question, blocage, livraison, MR, boucle, budget dépassé |
 | 🎯 FOCUS | Coupe les animations d'ambiance |
 | 🔊 Sons | Sons 8-bit (coupés par défaut) |
 
 ### Raccourcis clavier
 
-`?` aide · `A` question en attente · `M` mur · `S` stats · `R` rapport · `J` réponses · `/` recherche · `L` salle de repos · `E` émotions · `F` focus · `Échap` fermer
+`?` aide · `A` question en attente · `M` mur · `S` stats · `R` rapport · `J` réponses · `/` recherche · `L` salle de repos · `B` besoins · `D` déco · `E` émotions · `F` focus · `Échap` fermer
 
 ### Tes agents et tes skills
 
@@ -156,6 +180,7 @@ Sans configuration, tout marche avec les valeurs par défaut. Pour personnaliser
 | `gitlab_tools` | Dossier contenant un client `gl.py` : état de la CI et de la fusion des MR ouvertes par les agents | désactivé |
 | `audit_log` | Fichier `audit-log.json` d'audit sécurité : les failles trouvées donnent de l'XP | désactivé |
 | `to_verify_regex` | Commande qui compte comme « ticket passé en To Verify » | `yt.py command … to verify` |
+
 
 Après une modification, redémarre le serveur : `python3 -I ~/.claude/agent-office/office.py stop`, puis `/office`.
 

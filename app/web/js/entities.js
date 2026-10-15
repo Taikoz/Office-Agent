@@ -36,7 +36,8 @@ function sync(session) {
       const used = new Set([...ents.values()].map(x => x.who).filter(Boolean));  // a dev walking out is still in the office
       const free = TEAM.filter(n => !used.has(n));
       if (!free.length) continue;
-      const who = free.includes(crew.ids[a.id]) ? crew.ids[a.id] : free.reduce((b, n) => mate(n).fatigue < mate(b).fatigue ? n : b);
+      const pool = free.filter(devHasDesk).length ? free.filter(devHasDesk) : free;  // a dev with a desk first (build.js)
+      const who = free.includes(crew.ids[a.id]) ? crew.ids[a.id] : pool.reduce((b, n) => mate(n).fatigue < mate(b).fatigue ? n : b);
       crew.ids[a.id] = who;
       const desk = DESKS[TEAM.indexOf(who)];
       const seat = { x: desk.x, y: desk.y + 22 };
@@ -86,7 +87,7 @@ function goCoffee(e) {
 }
 
 function step(dt, t) {
-  stepFx(dt, t); stepCat(dt, t); stepCrew(dt); stepNeeds(dt); stepChief(dt, t); stepOfficeLife(t); stepLounge(dt, t); stepEvents(t);
+  stepFx(dt, t); stepCat(dt, t); stepCrew(dt); stepNeeds(dt); stepChief(dt, t); stepOfficeLife(t); stepLounge(dt, t); stepSocial(dt, t); stepBuild(t); stepEvents(t);
   if (view === "game") stepGame(dt, t);
   if (mmxQueue.length && ![...ents.values()].some(e => e.errand)) dispatch(mmxQueue.splice(0));
   while (arrivals.length && t >= doorFree) {  // let the next dev in once the previous one cleared the door
@@ -116,8 +117,8 @@ function render(t) {
   if (view === "lounge") return renderLounge(t);
   if (view === "game") return renderGame(t);
   drawRoom(t);
-  drawShopItems(t);
   drawBoard(session);
+  drawRoomItems("office", t);
   drawNight();
   // chief on his podium
   const ch = session?.chief;
@@ -128,7 +129,7 @@ function render(t) {
     const onPodium = chief.at === "podium" && !chief.path.length, walking = chief.path.length > 0;
     const waving = onPodium && !ch?.question && (t < chief.wave || (ch && !ch.finished && ch.idle < 20));
     const gaming = chief.at === "console" && !chief.path.length, asleep = gaming && ch?.idle > 900;
-    drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), smile: !asleep,
+    if (!(chief.at === "pc" && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), smile: !asleep,
       arms: waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length ? "up" : "down", back: gaming || (walking && chief.path[0].y < chief.y), seated: gaming });
     if (chief.cup) { px(chief.x + 4, chief.y - 13, 2.5, 3, "#f4f2ea"); px(chief.x + 4, chief.y - 13, 2.5, 0.8, "#6d4a2e"); }
     text(CHIEF_NAME.toUpperCase(), chief.x, chief.y + (onPodium ? 7 : 2), "#fbaa08", 4.6, "center");
@@ -151,6 +152,7 @@ function render(t) {
 
   const byDesk = new Map([...ents.values()].filter(e => !e.leaving).map(e => [e.desk, e]));
   for (const d of DESKS) drawDesk(d, byDesk.get(d), t);
+  drawChiefPc(t);
   drawCake(t);
   drawCabinet(t, cv.classList.contains("hover-store"));
   drawEvents(t);
@@ -219,6 +221,8 @@ function render(t) {
   drawLaser(t);
   drawDrag(t);
   drawFloaters(t);
+  drawCashFx(t);
   drawSeasonOver(t);
   drawAlarm(t);
+  drawBuyOverlay("office", t);
 }

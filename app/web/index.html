@@ -14,7 +14,10 @@
   <h1><img id="logo" alt="" hidden><span id="office-name">AGENT <span>OFFICE</span></span></h1>
   <nav id="tabs" aria-label="Sessions"></nav>
   <button id="qbadge" hidden></button>
-  <div class="tools">
+  <button id="sidebtn" title="Agents en mission, conso, quêtes du jour" aria-expanded="true" aria-controls="side">📋<span class="lbl"> MISSIONS</span> <span id="sidecount"></span></button>
+  <div class="menuwrap">
+  <button id="menubtn" title="Toutes les options" aria-expanded="false" aria-haspopup="true" aria-controls="tools">☰<span class="lbl"> MENU</span> <span class="chev">▾</span></button>
+  <div class="tools" id="tools" hidden>
     <button id="loungebtn" title="Les devs qui attendent d'être appelés">☕ SALLE DE REPOS</button>
     <button id="wallbtn" title="Toutes les sessions actives d'un coup d'œil">🧱<span class="lbl"> MUR</span></button>
     <button id="perfbtn" title="Statistiques des agents">📊<span class="lbl"> STATS</span></button>
@@ -23,16 +26,37 @@
     <button id="reportbtn" title="Ce que les agents ont fait aujourd'hui">📋<span class="lbl"> RAPPORT</span></button>
     <button id="teambtn" title="L'équipe : fatigue, ennui, moral, café">👥<span class="lbl"> ÉQUIPE</span></button>
     <button id="trophybtn" title="Succès, niveaux, employé de la semaine">🏆<span class="lbl"> SUCCÈS</span></button>
-    <button id="shopbtn" title="Dépense l'XP gagnée par les agents">🛒<span class="lbl"> BOUTIQUE</span></button>
+    <button id="shopbtn" title="Dépense l'argent gagné par les missions">🛒<span class="lbl"> BOUTIQUE</span></button>
+    <button id="decorbtn" title="Murs, sol, bois, tapis, rideaux et porte du bureau et de la salle de repos (D)" aria-expanded="false">🎨<span class="lbl"> DÉCO</span></button>
     <button id="emotionsbtn" title="Humeur et besoins de l'équipe, façon Sims (E)">💎<span class="lbl"> ÉMOTIONS</span></button>
     <button id="focusbtn" title="Couper les animations d'ambiance (F)">🎯<span class="lbl"> FOCUS : OFF</span></button>
-    <button id="helpbtn" title="Raccourcis clavier (?)">?</button>
+    <button id="tlbtn" title="Chronologie de la session : questions, tests, push, MR">🕘<span class="lbl"> CHRONOLOGIE</span></button>
+    <button id="helpbtn" title="Raccourcis clavier (?)">?<span class="lbl"> AIDE</span></button>
     <button id="notifbtn" title="Notifications du navigateur : questions, blocages, livraisons, MR">🔕 ALERTES : OFF</button>
     <button id="sndbtn" title="Sons 8-bit">♪ SON : OFF</button>
+  </div>
   </div>
 </header>
 <main>
 <div id="stage"><canvas id="c" title="Maj + souris : pointeur laser pour Brume"></canvas>
+<section id="live" aria-label="Ton personnage et sa file d'actions">
+  <button id="live-face" class="portrait" title="Aller voir le chef"></button>
+  <div class="col"><div id="live-queue" class="queue" aria-label="File d'actions"></div>
+    <div class="info"><b id="live-name"></b><span id="live-mood"></span></div>
+    <button id="live-funds" title="Argent du foyer : relevé des salaires et dépenses" aria-expanded="false" aria-controls="ledger"><b></b><span class="flash"></span></button></div>
+  <section id="ledger" hidden aria-label="Relevé"></section>
+</section>
+<section id="clock" aria-label="Jour et heure">
+  <svg id="clock-dial" viewBox="0 0 64 34" aria-hidden="true"></svg>
+  <div class="time"><b id="clock-time"></b><span id="clock-day"></span></div>
+  <span id="clock-phase"></span>
+</section>
+<button id="buybtn" title="Mode achat : acheter, placer, vendre des objets" aria-expanded="false" aria-controls="buy">🛒<span class="lbl">ACHAT</span></button>
+<section id="buy" hidden aria-label="Mode achat"></section>
+<div id="buytool" hidden role="dialog" aria-label="Objet sélectionné"></div>
+<button id="simsbtn" title="Besoins façon Sims (B)" aria-expanded="false"><svg viewBox="0 0 12 20" aria-hidden="true"><path class="pb" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg><span class="lbl">BESOINS</span></button>
+<section id="sims" hidden aria-label="Besoins"></section>
+<section id="decor" hidden aria-label="Décoration"></section>
 <div id="timeline" hidden></div>
 <section id="perf" hidden>
   <div class="perfhead"><span>STATISTIQUES DES AGENTS</span>
@@ -168,6 +192,7 @@
 <script src="static/js/lounge.js"></script>
 <script src="static/js/fun.js"></script>
 <script src="static/js/shop.js"></script>
+<script src="static/js/decor.js"></script>
 <script src="static/js/duel.js"></script>
 <script src="static/js/darts.js"></script>
 <script src="static/js/foosball.js"></script>
@@ -188,7 +213,11 @@
 <script src="static/js/events2.js"></script>
 <script src="static/js/insight.js"></script>
 <script src="static/js/ux.js"></script>
+<script src="static/js/money.js"></script>
+<script src="static/js/social.js"></script>
+<script src="static/js/build.js"></script>
 <script src="static/js/sims.js"></script>
+<script src="static/js/hud.js"></script>
 <script src="static/js/notify.js"></script>
 <script src="static/js/timeline.js"></script>
 <script src="static/js/launch.js"></script>
