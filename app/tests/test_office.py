@@ -243,3 +243,20 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(c["total"], {"runs": 3, "cost": 5.0, "seconds": 660.0})
         self.assertEqual((c["tickets"][0]["key"], c["tickets"][0]["cost"], c["tickets"][0]["done"], c["tickets"][0]["blocked"]), ("APP-1", 2.0, 1, 1))
         self.assertEqual([p["key"] for p in c["projects"]], ["api", "cogito"])
+
+
+class VersionTests(unittest.TestCase):
+    def test_older_server_is_replaced_newer_kept(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("office_cli2", Path(__file__).resolve().parents[2] / "bin" / "office.py")
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        self.assertTrue(cli.older("0", "0.5.2"))          # a server from before versions were told
+        self.assertTrue(cli.older("0.4.0", "0.5.2"))
+        self.assertTrue(cli.older("0.5.1", "0.5.10"))
+        self.assertFalse(cli.older("0.5.2", "0.5.2"))
+        self.assertFalse(cli.older("0.6.0", "0.5.2"))     # a newer dev server stays
+
+    def test_plugin_version_is_read(self) -> None:
+        self.assertNotEqual(config.plugin_version(), "0")
+        self.assertEqual(config.plugin_version(Path(tempfile.mkdtemp())), "0")

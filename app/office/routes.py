@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import history, savegame, team
 from .billing import billing
-from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, WEB, discover_agents
+from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
 from .launcher import agents, launch
 from .live import GAME, sessions
@@ -53,7 +53,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
         def do_GET(self) -> None:
             global LAST_VIEW
             if self.path.startswith("/api/viewer"):
-                self.reply(200, "application/json", json.dumps({"idle": time.time() - LAST_VIEW}).encode())
+                self.reply(200, "application/json", json.dumps({"idle": time.time() - LAST_VIEW, "version": VERSION, "root": str(WEB.parent)}).encode())
             elif self.path.startswith("/api/state"):
                 LAST_VIEW = time.time()
                 data = sessions(window)

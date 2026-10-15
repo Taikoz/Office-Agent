@@ -13,6 +13,7 @@ Hooks read the event JSON on stdin and never fail the session: any problem is lo
 from __future__ import annotations
 
 import json
+import re
 import os
 import signal
 import socket
@@ -51,6 +52,40 @@ def ours() -> bool:
         return False
 
 
+def running_version() -> str:
+    """Version of the Agent Office holding the port ("0" for one from before 0.5.2, which did not tell it)."""
+    try:
+        with urllib.request.urlopen(f"{URL}api/viewer", timeout=1) as r:
+            return str(json.load(r).get("version") or "0")
+    except (OSError, ValueError, AttributeError):
+        return "0"
+
+
+def vkey(version: str) -> tuple[int, ...]:
+    """'0.5.10' → (0, 5, 10), for comparing versions."""
+    return tuple(int(p) for p in re.findall(r"\d+", version)[:4]) or (0,)
+
+
+def older(running: str, mine: str) -> bool:
+    """The running server comes from an older plugin version: it would keep serving its old page after an update."""
+    return vkey(running) < vkey(mine)
+
+
+def stop_server() -> bool:
+    """Stops the server this plugin started (its pid is in STATE); True once the port is free."""
+    if PID.exists():
+        try:
+            os.kill(int(PID.read_text()), signal.SIGTERM)
+        except (OSError, ValueError):
+            pass
+        PID.unlink(missing_ok=True)
+    for _ in range(30):
+        if not up():
+            return True
+        time.sleep(0.1)
+    return not up()
+
+
 def viewed() -> bool:
     """An open tab polls /api/state every 2 s (a hidden one about once a minute): 90 s avoids duplicate tabs."""
     try:
@@ -62,7 +97,11 @@ def viewed() -> bool:
 
 def start() -> bool:
     if up():
-        return ours()
+        if not ours():
+            return False
+        if not older(running_version(), config.VERSION) or not stop_server():
+            return True  # same or newer version (or one we did not start): kept
+    # (an older version was stopped above: this one replaces it)
     STATE.mkdir(parents=True, exist_ok=True)
     kw: dict = {"stdin": subprocess.DEVNULL, "stdout": LOG.open("ab"), "stderr": subprocess.STDOUT}
     if os.name == "nt":
@@ -138,13 +177,9 @@ def main() -> int:
             print(f"{'en marche' if up() and ours() else 'arrêté'} — {URL} — config : {config.CONFIG_PATH}"
                   f"{'' if config.CONFIG_PATH.exists() else ' (absente, valeurs par défaut)'}")
         elif cmd == "stop":
-            if PID.exists():
-                try:
-                    os.kill(int(PID.read_text()), signal.SIGTERM)
-                    print("Agent Office arrêté.")
-                except (OSError, ValueError):
-                    print("Aucun serveur lancé par le plugin.")
-                PID.unlink(missing_ok=True)
+            had = PID.exists()
+            print("Agent Office arrêté." if stop_server() and had else "Aucun serveur lancé par le plugin." if not up() else
+                  f"Un serveur tourne sur le port {PORT} mais n'a pas été lancé par le plugin : arrête-le à la main.")
         else:
             print(__doc__)
             return 2
