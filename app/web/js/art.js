@@ -376,9 +376,9 @@ const SKY = {
   night: ["#0b1033", "#1a2558", "#2a3a78"], dawn: ["#41609f", "#e9a07e", "#ffd59a"],
   day: ["#3f95e0", "#79bdf2", "#c4e6ff"], dusk: ["#2b2d6e", "#b9567a", "#f6a35c"],
 };
-const SKY_GREY = { cloud: ["#7f98b8", "#a9bbd0", "#d3dde8"], rain: ["#4f5f7c", "#6f7e98", "#93a1b6"], storm: ["#262c45", "#3a425f", "#535c78"] };
+const SKY_GREY = { snow: ["#9aa8bd", "#c3cdda", "#e6ebf2"], cloud: ["#7f98b8", "#a9bbd0", "#d3dde8"], rain: ["#4f5f7c", "#6f7e98", "#93a1b6"], storm: ["#262c45", "#3a425f", "#535c78"] };
 function skyPhase() {
-  const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+  const d = typeof clockNow === "function" ? clockNow() : new Date(), h = d.getHours() + d.getMinutes() / 60;
   return { h, phase: h < 5.5 || h >= 21.5 ? "night" : h < 8 ? "dawn" : h < 18 ? "day" : "dusk" };
 }
 function skyGradientArt(stops) {
@@ -401,7 +401,7 @@ function cloudArt(kind, tone) {
 }
 const CLOUD_TONES = {
   day: ["#ffffff", "#eef4fb", "#c9d8ea"], dawn: ["#fff1e6", "#f6c7b8", "#d99a9a"], dusk: ["#f9c9b8", "#d98fa0", "#8f5a86"],
-  night: ["#5d6a9a", "#46527f", "#323c63"], cloud: ["#eef1f5", "#cfd6df", "#a8b3c1"], rain: ["#9aa5b5", "#7e8a9c", "#626d80"], storm: ["#6a7288", "#4f566b", "#3a4054"],
+  night: ["#5d6a9a", "#46527f", "#323c63"], snow: ["#f4f6fb", "#dfe5ee", "#c3cdda"], cloud: ["#eef1f5", "#cfd6df", "#a8b3c1"], rain: ["#9aa5b5", "#7e8a9c", "#626d80"], storm: ["#6a7288", "#4f566b", "#3a4054"],
 };
 function drawSky(x0, y0, t) {
   const W0 = 46, H0 = 28, { h, phase } = skyPhase(), w = typeof weather === "function" ? weather() : "clear";
@@ -419,12 +419,13 @@ function drawSky(x0, y0, t) {
     art(`sun:${col}`, sx - 5, sy - 5, 10, 10, `<circle cx="5" cy="5" r="5" fill="${col}" fill-opacity=".25"/><circle cx="5" cy="5" r="3.6" fill="${col}" fill-opacity=".35"/><circle cx="5" cy="5" r="2.4" fill="${col}"/><circle cx="4.3" cy="4.3" r=".9" fill="#fff8d0"/>`, { outline: false });
   }
   // clouds: far ones slow and small, near ones faster; more and greyer when tests go badly
-  const tone = CLOUD_TONES[grey ? w : phase], n = { clear: 2, sun: 2, cloud: 4, rain: 5, storm: 6 }[w] || 2;
+  const tone = CLOUD_TONES[grey ? w : phase], n = { clear: 2, sun: 2, cloud: 4, rain: 5, storm: 6, snow: 4 }[w] || 2;
   for (let i = 0; i < n; i++) {
     const kind = "abc"[i % 3], c = cloudArt(kind, tone), speed = 900 - i * 120, span = W0 + c.w + 6;
     const cx = x0 - c.w - 3 + ((tt / speed + i * 23) % span), cy = y0 + 1 + (i * 5.3) % 13;
     art(`cloud:${kind}:${tone[1]}`, cx, cy, c.w, c.h, c.body, { outline: false });
   }
+  if (w === "snow") for (let i = 0; i < 18; i++) px(x0 + ((i * 7.3 + tt / 90) % W0), y0 + ((i * 11.7 + tt / 45) % H0), 0.9, 0.9, "#ffffff");  // real weather (seasons.js)
   if (w === "rain" || w === "storm") for (let i = 0; i < 16; i++) {
     const rx = x0 + ((i * 7.3 + tt / 25) % W0), ry = y0 + 6 + ((i * 11.7 + tt / 9) % (H0 - 6));
     px(rx, ry, 0.5, 2.2, "#b8d4ff");

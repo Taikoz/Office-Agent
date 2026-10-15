@@ -101,6 +101,7 @@ function drawItem(it, t, alpha = 1) {
   if (it.type === "jukebox") state = jukebox.playing && jukebox.uid === it.uid ? Math.floor(t / 300) % 3 : 3;
   if (it.type === "lamp") state = it.on ? 1 : 0;
   if (alpha < 1) ctx.globalAlpha = alpha;
+  if (it.type === "window") drawSky(it.x + 6, it.y + 8, t);  // the sky behind the glass (construct.js)
   const arg = it.type === "jukebox" ? state : !!state;  // jukebox: light 0-3; the others: on / open / hot
   art(itemArtKey(it, state), it.x, it.y, d.w, d.h, () => recolor(d.art(st, arg), st.map), { outline: !d.rug });
   ctx.globalAlpha = 1;
@@ -179,6 +180,8 @@ function itemPieItems(uid, sub) {
   if (it.type === "aquarium") out.push(["feed", "🐟", "Nourrir les poissons"]);
   if (it.type === "jukebox") out.push(["music", jukebox.playing && jukebox.uid === it.uid ? "⏹" : "▶", jukebox.playing && jukebox.uid === it.uid ? "Couper la musique" : "Lancer la musique"]);
   if (it.type === "plant") out.push(["water", "💧", "Arroser"]);
+  if (it.type === "bowl") out.push(["fill", "🐟", it.on ? "Gamelle pleine" : "Remplir · § 5", it.on ? "déjà pleine" : ""]);
+  if (it.type === "chiefdesk") out.push(["chiefos", "🖥️", "Ouvrir ChiefOS"]);
   if (it.type === "desk") {
     const busy = [...ents.values()].some(e => e.desk === DESKS[it.slot] && !e.leaving);
     out.push(["launch", "🚀", "Lancer un agent ici", busy ? "occupé" : ""], ["usepc", "💻", "Utiliser l'ordinateur", busy ? "occupé" : ""]);
@@ -195,8 +198,10 @@ function itemPieAction(uid, id) {
   if (id === "lamp") { it.on = !it.on; saveBuild(); sfx("commit"); return; }
   if (id === "feed") { const f = fishFoods.get(it.uid) || []; for (let k = 0; k < 6; k++) f.push({ x: it.x + 5 + Math.random() * 16, y: it.y + 1 }); fishFoods.set(it.uid, f); crewAdd(CHIEF_NAME, { ennui: -3 }); return sfx("commit"); }
   if (id === "music") { if (jukebox.playing && jukebox.uid !== it.uid) toggleJukebox(); jukebox.uid = it.uid; toggleJukebox(); return; }
+  if (id === "fill") return fillBowl(it);
   if (id === "water") { it.wetUntil = performance.now() + 2500; crewAdd(CHIEF_NAME, { ennui: -2 }); return; }
   if (id === "launch") return openPanel(`launch:${it.slot}`);
+  if (id === "chiefos") return enqueue("🖥️", "ChiefOS", chiefToDesk);
   if (id === "usepc") return enqueue("💻", "Jouer sur l'ordinateur", () => chiefToPc(it.slot));
   if (id === "snack") return enqueue("🥪", "Encas du frigo", () => chiefDo(() => chiefTo(frontOf(it), { id: "fridge", label: "fouille le frigo", pose: { back: true } }, () => {
     if (!spend(5, "Encas du frigo")) return;
@@ -222,6 +227,7 @@ function stepBuild(t) {
 }
 // the chief seated at a computer, drawn after the desks
 function drawChiefPc(t) {
+  if (chief.room === "office" && chief.at === "chiefos" && !chief.path.length) return drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, seated: true, back: true, arms: "type", frame: Math.floor(t / 140) });
   if (chief.room !== "office" || chief.at !== "pc" || chief.path.length) return;
   const d = DESKS[chief.pcSlot], f = Math.floor(t / 200) % 2;
   px(d.x - 7, d.y - 11, 14, 8, "#1d3b2a"); px(d.x - 7 + ((t / 60) % 12), d.y - 6, 2, 2, "#ffd43b"); px(d.x - 6, d.y - 4.4, 12, 1, "#51cf66"); px(d.x + 2 - f, d.y - 9, 2, 2, "#ff6b6b");
@@ -248,16 +254,23 @@ function thumbSvg(def, st) {
 const roomOk = (def, room) => def.room === "any" || def.room === room;
 function renderBuy() {
   if (!buy.on) return;
-  const room = view === "lounge" ? "lounge" : "office";
+  const room = curRoom();
   const cats = BUY_CATS.map(([id, ic, label]) => `<button data-cat="${id}" class="${buy.cat === id ? "on" : ""}" title="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join("");
   let grid = "", detail = "";
-  if (buy.cat === "garde") {
+  if (buy.cat === "construction") {  // projects (construct.js) and the objects of the category
+    grid = constructGridHtml() + CATALOG.filter(d => d.cat === "construction").map(d => `<button class="bitem${buy.sel === d.type ? " on" : ""}" data-sel="${d.type}"><img class="bthumb" alt="" src="${thumbSvg(d, d.styles[0])}"><b>${esc(d.name)}</b><span class="price">${fmtSim(d.price)}</span></button>`).join("");
+    const d = buy.sel && defOf(buy.sel);
+    if (d && d.cat === "construction") { const st = d.styles.find(s => s.id === buy.style) || d.styles[0];
+      detail = `<div class="bdetail"><img class="bthumb big" alt="" src="${thumbSvg(d, st)}"><div class="bdesc"><b>${esc(d.name)} · ${esc(st.name)}</b><span class="muted">${esc(d.desc)}</span>
+        <div class="swatches">${d.styles.map(s => `<button data-style="${s.id}" class="${s.id === st.id ? "on" : ""}" title="${esc(s.name)}" style="--sw:${s.sw}"></button>`).join("")}</div>
+        <div class="bacts"><button data-place="hand"${wallet.funds < d.price ? " disabled" : ""}>🖐 Placer · ${fmtSim(d.price)}</button><button data-place="auto"${wallet.funds < d.price ? " disabled" : ""}>✨ Placement auto</button></div></div></div>`; }
+  } else if (buy.cat === "garde") {
     grid = SHOP.map(it => { const own = shop.owned.includes(it.id);
       return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
         <button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (itemOn(it) ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
   } else {
     const defs = CATALOG.filter(d => d.cat === buy.cat);
-    grid = defs.map(d => { const ok = roomOk(d, room), st = d.styles[0];
+    grid = (buy.cat === "animaux" ? petsGridHtml() : "") + defs.map(d => { const ok = roomOk(d, room), st = d.styles[0];
       return `<button class="bitem${buy.sel === d.type ? " on" : ""}" data-sel="${d.type}"${ok ? "" : ` disabled title="${d.room === "office" ? "Seulement au bureau" : "Seulement en salle de repos"}"`}>
         <img class="bthumb" alt="" src="${thumbSvg(d, st)}"><b>${esc(d.name)}</b><span class="price">${fmtSim(d.price)}</span></button>`; }).join("")
       || `<p class="muted">Rien ici.</p>`;
@@ -269,7 +282,7 @@ function renderBuy() {
         <div class="bacts"><button data-place="hand"${!roomOk(d, room) || wallet.funds < d.price ? " disabled" : ""}>🖐 Placer · ${fmtSim(d.price)}</button><button data-place="auto"${!roomOk(d, room) || wallet.funds < d.price ? " disabled" : ""}>✨ Placement auto</button></div></div></div>`;
     }
   }
-  buyBox.innerHTML = `<div class="bhead"><b>🛒 MODE ACHAT</b><span class="tabs"><button data-room="office" class="${room === "office" ? "on" : ""}">🏢 Bureau</button><button data-room="lounge" class="${room === "lounge" ? "on" : ""}">☕ Salle de repos</button></span>
+  buyBox.innerHTML = `<div class="bhead"><b>🛒 MODE ACHAT</b><span class="tabs">${["office", "lounge", ...con.rooms].map(r => `<button data-room="${r}" class="${room === r ? "on" : ""}">${ROOM_LABELS[r]}</button>`).join("")}</span>
     <span class="bfunds">💰 ${fmtSim(wallet.funds)}</span><button class="x" data-buy="close" title="Quitter le mode achat (Échap)">×</button></div>
     <div class="bbody"><nav class="bcats">${cats}</nav><div class="bgrid">${grid}</div>${detail}</div>
     <p class="bhint muted">${buy.placing || buy.moving ? "Clic sur la scène pour poser (vert = ça rentre) · clic droit ou Échap pour annuler" : "Clic sur un objet de la scène : style, déplacer, vendre."}</p>`;
@@ -281,6 +294,7 @@ buyBox.addEventListener("click", ev => {
   if (b.dataset.cat) { buy.cat = b.dataset.cat; buy.sel = null; return renderBuy(); }
   if (b.dataset.sel) { buy.sel = b.dataset.sel; buy.style = defOf(buy.sel).styles[0].id; return renderBuy(); }
   if (b.dataset.style) { buy.style = b.dataset.style; return renderBuy(); }
+  if (b.dataset.project) return buyProject(b.dataset.project);
   if (b.dataset.wear) { const it = SHOP.find(i => i.id === b.dataset.wear); shopAction(shop.owned.includes(it.id) ? "toggle" : "buy", it.id); return renderBuy(); }
   if (b.dataset.place === "hand") { buy.placing = { type: buy.sel, style: buy.style }; buy.pick = null; buyTool.hidden = true; return renderBuy(); }
   if (b.dataset.place === "auto") return autoPlace(buy.sel, buy.style);
@@ -314,6 +328,7 @@ function placement(type, x, y, room, ignore) {
 function placeAt(type, style, spot, room) {
   if ((furni.items || []).length >= MAX_ITEMS) { toast("MODE ACHAT", "Trop d'objets", `${MAX_ITEMS} au maximum.`); return false; }
   const d = defOf(type);
+  if (d.unique && furni.items.some(i => i.type === type)) { toast("MODE ACHAT", `Un seul ${d.name.toLowerCase()}`, "Déplace celui qui est déjà là."); return false; }
   if (!spend(d.price, d.name)) return false;
   const it = { uid: ++furni.seq, type, style, room, x: spot.x, y: spot.y, ...(d.slot ? { slot: spot.slot } : {}), ...(type === "lamp" ? { on: true } : {}) };
   furni.items.push(it); saveBuild(); sfx("achievement");
@@ -322,7 +337,7 @@ function placeAt(type, style, spot, room) {
   return true;
 }
 function autoPlace(type, style) {
-  const room = view === "lounge" ? "lounge" : "office", d = defOf(type);
+  const room = curRoom(), d = defOf(type);
   if (d.slot) { const i = DESKS.findIndex((_, k) => !hasDesk(k)); if (i < 0) return toast("MODE ACHAT", "Tous les bureaux sont là", "Vends-en un pour en changer."); placeAt(type, style, { slot: i, x: DESKS[i].x - 18, y: DESKS[i].y - 14 }, room); return renderBuy(); }
   const ys = d.wall ? [30, 20, 40] : [150, 120, 180, 100, 205, 84], xs = [];  // from the middle of the room outward, clear of the HUD corners
   for (let k = 0; k <= W / 2 - 40; k += 8) xs.push(W / 2 + k, W / 2 - k);
@@ -333,7 +348,7 @@ const dust = [];
 function dustAt(it) { const r = itemRect(it); for (let i = 0; i < 12; i++) dust.push({ x: r.x + Math.random() * r.w, y: r.y + r.h - Math.random() * 4, born: performance.now(), vx: (Math.random() - 0.5) * 0.02 }); }
 
 function buyClick(p) {
-  const room = view === "lounge" ? "lounge" : "office";
+  const room = curRoom();
   if (buy.placing || buy.moving) {
     const type = (buy.placing || buy.moving).type, sp = placement(type, p.x, p.y, room, buy.moving?.uid);
     if (!sp) { sfx("fail"); return; }
@@ -389,8 +404,8 @@ setInterval(() => { if (buy.on) { const f = buyBox.querySelector(".bfunds"); if 
 
 // over the scene: lamp light, sawdust of a new object, and in buy mode the free desk spots, the picked object, the ghost
 function drawBuyOverlay(room, t) {
-  const h = new Date().getHours(), night = h < 8 || h >= 19;
-  for (const it of itemsIn(room)) if (it.type === "lamp" && it.on) {
+  const h = clockNow().getHours(), night = h < 8 || h >= 19;
+  for (const it of itemsIn(room)) if (it.type === "lamp" && it.on && !(happen.power && room === "office")) {
     const cx = (it.x + 5.5) * S, cy = (it.y + 4) * S, g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 46 * S);
     g.addColorStop(0, `rgba(255,214,120,${night ? 0.32 : 0.12})`); g.addColorStop(1, "rgba(255,214,120,0)");
     ctx.fillStyle = g; ctx.fillRect(cx - 46 * S, cy - 46 * S, 92 * S, 92 * S);

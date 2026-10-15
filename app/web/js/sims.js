@@ -23,13 +23,13 @@ function ensureNeeds(m, name) { if (m.faim === undefined) { const h = hash(name)
 // per minute: hunger always goes down (faster at work), social drops alone at the desk and rises in the break room;
 // eating in the kitchen fills up fast; the mood drifts toward the average of the needs
 function stepNeeds(dt) {
-  stepChiefNeeds(dt); replanLoungers(performance.now());
+  stepChiefNeeds(dt); replanLoungers(performance.now()); stepTraits(dt);
   const k = dt / 60000, atDesk = new Set([...ents.values()].filter(e => e.who && !e.leaving && e.seated).map(e => e.who));
   for (const n of TEAM) {
     const m = ensureNeeds(mate(n), n), l = loungers.get(n), act = l && !l.path.length && l.spot?.act.id;
     m.faim = clamp(m.faim - (atDesk.has(n) ? 1.2 : 0.6) * k + (act === "kitchen" ? 40 * k : 0));
     m.social = clamp(m.social + (atDesk.has(n) ? -0.8 : ["chat", "pingpong", "babyfoot", "sofa", "visit", "eat", "helpcook"].includes(act) ? 4 : 0.5) * k);
-    const avg = NEEDS.reduce((s, x) => s + x[3](m), 0) / NEEDS.length - (devHasDesk(n) ? 0 : 35);  // no desk (build.js): the mood sinks
+    const avg = NEEDS.reduce((s, x) => s + x[3](m), 0) / NEEDS.length - (devHasDesk(n) ? 0 : 35) + moodletSum(n);  // no desk (build.js): the mood sinks; moodlets (moods.js)
     m.moral = clamp(m.moral + (avg - m.moral) * 0.04 * k * 10);
   }
 }
@@ -118,7 +118,7 @@ function stepChiefNeeds(dt) {
     fatigue: (gaming ? -6 : leading ? 1.2 : 0) * k, ennui: (gaming ? -10 : leading && !chiefBusyNow() ? 1.5 : 0.5) * k,
     social: (chiefBusyNow() || arrivals.length ? 3 : -0.4) * k,
   });
-  const avg = NEEDS.reduce((sum, x) => sum + x[3](m), 0) / NEEDS.length;
+  const avg = NEEDS.reduce((sum, x) => sum + x[3](m), 0) / NEEDS.length + moodletSum(CHIEF_NAME);
   m.moral = clamp(m.moral + (avg - m.moral) * 0.4 * k);
   if (sipping && chief.coffeeUntil && t > chief.coffeeUntil) { chief.coffeeUntil = 0; chief.cup = true; crewAdd(CHIEF_NAME, { cafe: 60, faim: 35, fatigue: -10 }); chief.bubble = "🥐 café + croissant, parfait."; chief.until = t + 3000; chiefGo("podium", c => { c.cup = false; }); }
 }
@@ -190,10 +190,12 @@ function renderSims() {
     ? `<span class="muted">👑 C'est toi : clique sur le sol, la machine à café, la console, le podium ou la porte ; en salle de repos, sur un dev, la cuisine ou la table.</span>`
     : `<button data-simact="chief">👑 Revenir au chef</button><button data-simact="mate">💬 Fiche</button>${e && e.agent.id ? `<button data-simact="pc">🖥️ Écran</button>` : ""}`;
   const html = `<div class="who"><div class="face" style="--m:${col}"><svg class="crystal" viewBox="0 0 12 20" aria-hidden="true"><path fill="${col}" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg>${simPortrait(name)}</div>
-    <div class="id"><b>${esc(isChief ? `${name} 👑` : nameTag(name))}</b><span class="muted">${simStatus(name)}</span>
+    <div class="id"><b>${esc(isChief ? `${name} 👑` : nameTag(name))} <small class="career">${esc(careerTitle(name))}</small></b><span class="muted">${simStatus(name)}</span>
     <span class="mood" style="--m:${col}">${esc(moodWord(m))} <span class="bar"><i style="width:${mood}%;background:${col}"></i></span></span></div>
     <button class="x" data-simact="close" title="Fermer (B)">×</button></div>
+    ${traitsHtml(name)}${bondsHtml(name)}${moodletsHtml(name)}
     <div class="needs">${needs}</div>
+    ${wantsHtml(name)}
     ${simSocialHtml(name)}
     <div class="house">${house}</div>
     <div class="acts">${acts}</div>`;

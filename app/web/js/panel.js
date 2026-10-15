@@ -14,9 +14,11 @@ function hit(ev) {
   if (!booted) return null;
   const { x, y } = canvasPoint(ev);
   if (view === "lounge") return hitLounge(x, y);
+  if (view === "meeting" || view === "terrace") return hitRoom(view, x, y);  // construct.js
   if (view === "game") return null;
   const pager = hitBoardPager(x, y);  // before people: a dev walking past the board must not hide its arrows
   if (pager) return pager;
+  const hp = hitHappen(x, y) || hitDog(x, y); if (hp) return hp;  // happen.js, pets.js  // client visit, breaker box (happen.js)
   if (Math.abs(x - cat.x) <= 7 && y >= cat.y - 10 && y <= cat.y + 2) return "cat";
   const boss = hitBoss(x, y);
   if (boss) return boss;
@@ -64,7 +66,10 @@ cv.addEventListener("click", ev => {
   if (id.startsWith("chiefact:")) return chiefLoungeAct(id.slice(9));
   if (id === "cat") return petCat();
   if (id === "lounge") return chiefToLounge();                                        // the office door: he goes on a break
-  if (id === "office") return chief.room === "lounge" ? chiefToOffice() : setView("office");  // the break-room door: back to work
+  if (id === "office") return view === "lounge" && chief.room === "lounge" ? chiefToOffice() : setView("office");
+  if (id.startsWith("happen:")) return happenClick(id.slice(7));
+  if (id === "meet-table") return startMeeting();
+  if (id === "dog") return openPie("dog", null, canvasPoint(ev));  // the break-room door: back to work
   if (["fix-coffee", "clean", "croissants", "water"].includes(id)) return solveEvent(id);
   if (id.startsWith("item:")) return itemPieItems(id.slice(5)).length ? openPie("item", id.slice(5), canvasPoint(ev)) : null;  // Sims pie of the object
   if (id.startsWith("boss:")) return whackBoss(id.slice(5));
@@ -84,7 +89,8 @@ cv.addEventListener("click", ev => {
   if (id === "kitchen" || id === "table") return openPie(id, null, canvasPoint(ev));
   const a = curSession()?.agents.find(x => x.id === id), who = ents.get(id)?.who;
   if (simsOpen && who && !a?.question) return selectSim(who);
-  if (a && !a.question) openPc(id); else openPanel(id);  // a question is answered in the side panel
+  if (a && !a.question) return openPie("worker", id, canvasPoint(ev));  // Sims pie: screen, coffee, cheer, hint (social.js)
+  openPanel(id);  // a question is answered in the side panel
 });
 document.getElementById("rows").addEventListener("click", ev => {
   if (ev.target.closest("a")) return;  // MR / ticket links open in a new tab

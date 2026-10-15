@@ -65,7 +65,7 @@ function stepLounge(dt, t) {
   const inOffice = new Set([...ents.values()].map(e => e.who).filter(Boolean));
   for (const name of TEAM) {
     const l = loungers.get(name);
-    if (!inOffice.has(name) && !l) {  // back from the office (or first load): settles on an activity
+    if (!inOffice.has(name) && !l && !atHome(name) && !isVacant(name)) {  // at home in the evening (days.js)  // back from the office (or first load): settles on an activity
       const n = { name, look: { ...lookFor(name, null), shirt: CASUAL[hash(name) % CASUAL.length], team: true }, x: LD.x, y: LD.y, path: [], spot: null, next: 0, say: "", sayUntil: 0 };
       loungers.set(name, n);
       const sp = pickSpot(name);
@@ -164,6 +164,7 @@ function renderMate(name) {
     <div class="muted">${moodWord(m)}${l?.say && performance.now() < l.sayUntil ? ` · « ${esc(l.say)} »` : ""}</div>
     ${needMeters(m)}</div>
     ${mateSocialHtml(name)}
+    ${skillsLine(name)}
     <div class="acts"><button data-act="talk"${l ? "" : " disabled"}>💬 Discuter</button><button data-act="cheer">🎉 Encourager</button><button data-act="kudos">⭐ Kudos</button></div>
     ${l && !l.called ? `<div class="acts"><button data-act="duel:pingpong">🏓 Défier au ping-pong</button><button data-act="duel:babyfoot">⚽ Défier au baby-foot</button><button data-act="duel:darts">🎯 Défier aux fléchettes</button></div>` : ""}
     <p class="muted">⭐ ${kudos.total[name] || 0} kudos au total${crushOfDay() === name ? " · ♥ coup de cœur du jour" : ""} · duels : ${(duels.scores[name]?.w || 0)} victoire(s) pour toi, ${(duels.scores[name]?.l || 0)} pour ${name}</p>
@@ -177,6 +178,7 @@ document.getElementById("p-game").addEventListener("click", ev => {
 
 function setView(v) {
   view = v;
+  if (typeof renderRoomBar === "function") renderRoomBar();
   document.getElementById("loungebtn").classList.toggle("on", v === "lounge");
   document.getElementById("loungebtn").innerHTML = v === "lounge" ? `🏢<span class="lbl"> RETOUR AU BUREAU</span>` : `☕<span class="lbl"> SALLE DE REPOS</span> (${loungers.size})`;
 }
@@ -186,7 +188,7 @@ function hitLounge(x, y) {
   if (x >= 194 && x <= 266 && y >= 124 && y <= 152) return "duel:pingpong";
   if (x >= 298 && x <= 346 && y >= 166 && y <= 190) return "duel:babyfoot";
   if (x >= 293 && x <= 313 && y >= 15 && y <= 35) return "duel:darts";
-  for (const l of [...loungers.values()].sort((a, b) => b.y - a.y)) if (Math.abs(x - l.x) <= 7 && y >= l.y - 22 && y <= l.y + 3) return `mate:${l.name}`;
+  for (const l of [...loungers.values()].filter(l => !l.partyRoom).sort((a, b) => b.y - a.y)) if (Math.abs(x - l.x) <= 7 && y >= l.y - 22 && y <= l.y + 3) return `mate:${l.name}`;
   const itm = hitItem(x, y, "lounge"); if (itm) return itm;                                           // bought objects (build.js)
   if (x >= 158 && x <= 214 && y >= 30 && y <= 70) return "kitchen";                                  // pie menu: cook, snack, fire
   if (x >= TABLE.x - 2 && x <= TABLE.x + TABLE.w + 2 && y >= TABLE.y - 2 && y <= TABLE.y + TABLE.h) return "table";
@@ -234,15 +236,17 @@ function renderLounge(t) {
   ];
   items.push(...socialItems(t), ...roomDepthItems("lounge", t));
   items.push({ y: 70, draw: () => drawKitchenFx(t) });  // pan, flames, over the stove (build.js)
-  for (const l of loungers.values()) items.push({ y: l.y, draw: () => drawLounger(l, t) });
+  const here = [...loungers.values()].filter(l => !l.partyRoom);  // gone to the meeting room or the terrace (construct.js)
+  for (const l of here) items.push({ y: l.y, draw: () => drawLounger(l, t) });
   if (chief.room === "lounge") items.push({ y: chief.ly, draw: () => drawChiefLounge(t) });
   items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
-  for (const l of loungers.values()) badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");
-  for (const l of loungers.values()) drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25), t);
+  for (const l of here) badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");
+  for (const l of here) drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25), t);
   drawSocialOver(t);
   if (chief.room === "lounge") drawChiefLoungeOver(t);
-  for (const l of loungers.values()) if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24), l.say, "#f7f7f7", "#081746");
-  if (!loungers.size) text("Tout le monde est au bureau !", W / 2, 150, "#d5eeff", 5, "center");
+  for (const l of here) if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24), l.say, "#f7f7f7", "#081746");
+  if (!here.length) text(emptyLoungeText(), W / 2, 150, "#d5eeff", 5, "center");
+  drawPartyOver("lounge", t);
   drawBuyOverlay("lounge", t);
 }
 function drawPingBall(t) {

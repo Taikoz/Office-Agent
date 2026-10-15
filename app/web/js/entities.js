@@ -34,10 +34,10 @@ function sync(session) {
     let e = ents.get(a.id);
     if (!e) {
       const used = new Set([...ents.values()].map(x => x.who).filter(Boolean));  // a dev walking out is still in the office
-      const free = TEAM.filter(n => !used.has(n));
+      const free = TEAM.filter(n => !used.has(n) && !isVacant(n));  // a resigned dev's post is vacant (careers.js)
       if (!free.length) continue;
       const pool = free.filter(devHasDesk).length ? free.filter(devHasDesk) : free;  // a dev with a desk first (build.js)
-      const who = free.includes(crew.ids[a.id]) ? crew.ids[a.id] : pool.reduce((b, n) => mate(n).fatigue < mate(b).fatigue ? n : b);
+      const who = free.includes(crew.ids[a.id]) ? crew.ids[a.id] : bestDevFor(a, pool);  // the most skilled for this work (skills.js)
       crew.ids[a.id] = who;
       const desk = DESKS[TEAM.indexOf(who)];
       const seat = { x: desk.x, y: desk.y + 22 };
@@ -87,7 +87,7 @@ function goCoffee(e) {
 }
 
 function step(dt, t) {
-  stepFx(dt, t); stepCat(dt, t); stepCrew(dt); stepNeeds(dt); stepChief(dt, t); stepOfficeLife(t); stepLounge(dt, t); stepSocial(dt, t); stepBuild(t); stepEvents(t);
+  stepFx(dt, t); stepCat(dt, t); stepCrew(dt); stepNeeds(dt); stepChief(dt, t); stepOfficeLife(t); stepLounge(dt, t); stepSocial(dt, t); stepBuild(t); stepHappen(dt, t); stepDog(dt, t); stepEvents(t);
   if (view === "game") stepGame(dt, t);
   if (mmxQueue.length && ![...ents.values()].some(e => e.errand)) dispatch(mmxQueue.splice(0));
   while (arrivals.length && t >= doorFree) {  // let the next dev in once the previous one cleared the door
@@ -95,7 +95,7 @@ function step(dt, t) {
     if (!e?.queued) continue;
     e.queued = false; doorFree = t + ARRIVAL_GAP;
     chief.wave = t + 2500; chief.until = t + 5000;
-    chief.bubble = `${e.agent.ticket || clip(e.agent.description, 22)} → ${e.who} !`;
+    chief.bubble = `${e.agent.ticket || clip(e.agent.description, 22)} → ${e.who} (${skillTag(e.who, e.agent.type)}) !`;
   }
   for (const [id, e] of ents) {
     if (e.queued) continue;
@@ -116,6 +116,8 @@ function render(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (view === "lounge") return renderLounge(t);
   if (view === "game") return renderGame(t);
+  if (view === "meeting") return renderMeeting(t);
+  if (view === "terrace") return renderTerrace(t);
   drawRoom(t);
   drawBoard(session);
   drawRoomItems("office", t);
@@ -129,7 +131,7 @@ function render(t) {
     const onPodium = chief.at === "podium" && !chief.path.length, walking = chief.path.length > 0;
     const waving = onPodium && !ch?.question && (t < chief.wave || (ch && !ch.finished && ch.idle < 20));
     const gaming = chief.at === "console" && !chief.path.length, asleep = gaming && ch?.idle > 900;
-    if (!(chief.at === "pc" && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), smile: !asleep,
+    if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), smile: !asleep,
       arms: waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length ? "up" : "down", back: gaming || (walking && chief.path[0].y < chief.y), seated: gaming });
     if (chief.cup) { px(chief.x + 4, chief.y - 13, 2.5, 3, "#f4f2ea"); px(chief.x + 4, chief.y - 13, 2.5, 0.8, "#6d4a2e"); }
     text(CHIEF_NAME.toUpperCase(), chief.x, chief.y + (onPodium ? 7 : 2), "#fbaa08", 4.6, "center");
@@ -157,6 +159,7 @@ function render(t) {
   drawCabinet(t, cv.classList.contains("hover-store"));
   drawEvents(t);
   drawCat(t);
+  drawDog(t);
   const order = [...ents.values()].sort((a, b) => a.y - b.y);
   for (const e of order) {
     if (e.queued) continue;  // still waiting outside
@@ -214,6 +217,7 @@ function render(t) {
       badge(e.x, e.y + 2, e.who ? nameTag(e.who) : specialty(a.type), typeColor(a.type));
     }
   }
+  drawHappenOffice(t);
   if (!ents.size && session) text("Aucun dev sur cette session — le chef travaille seul.", W / 2, 150, "#d5eeff", 5, "center");
   for (const e of ents.values()) if (!e.queued && !e.leaving) drawEmotion(e.who, e.seated ? e.x + 10 : e.x, e.seated ? e.y - 12 : e.y - 25, t);
   if (chief.room === "office") drawEmotion(CHIEF_NAME, chief.x, chief.y - (chief.at === "console" && !chief.path.length ? 18 : 25), t);

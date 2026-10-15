@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, config, game, launcher, pricing, questions, routes, team, transcripts  # noqa: E402
+from office import billing, config, game, history, launcher, pricing, questions, routes, savegame, team, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -200,3 +200,46 @@ class StaticTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SaveGameTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self.patches = [mock.patch.object(savegame, "STATE_DIR", self.tmp), mock.patch.object(savegame, "SAVE_FILE", self.tmp / "save.json")]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self) -> None:
+        for p in self.patches:
+            p.stop()
+
+    def test_save_then_load(self) -> None:
+        self.assertEqual(savegame.load(), {})
+        data = {"savedAt": 1700000000000, "keys": {"office-wallet": '{"funds": 1500}', "office-build": "{}"}}
+        self.assertEqual(savegame.save(data), (True, str(self.tmp / "save.json")))
+        self.assertEqual(savegame.load(), data)
+        savegame.save({"savedAt": 1700000000001, "keys": {"office-build": '{"seq": 3}'}})  # partial: the wallet stays
+        self.assertEqual(savegame.load()["keys"], {"office-wallet": '{"funds": 1500}', "office-build": '{"seq": 3}'})
+
+    def test_rejects_foreign_keys_and_oversize(self) -> None:
+        self.assertFalse(savegame.save({"savedAt": 1, "keys": {"token": "x"}})[0])
+        self.assertFalse(savegame.save({"savedAt": "1", "keys": {}})[0])
+        self.assertFalse(savegame.save({"savedAt": 1, "keys": {"office-x": "a" * (savegame.VALUE_MAX + 1)}})[0])
+        self.assertFalse((self.tmp / "save.json").exists())
+
+
+class HistoryTests(unittest.TestCase):
+    def test_project_name(self) -> None:
+        home = str(Path.home()).replace("/", "-")
+        self.assertEqual(history.project_name(f"{home}-repos-Office-Agent"), "Office-Agent")
+        self.assertEqual(history.project_name("-tmp-x"), "tmp-x")
+
+    def test_costs_group_by_ticket_and_project(self) -> None:
+        fake = [{"ticket": "DEMO-1", "project": "front", "cost": 1.5, "first": 0, "last": 600, "status": "done", "type": "feature-builder"},
+                {"ticket": "DEMO-1", "project": "front", "cost": 0.5, "first": 0, "last": 60, "status": "blocked", "type": "mr-reviewer"},
+                {"ticket": None, "project": "api", "cost": 3.0, "first": 0, "last": 0, "status": "done", "type": "Explore"}]
+        with mock.patch.object(history, "runs", lambda game, days: iter(fake)):
+            c = history.costs(None, 30)
+        self.assertEqual(c["total"], {"runs": 3, "cost": 5.0, "seconds": 660.0})
+        self.assertEqual((c["tickets"][0]["key"], c["tickets"][0]["cost"], c["tickets"][0]["done"], c["tickets"][0]["blocked"]), ("DEMO-1", 2.0, 1, 1))
+        self.assertEqual([p["key"] for p in c["projects"]], ["api", "front"])
