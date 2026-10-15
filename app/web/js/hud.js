@@ -35,7 +35,7 @@ const liveFace = document.getElementById("live-face"), liveQueue = document.getE
 let liveHtml = "", faceKey = "";
 function renderLive() {
   const m = mate(CHIEF_NAME), col = moodColor(m.moral);
-  const key = `${col}|${m.moral >= 50}`;
+  const key = `${col}|${m.moral >= 50}|${lookKey(CHIEF_LOOK)}|${chiefHat()}`;  // the look may change (chiefedit.js)
   if (key !== faceKey) {
     faceKey = key;
     liveFace.innerHTML = `<svg class="crystal" viewBox="0 0 12 20" aria-hidden="true"><path fill="${col}" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg>${simPortrait(CHIEF_NAME)}`;

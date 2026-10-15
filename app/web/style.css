@@ -612,3 +612,43 @@
   #chiefos .ubgrid .osbadge { right: 22px; top: 4px; }
   @media (max-width: 760px) { #chiefos .ubtitle, #chiefos .ubsys span { display: none; } #chiefos .osrow, #chiefos .osgrid { grid-template-columns: 1fr; } #chiefos .ubdock { width: 54px; } }
   @media (max-width: 760px) { #rooms button { padding: 1px 6px; } }
+
+  /* Créer ton chef (chiefedit.js), Create-a-Sim style */
+  #live .info { position: relative; } #live-edit { position: absolute; right: -6px; top: -10px; width: 26px; height: 26px; padding: 0; font-size: 13px; color: var(--text); background: var(--panel-2); border: 2px solid var(--line); border-radius: 50%; cursor: pointer; }
+  #live-edit:hover { border-color: var(--accent); }
+  #cas { position: fixed; z-index: 32; inset: 64px max(14px, calc(50vw - 560px)) 24px; display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(90% 120% at 25% 40%, #3a5a9a 0%, #1f2f5a 45%, #141a33 100%); border: 2px solid #5a7ac4; border-radius: 20px; box-shadow: 0 24px 70px #000d; }
+  #cas[hidden] { display: none; }
+  #cas button { font: inherit; color: var(--text); cursor: pointer; }
+  #cas .chead { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #0006; }
+  #cas .chead b { font-weight: normal; font-size: 26px; color: var(--accent); } #cas .chead .x { margin-left: auto; width: 30px; height: 30px; padding: 0; background: #ffffff1a; border: 0; border-radius: 50%; }
+  #cas .cbody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.3fr); }
+  #cas .cstage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px; }
+  #cas .cpreview { position: relative; display: grid; place-items: end center; width: 260px; height: 340px; }
+  #cas .cpreview::before { content: ""; position: absolute; bottom: 4px; left: 50%; width: 200px; height: 40px; margin-left: -100px; border-radius: 50%; background: radial-gradient(#5a7ac455, transparent 70%); }
+  #cas .cpreview img { position: relative; width: 216px; height: 312px; image-rendering: pixelated; filter: drop-shadow(0 8px 12px #0008); animation: casidle 3s ease-in-out infinite; }
+  @keyframes casidle { 50% { transform: translateY(-4px); } }
+  @media (prefers-reduced-motion: reduce) { #cas .cpreview img { animation: none; } }
+  #cas .cposes, #cas .ctraitbadges { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  #cas .cposes button { padding: 2px 12px; font-size: 16px; background: #ffffff14; border: 2px solid transparent; border-radius: 999px; } #cas .cposes button.on { border-color: var(--accent); color: var(--accent); }
+  #cas .ctraitbadges span { padding: 1px 10px; font-size: 15px; background: #0005; border: 1px solid #ffffff33; border-radius: 999px; }
+  #cas .cpanel { display: flex; flex-direction: column; min-height: 0; margin: 12px 12px 12px 0; background: #0b1024d9; border: 1px solid #ffffff22; border-radius: 16px; overflow: hidden; }
+  #cas .ctabs { display: flex; gap: 2px; padding: 6px; background: #0006; }
+  #cas .ctabs button { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 2px; font-size: 15px; background: transparent; border: 0; border-radius: 10px; }
+  #cas .ctabs button span { font-size: 22px; } #cas .ctabs button.on { background: #5a7ac4; } #cas .ctabs button:hover:not(.on) { background: #ffffff14; }
+  #cas .copts { flex: 1; overflow-y: auto; padding: 4px 16px 16px; scrollbar-width: thin; }
+  #cas .copts h4 { margin: 14px 0 6px; font-weight: normal; font-size: 16px; letter-spacing: 1px; color: #a9bce8; }
+  #cas .cswatch { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #cas .cswatch button { width: 34px; height: 34px; padding: 0; background: var(--sw); border: 3px solid #ffffff40; border-radius: 50%; box-shadow: inset 0 -4px 0 #0003; }
+  #cas .cswatch button.on { border-color: var(--accent); box-shadow: 0 0 0 3px #fbaa0855, inset 0 -4px 0 #0003; transform: scale(1.08); }
+  #cas .cpick { position: relative; display: grid; place-items: center; width: 34px; height: 34px; font-size: 16px; background: conic-gradient(#ff6b6b, #fbaa08, #51cf66, #5aa9ff, #b48cff, #ff6b6b); border: 3px solid #ffffff40; border-radius: 50%; cursor: pointer; overflow: hidden; }
+  #cas .cpick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  #cas .cchoice, #cas .ctraits { display: flex; flex-wrap: wrap; gap: 6px; }
+  #cas .cchoice button, #cas .ctraits button { padding: 3px 12px; font-size: 16px; background: #ffffff10; border: 2px solid #ffffff22; border-radius: 10px; }
+  #cas .cchoice button.on, #cas .ctraits button.on { background: #5a7ac4; border-color: #a9bce8; } #cas .cchoice button[disabled] { opacity: .45; cursor: not-allowed; }
+  #cas #cas-phrase { width: 100%; padding: 6px 10px; font: inherit; color: var(--text); background: #0006; border: 2px solid #ffffff33; border-radius: 10px; }
+  #cas .copts p { margin: 6px 0; font-size: 15px; line-height: 1.3; }
+  #cas .cfoot { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #0006; }
+  #cas .cfoot span { flex: 1; } #cas .cfoot button { padding: 4px 16px; background: #ffffff14; border: 2px solid #ffffff33; border-radius: 999px; }
+  #cas .cfoot button.ok { color: #1c1c24; background: #5fd38d; border-color: #5fd38d; } #cas .cfoot button:hover { border-color: var(--accent); }
+  @media (max-width: 760px) { #cas .cbody { grid-template-columns: 1fr; overflow-y: auto; } #cas .cpreview { height: 240px; } #cas .cpreview img { width: 150px; height: 216px; } #cas .cpanel { margin: 0 12px 12px; } }

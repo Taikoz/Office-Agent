@@ -143,7 +143,7 @@ function render(t) {
     else if (!session) say = "Personne au bureau.";
     else if (chief.at === "coffee") say = "☕ petite pause";
     else if (gaming) say = asleep ? "zZz…" : (t / 1000) % 14 < 3 ? "GG !" : "🎮 appelle-moi si besoin";
-    else if (ch.finished || ch.idle > 120) say = ch.idle > 900 ? "zZz…" : "J'attends tes ordres.";
+    else if (ch.finished || ch.idle > 120) say = ch.idle > 900 ? "zZz…" : chiefPhrase() || "J'attends tes ordres.";  // his catchphrase (chiefedit.js)
     else if (ents.get("chief")?.agent.solo) say = `${ents.get("chief").who} est dessus 👍`;
     else if (say !== null) say = clip(ch.action, 40);
     if (say) bubble(cx, cy - 25, say);

@@ -31,6 +31,7 @@
     <button id="decorbtn" title="Murs, sol, bois, tapis, rideaux et porte du bureau et de la salle de repos (D)" aria-expanded="false">🎨<span class="lbl"> DÉCO</span></button>
     <button id="emotionsbtn" title="Humeur et besoins de l'équipe, façon Sims (E)">💎<span class="lbl"> ÉMOTIONS</span></button>
     <button id="focusbtn" title="Couper les animations d'ambiance (F)">🎯<span class="lbl"> FOCUS : OFF</span></button>
+    <button id="casbtn" title="Look et personnalité du chef, façon Créer un Sim">👑<span class="lbl"> CRÉER TON CHEF</span></button>
     <button id="osbtn" title="Ton bureau : questions, MR, tickets, rapport, comptes, équipe">🖥️<span class="lbl"> BUREAU DU CHEF</span></button>
     <button id="savebtn" title="Sauvegarder la partie dans ~/.claude/agent-office/save.json (automatique toutes les 30 s)">💾<span class="lbl"> SAUVEGARDER</span></button>
     <button id="exportbtn" title="Télécharger la partie dans un fichier">📤<span class="lbl"> EXPORTER</span></button>
@@ -48,7 +49,7 @@
 <section id="live" aria-label="Ton personnage et sa file d'actions">
   <button id="live-face" class="portrait" title="Aller voir le chef"></button>
   <div class="col"><div id="live-queue" class="queue" aria-label="File d'actions"></div>
-    <div class="info"><b id="live-name"></b><span id="live-mood"></span></div>
+    <div class="info"><b id="live-name"></b><span id="live-mood"></span><button id="live-edit" title="Créer ton chef : look et personnalité">✏️</button></div>
     <button id="live-funds" title="Argent du foyer : relevé des salaires et dépenses" aria-expanded="false" aria-controls="ledger"><b></b><span class="flash"></span></button></div>
   <section id="ledger" hidden aria-label="Relevé"></section>
 </section>
@@ -59,6 +60,7 @@
 </section>
 <button id="buybtn" title="Mode achat : acheter, placer, vendre des objets" aria-expanded="false" aria-controls="buy">🛒<span class="lbl">ACHAT</span></button>
 <section id="buy" hidden aria-label="Mode achat"></section>
+<section id="cas" hidden role="dialog" aria-label="Créer ton chef"></section>
 <div id="chiefos" hidden role="dialog" aria-label="ChiefOS"></div>
 <div id="buytool" hidden role="dialog" aria-label="Objet sélectionné"></div>
 <button id="simsbtn" title="Besoins façon Sims (B)" aria-expanded="false"><svg viewBox="0 0 12 20" aria-hidden="true"><path class="pb" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg><span class="lbl">BESOINS</span></button>
@@ -232,6 +234,7 @@
 <script src="static/js/social.js"></script>
 <script src="static/js/build.js"></script>
 <script src="static/js/moods.js"></script>
+<script src="static/js/chiefedit.js"></script>
 <script src="static/js/wants.js"></script>
 <script src="static/js/days.js"></script>
 <script src="static/js/happen.js"></script>
