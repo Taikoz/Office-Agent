@@ -7,6 +7,7 @@ import { meteo } from "../world/seasons.js";
 import { plan } from "./planning.js";
 import { glBusy, glDraftUrl, glMsg, glStatus } from "../ui/gitlab.js";
 import { quality, setQuality } from "../ui/quality.js";
+import { slackClick, supportSettingsHtml } from "./support.js";
 import { renderChiefOs } from "../ui/chiefos.js";
 
 const Q = [["auto", "Auto", "s'adapte à ta machine"], ["high", "Haute", "tous les pixels de l'écran"], ["eco", "Économie", "30 images/s, moins de pixels, sans flou"]];
@@ -27,6 +28,7 @@ function settingsAppHtml() {
     <div class="osrow"><b>Jeton personnel</b><span><input id="gl-token" type="password" autocomplete="off" placeholder="${st.configured ? "•••••• enregistré (laisser vide pour le garder)" : "glpat-…"}" aria-label="Jeton GitLab"></span><span><a href="${esc(create)}" target="_blank" rel="noopener">Créer un jeton ↗</a></span></div>
     <div class="osacts"><button data-gl="save" class="ubok"${glBusy ? " disabled" : ""}>${glBusy ? "Vérification…" : "Enregistrer et tester"}</button><span class="muted">${esc(glMsg)}</span></div>
     <p class="muted">Droit <b>read_api</b> suffisant (lecture seule). Le jeton reste sur cette machine (<code>~/.claude/agent-office/gitlab.json</code>, lisible par toi seul) : la page ne le revoit jamais et il n'est pas dans la sauvegarde. Le serveur interroge GitLab lui-même.</p>
+    ${supportSettingsHtml()}
     ${perfHtml()}
     ${dockSettingsHtml()}
     <h4>AUTRES RÉGLAGES</h4>
@@ -38,6 +40,9 @@ function settingsAppHtml() {
 class SettingsApp extends OsApp {
   constructor() { super("settings", "⚙️", "Réglages", "#77767b"); }
   render() { return settingsAppHtml(); }
-  click(b) { if (!b.dataset.q) return false; setQuality(b.dataset.q); renderChiefOs(); return true; }
+  click(b) {
+    if (b.dataset.sl) { slackClick(b); return true; }  // Slack · Support (apps/support.js)
+    if (!b.dataset.q) return false; setQuality(b.dataset.q); renderChiefOs(); return true;
+  }
 }
 new SettingsApp();

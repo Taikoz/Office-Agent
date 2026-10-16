@@ -5,11 +5,12 @@
 // blind, the music. Only those (the server checks them too), at most one every 1.5 s per visitor.
 
 import { hub } from "../hub.js";
-import { ents, specialty, typeColor } from "../core/core.js";
+import { CAT_NAME, ents, specialty, typeColor } from "../core/core.js";
+import { cat } from "./cat.js";
 import { isStuck } from "../core/data.js";
 import { crewAdd, mate, moodLine } from "../sims/crew.js";
 import { SKILLS, skillLevel, skillXp } from "../sims/skills.js";
-import { chairNear } from "./place.js";
+import { chairNear, deskItemOf, surfaceOf } from "./place.js";
 import { loungeSay, loungerPose, loungers } from "./lounge.js";
 import { toast } from "../sims/progress.js";
 import { Room } from "../rooms/base.js";
@@ -74,6 +75,19 @@ function lounger(l, t) {
   return null;
 }
 
+// the pets of the office (world/cat.js, world/pets.js): where they are, walking, sitting or asleep (on a desk: its top)
+function pets(t) {
+  const out = [], base = { look: {}, tag: "", c: "#c98b4f", mood: 80, kudos: 0, sk: [], st: "rest", what: "" };
+  if (!hub.focusMode) {
+    const desk = cat.mode === "sleep" && cat.desk && deskItemOf(cat.desk), top = desk && surfaceOf(desk);
+    out.push({ ...base, n: CAT_NAME, pet: "cat", room: "office", x: cat.x, y: cat.y, pm: cat.mode === "sleep" ? "sleep" : cat.mode === "walk" || cat.mode === "chase" ? "walk" : "sit",
+      fx: top ? top.x + top.w * 0.25 : cat.x, fy: top ? top.y + top.h / 2 : cat.y, pose: { z: top ? top.z : 0, dir: [cat.dir || 1, 0] }, b: t < cat.sayUntil ? cat.say : "" });
+  }
+  const dog = hub.dog;
+  if (hub.petBook?.dog && dog) out.push({ ...base, n: hub.DOG_NAME, pet: "dog", room: "office", x: dog.x, y: dog.y, pm: dog.path.length ? "walk" : "sit", fx: dog.x, fy: dog.y,
+    pose: { z: 0, dir: [dog.dir || 1, 0] }, b: t < dog.sayUntil ? dog.say : "" });
+  return out;
+}
 export function crewSnapshot(t) {
   const out = [], seen = new Set();
   for (const e of ents.values()) {
@@ -82,7 +96,7 @@ export function crewSnapshot(t) {
   }
   for (const l of loungers.values()) if (!seen.has(l.name)) { const m = lounger(l, t); if (m) out.push(m); }
   out.push(...(hub.partyCrew?.(t) || []));  // the guests of our afterwork (social/netparty.js)
-  return out.slice(0, 24);
+  return [...pets(t), ...out].slice(0, 24);
 }
 
 /* ---------- what a visitor does here ---------- */
@@ -110,6 +124,12 @@ export function applyAct(m, t = performance.now()) {
     def.act(it, b);
     toast("🌐 VISITE", `${from} ${b === "music" ? "touche à la musique" : b === "blind" ? (it.closed ? "ferme le store" : "ouvre le store") : "joue avec la lumière"}`, def.name || "");
     return;
+  }
+  if (verb === "pet") {  // a visitor pets our cat or our dog
+    if (a === CAT_NAME) Object.assign(cat, { say: "Ronron… ❤️", sayUntil: t + 2500, jump: t + 1300 });
+    else if (a === hub.DOG_NAME && hub.dog) Object.assign(hub.dog, { say: "Wouf ! ❤️", sayUntil: t + 2500 });
+    else return;
+    return toast("🌐 VISITE", `${from} caresse ${a}`, "");
   }
   const name = a, known = loungers.has(name) || [...ents.values()].some(e => e.who === name);
   if (!known) return;

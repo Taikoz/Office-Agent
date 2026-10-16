@@ -130,7 +130,7 @@ function itemPieCenter(uid) {
 function itemPieAction(uid, id) {
   const it = itemByUid(uid); if (!it) return;
   if (id === "coffee") return hub.chiefOrder("coffee");
-  if (id === "play") return hub.chiefOrder("console");
+  if (id === "play" && defOf(it.type).role === "console") return hub.chiefOrder("console");  // a computer's "play": its own (items/furniture.js)
   if (id === "podium") return hub.chiefOrder("podium");
   if (id === "meet") return hub.startMeeting();
   defOf(it.type).act(it, id);  // js/items/

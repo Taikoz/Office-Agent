@@ -996,19 +996,28 @@ class IsoAvatar extends SvgArt {
   constructor() { super("isoavatar", 24, 42, { outline: 0.45, pad: 1 }); }
   box() { return [-12, -34, 24, 42]; }
   under({ seated = false }) { return seated ? "" : `<ellipse cx="0" cy="0" rx="6" ry="2.4" fill="#000" fill-opacity=".25"/>`; }
-  body({ look, rot = 0, frame = 0, seated = false, arms = "down", tux = false, smile = false, hat = "" }) {
+  // walk: the step of the walk cycle (0-7: legs swinging, the foot coming forward lifted, the arms the other way;
+  // none: standing still, legs together); breath 0/1 (the chest a little higher); blink (eyes shut); talk (mouth open)
+  image(state) {  // a new pose not ready yet: the same person at rest meanwhile (no flicker while it loads)
+    return super.image(state) || (state.walk != null || state.blink || state.talk || state.breath ? super.image({ ...state, walk: undefined, blink: false, talk: false, breath: 0 }) : null);
+  }
+  body({ look, rot = 0, frame = 0, seated = false, arms = "down", tux = false, smile = false, hat = "", walk, breath = 0, blink = false, talk = false }) {
     const { block, svg } = blocks(rot);
     const outfit = look.outfit || (tux ? "tux" : "tshirt"), dark = outfit === "tux";
     const shirt = dark ? (look.outfit ? look.shirt : "#1c1c24") : look.shirt, skin = look.skin, hair = look.hair;
     const pants = look.pants || "#2f3550", shoes = look.shoes || "#17141c", tie = look.tie || "#d64545", beardC = look.beardColor || hair;
     const st = look.style || 0, bald = st === 5, f = frame % 2;
-    const zt = seated ? 4 : 8, zh = zt + 9.5;  // the body's bottom, the head's bottom
+    const ph = walk != null ? (walk % 8) / 8 * 2 * Math.PI : null, bz = breath ? 0.35 : 0;
+    const zt = seated ? 4 : 8, zh = zt + 9.5 + bz - (arms === "type" && f ? 0.3 : 0);  // the body's bottom, the head's bottom (a nod while typing)
     // legs and shoes (seated: the thighs forward, the shins down)
     if (seated) {
       for (const x of [-3.4, 0.4]) { block(x, -0.5, 3, 6.5, 2.4, 3, pants); block(x, 5, 3, 2, 0, 3, pants); block(x - 0.1, 6, 3.2, 2, 0, 1.4, shoes); }
     } else {
-      const step = f ? 1.4 : -1.4;
-      for (const [x, s2] of [[-3.4, step], [0.4, -step]]) { block(x, -1.4 + s2, 3, 3, 1.4, zt - 1.4, pants); block(x - 0.1, -1.4 + s2, 3.2, 4, 0, 1.4, shoes); }
+      // walking: each leg swings forward and back, the one coming forward lifted; standing: side by side
+      for (const [x, side] of [[-3.4, 1], [0.4, -1]]) {
+        const s2 = ph == null ? 0 : Math.sin(ph) * 1.7 * side, lift = ph == null ? 0 : Math.max(0, Math.cos(ph) * side) * 0.9;
+        block(x, -1.4 + s2, 3, 3, 1.4 + lift, zt - 1.4 - lift, pants); block(x - 0.1, -1.4 + s2, 3.2, 4, lift, 1.4, shoes);
+      }
     }
     // the body, its front by outfit
     const front = [];
@@ -1018,28 +1027,29 @@ class IsoAvatar extends SvgArt {
     else if (outfit === "hoodie") front.push(["front", 2, 7.5, 4, 2, shade(shirt, 0.85)], ["front", 3, 8.5, 2, 1, shade(skin, 0.84)], ["front", 2.6, 4.6, 0.5, 3, "#f4f2ea"], ["front", 4.9, 4.6, 0.5, 3, "#f4f2ea"], ["front", 1.6, 0.6, 4.8, 2.6, shade(shirt, 0.82)]);
     else if (outfit === "polo") front.push(["front", 3, 8, 2, 1.5, shade(skin, 0.84)], ["front", 1.8, 8.2, 1.4, 1.3, shade(shirt, 1.3)], ["front", 4.8, 8.2, 1.4, 1.3, shade(shirt, 1.3)], ["front", 3.7, 6.4, 0.6, 0.6, shade(shirt, 0.6)]);
     else front.push(["front", 3, 8.2, 2, 1.3, shade(skin, 0.84)], ["front", 1.6, 0.4, 4.8, 0.8, shade(shirt, 0.8)]);
-    block(-4, -2.4, 8, 4.8, zt, 9.5, shirt, [...front, ...(dark ? [] : [["back", 1, 8.6, 6, 0.9, shade(shirt, 0.8)]])]);
-    block(-1.2, -1.2, 2.4, 2.4, zt + 9.5, 0.6, shade(skin, 0.84));  // the neck
+    block(-4, -2.4, 8, 4.8, zt, 9.5 + bz, shirt, [...front, ...(dark ? [] : [["back", 1, 8.6, 6, 0.9, shade(shirt, 0.8)]])]);
+    block(-1.2, -1.2, 2.4, 2.4, zt + 9.5 + bz, 0.6, shade(skin, 0.84));  // the neck
     // arms
     const arm = (side, pose) => {
-      const x = side < 0 ? -5.8 : 4, sw = f ? 1 : -1;
+      const x = side < 0 ? -5.8 : 4;
       if (pose === "up") { block(x, -1, 1.8, 2.2, zt + 7, 9, shirt); block(x, -1, 1.8, 2.2, zt + 16, 1.6, skin); }
       else if (pose === "type") { block(x, -1, 1.8, 2.4, zt + 4, 5.5, shirt); block(x, 1.4, 1.8, 3.6, zt + 4 + (side < 0 ? f : 1 - f) * 0.8, 1.8, shirt); block(x, 5, 1.8, 1.4, zt + 4 + (side < 0 ? f : 1 - f) * 0.8, 1.8, skin); }
       else if (pose === "wave") { block(x, -1, 1.8, 2.2, zt + 6 + f * 2, 8, shirt); block(x, -1, 1.8, 2.2, zt + 14 + f * 2, 1.6, skin); }
-      else { const s2 = seated ? 0 : sw * side * 0.9; block(x, -1 + s2, 1.8, 2.2, zt + 1.6, 7.6, shirt); block(x, -1 + s2, 1.8, 2.2, zt, 1.6, skin); }
+      else { const s2 = seated || ph == null ? 0 : Math.sin(ph) * side * 0.75; block(x, -1 + s2, 1.8, 2.2, zt + 1.6 + bz, 7.6, shirt); block(x, -1 + s2, 1.8, 2.2, zt + bz, 1.6, skin); }  // the arms swing against the legs
     };
     arm(-1, arms === "up" ? "up" : arms === "type" ? "type" : "down");
     arm(1, arms === "up" ? "up" : arms === "type" ? "type" : arms === "baton" ? "wave" : "down");
     // the head: the face on its front, the ears on its sides, the hair over it and down its back
     const face = [], b = look.beard, gl = look.glasses === true ? "square" : look.glasses;
-    face.push(["front", 1.4, 3.6, 1.2, 1.4, "#1a1a1a"], ["front", 4.4, 3.6, 1.2, 1.4, "#1a1a1a"], ["front", 1.6, 4.4, 0.5, 0.5, "#ffffff"], ["front", 4.6, 4.4, 0.5, 0.5, "#ffffff"]);
+    if (blink) face.push(["front", 1.4, 4.0, 1.2, 0.35, "#1a1a1a"], ["front", 4.4, 4.0, 1.2, 0.35, "#1a1a1a"]);
+    else face.push(["front", 1.4, 3.6, 1.2, 1.4, "#1a1a1a"], ["front", 4.4, 3.6, 1.2, 1.4, "#1a1a1a"], ["front", 1.6, 4.4, 0.5, 0.5, "#ffffff"], ["front", 4.6, 4.4, 0.5, 0.5, "#ffffff"]);
     face.push(["front", 0.6, 2.4, 1.1, 0.7, "#e88a8a"], ["front", 5.3, 2.4, 1.1, 0.7, "#e88a8a"]);
     if (b === "stubble") face.push(["front", 0.4, 0.2, 6.2, 2.6, shade(beardC, 1.2)]);
     else if (b === "short") face.push(["front", 0.4, 0.2, 6.2, 2, beardC]);
     else if (b === "full") face.push(["front", 0.2, 0, 6.6, 3.4, beardC]);
     else if (b === "goatee") face.push(["front", 2.6, 0, 1.8, 2, beardC]);
     if (b === "mustache" || b === "goatee" || b === "full") face.push(["front", 2, 2.4, 3, 0.8, shade(beardC, 0.85)]);
-    face.push(smile ? ["front", 2.6, 1.6, 1.8, 0.7, "#7a2b2b"] : ["front", 2.9, 1.6, 1.2, 0.6, "#8a4a4a"]);
+    face.push(talk ? ["front", 2.7, 1.1, 1.6, 1.3, "#5a1e1e"] : smile ? ["front", 2.6, 1.6, 1.8, 0.7, "#7a2b2b"] : ["front", 2.9, 1.6, 1.2, 0.6, "#8a4a4a"]);
     if (gl === "sun") face.push(["front", 0.9, 3.4, 2.4, 1.9, "#1c1c24"], ["front", 3.7, 3.4, 2.4, 1.9, "#1c1c24"], ["front", 3.2, 4.2, 0.6, 0.5, "#1c1c24"]);
     else if (gl) face.push(["front", 0.9, 5, 2.4, 0.5, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 3.7, 5, 2.4, 0.5, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 0.9, 3.2, 2.4, 0.4, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 3.7, 3.2, 2.4, 0.4, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 3.2, 4.4, 0.6, 0.4, "#1c1c24"]);
     const ear = shade(skin, 0.84);

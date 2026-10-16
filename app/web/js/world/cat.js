@@ -4,7 +4,7 @@ import { hub, provide } from "../hub.js";
 import { isoDrawing, petRot } from "../iso/engine.js";
 import { CAB, CAT_NAME, COFFEE, DESKS, LANE, ctx, ents, px, text } from "../core/core.js";
 import { ART } from "../svg/base.js";
-import { bubble } from "./scene.js";
+import { bubble, stepOf } from "./scene.js";
 import { crew, crewAdd } from "../sims/crew.js";
 import { stepLaser } from "./fun.js";
 
@@ -99,7 +99,7 @@ export function drawCat(t) {
   const y = cat.y - (t < cat.jump ? Math.abs(Math.sin((cat.jump - t) / 1300 * Math.PI * 3)) * 5 : 0);
   const moving = mode === "walk" || mode === "chase";
   const pose = mode === "sleep" ? "sleep" : moving ? "walk" : "sit";
-  const frame = moving ? Math.floor(t / (mode === "chase" ? 90 : 140)) % 2 : pose === "sit" ? (Math.floor(t / 180) % 23 === 0 ? 2 : Math.sin(t / 300) > 0 ? 1 : 0) : 0;  // 2 = blink
+  const frame = moving ? Math.floor(stepOf(cat, x, cat.y) * 1.6) % 2 : pose === "sit" ? (Math.floor(t / 180) % 23 === 0 ? 2 : Math.sin(t / 300) > 0 ? 1 : 0) : 0;  // the paws follow the ground covered; 2 = blink
   if (isoDrawing()) { if (!ART.isocat.draw(x, y, { pose, frame, rot: pose === "sit" ? 0 : petRot(cat, dir) })) drawCatPx(t, x, y); }  // in volume (svg/iso.js), sitting: facing us
   else if (!ART.cat.draw(x, y, { pose, frame }, { flip: dir < 0 })) drawCatPx(t, x, y);  // svg/figures.js; she faces right
   if (mode === "sleep") {  // z z z

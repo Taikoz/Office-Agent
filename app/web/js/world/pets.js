@@ -7,7 +7,7 @@ import { isoDrawing, petRot } from "../iso/engine.js";
 import { CAT_NAME, CHIEF_NAME, DOOR, LANE, TEAM, badge, chief, ents, px } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART } from "../svg/base.js";
-import { bubble } from "./scene.js";
+import { bubble, stepOf } from "./scene.js";
 import { clamp, crewAdd } from "../sims/crew.js";
 import { officeRoute } from "./chief.js";
 import { pick, view } from "./lounge.js";
@@ -79,7 +79,7 @@ function stepDog(dt, t) {
 }
 function drawDog(t) {
   if (!petBook.dog || view !== "office") return;
-  const walking = dog.path.length > 0, f = Math.floor(t / (dog.ball ? 90 : 160)) % 2;
+  const walking = dog.path.length > 0, f = walking ? Math.floor(stepOf(dog, dog.x, dog.y) * 1.4) % 2 : Math.floor(t / 600) % 2;  // the paws follow the ground covered; sitting: the tail
   if (isoDrawing()) ART.isodog.draw(dog.x, dog.y, { frame: f, sit: !walking, rot: walking ? petRot(dog, dog.dir) : 0 });  // in volume (svg/iso.js)
   else ART.dog.draw(dog.x, dog.y, { frame: f, sit: !walking }, { flip: dog.dir < 0 });
   if (dog.ball && dog.ballAt) { const k = Math.min(1, (t - dog.ballAt) / 700); px(dog.ball.x0 + (dog.ball.x - dog.ball.x0) * k, dog.ball.y0 + (dog.ball.y - dog.ball.y0) * k - Math.sin(k * Math.PI) * 18, 2.4, 2.4, "#d4e157"); }
