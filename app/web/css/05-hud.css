@@ -1,30 +1,37 @@
   /* rounded everywhere, Sims style */
   button, input, select, textarea { border-radius: var(--r-sm); }
-  .card, #quests .q, #p-game .mate, #p-game .emp, .launch select, .launch textarea, #sims .face, #sims .house button, #sims .rels button, #sims .bar, #sims .pips i,
+  .card, #quests .q, #p-game .mate, #p-game .emp, .launch select, .launch textarea, #sims .face, #sims .rels button, #sims .bar, #sims .pips i,
   .meter .track, .rbar, #quests .q .track, .bar { border-radius: var(--r-sm); }
   #sims .bar i, .meter .track i, #quests .q .track i { border-radius: inherit; }
   #pc .bezel, #pc .screen, #pc .win { border-radius: var(--r); }
   .card { border-left-width: 2px; box-shadow: inset 5px 0 0 var(--c); }
-  /* bottom-left: your sim (the chief) and the action queue */
-  #live { position: fixed; z-index: 12; left: 14px; bottom: 12px; display: flex; align-items: flex-end; pointer-events: none; }
-  #live > *, #live .col > * { pointer-events: auto; }
-  #live .col { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; }
-  #live .portrait { position: relative; z-index: 1; flex: none; width: 92px; height: 92px; padding: 0; border-radius: 50%; overflow: visible; cursor: pointer;
-    background: radial-gradient(circle at 50% 35%, #55526a, #1c1b23 72%); border: 4px solid var(--m, var(--sims)); box-shadow: 0 10px 26px #000b; }
-  #live .portrait img { position: absolute; left: 6%; bottom: 0; width: 88%; image-rendering: pixelated; border-radius: 0 0 50% 50%; clip-path: circle(50% at 50% 50%); }
-  #live .portrait .crystal { position: absolute; left: 50%; top: -34px; width: 18px; height: 30px; margin-left: -9px; filter: drop-shadow(0 0 6px var(--m)); animation: plumbob 2.4s ease-in-out infinite; }
-  #live .info { display: flex; flex-direction: column; margin: 0 0 8px -18px; padding: 6px 18px 6px 26px; background: var(--glass); border: 2px solid var(--line); border-radius: 0 999px 999px 0; box-shadow: 0 8px 20px #0009; }
-  #live .info b { font-weight: normal; font-size: 24px; line-height: 1; color: var(--accent); } #live-mood { color: var(--m); font-size: 17px; }
-  #live .queue { display: flex; align-items: center; gap: 6px; padding-left: 8px; }
-  #live .act { position: relative; flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; cursor: pointer; color: var(--text);
-    background: radial-gradient(circle at 35% 30%, #4a4757, #2a2933); border: 2px solid var(--line); box-shadow: 0 6px 14px #0009; }
-  #live .act .ic { font-size: 22px; line-height: 40px; }
-  #live .act .x { position: absolute; right: -4px; top: -4px; display: none; width: 18px; height: 18px; line-height: 15px; font-size: 16px; border-radius: 50%; background: var(--err); color: #fff; }
+  /* bottom-left: the household in a row (the chief, then the team, small), the money; the action queue over it (hud.js) */
+  #live { position: fixed; z-index: 12; left: 14px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; }
+  #live > * { pointer-events: auto; }
+  #live .household { display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; background: var(--glass-2); border: 1px solid var(--line); border-radius: 999px;
+    box-shadow: 0 8px 22px #0009; backdrop-filter: blur(8px); }
+  #live .portrait, #live .team button { position: relative; flex: none; padding: 0; overflow: hidden; cursor: pointer; border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #4a4757, #1c1b23 72%); border: 2px solid var(--m, var(--line)); transition: transform .12s, border-color .2s; }
+  #live .portrait { width: 46px; height: 46px; border-width: 3px; }
+  #live .team { display: flex; gap: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
+  #live .team button { width: 32px; height: 32px; }
+  #live .portrait img, #live .team img { position: absolute; left: 6%; bottom: -2%; width: 88%; image-rendering: pixelated; }
+  #live .portrait:hover, #live .team button:hover { transform: translateY(-2px); }
+  #live .portrait.on, #live .team button.on { box-shadow: 0 0 0 2px var(--accent); }
+  #live .team button.work::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 6px; height: 6px; border-radius: 50%; background: #3bc4ff; box-shadow: 0 0 0 1px #1c1b23; }
+  #live .team .need { position: absolute; right: -1px; top: -3px; font-size: 11px; line-height: 1; filter: drop-shadow(0 1px 1px #000); }
+  #live-edit { flex: none; width: 24px; height: 24px; padding: 0; font-size: 12px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; }
+  #live-edit:hover { color: var(--text); border-color: var(--accent); }
+  #live .queue { display: flex; align-items: center; gap: 5px; padding-left: 4px; }
+  #live .act { position: relative; flex: none; width: 34px; height: 34px; padding: 0; border-radius: 50%; cursor: pointer; color: var(--text);
+    background: radial-gradient(circle at 35% 30%, #4a4757, #2a2933); border: 1px solid var(--line); box-shadow: 0 4px 10px #0008; }
+  #live .act .ic { font-size: 17px; line-height: 32px; }
+  #live .act .x { position: absolute; right: -4px; top: -4px; display: none; width: 15px; height: 15px; line-height: 13px; font-size: 13px; border-radius: 50%; background: var(--err); color: #fff; }
   #live .act:not([disabled]):hover { border-color: var(--err); } #live .act:not([disabled]):hover .x { display: block; }
-  #live .act.cur { width: 58px; height: 58px; border: 0; background: conic-gradient(var(--sims) var(--p, 0%), #ffffff22 0) border-box; padding: 4px; }
-  #live .act.cur .ic { display: block; width: 100%; height: 100%; line-height: 50px; font-size: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4a4757, #2a2933); }
+  #live .act.cur { width: 40px; height: 40px; border: 0; background: conic-gradient(var(--sims) var(--p, 0%), #ffffff22 0) border-box; padding: 3px; }
+  #live .act.cur .ic { display: block; width: 100%; height: 100%; line-height: 34px; font-size: 19px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4a4757, #2a2933); }
   #live .act[disabled] { cursor: default; }
-  #live .curlbl { padding: 2px 12px; font-size: 17px; background: var(--glass); border: 2px solid var(--line); border-radius: 999px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+  #live .curlbl { padding: 1px 10px; font-size: 15px; color: var(--muted); background: var(--glass); border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
   /* bottom-center: day, hour, sun and moon */
   #clock { position: fixed; z-index: 11; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 8px;
     background: var(--glass-2); border: 2px solid var(--line); border-radius: 999px; box-shadow: 0 10px 26px #000b; backdrop-filter: blur(8px); }
@@ -32,19 +39,16 @@
   #clock .time { display: flex; flex-direction: column; line-height: 1; }
   #clock .time b { font-weight: normal; font-size: 32px; color: var(--text); letter-spacing: 1px; } #clock .time span { color: var(--muted); font-size: 16px; }
   #clock-phase { padding: 2px 10px; font-size: 16px; color: var(--accent); background: #ffffff10; border-radius: 999px; white-space: nowrap; }
-  @media (prefers-reduced-motion: reduce) { #live .portrait .crystal { animation: none; } }
 
   /* household funds (money.js): by your sim, the statement above it, the salary on the mission cards */
-  #live-funds { position: relative; align-self: flex-start; margin: -2px 0 8px -18px; padding: 3px 16px 3px 26px; color: var(--text); cursor: pointer;
-    background: linear-gradient(#2f4a36e6, #1f3326e6); border: 2px solid #4f8a5c; border-radius: 0 999px 999px 0; box-shadow: 0 6px 16px #0008; }
+  #live-funds { position: relative; flex: none; margin-left: 2px; padding: 2px 12px; color: var(--text); cursor: pointer; background: #1f3326cc; border: 1px solid #4f8a5c; border-radius: 999px; }
   #live-funds:hover, #live-funds[aria-expanded="true"] { border-color: var(--sims); }
-  #live-funds b { font-weight: normal; font-size: 22px; color: #9dffb5; letter-spacing: 1px; }
+  #live-funds b { font-weight: normal; font-size: 17px; color: #9dffb5; letter-spacing: .5px; }
   #live-funds .flash { position: absolute; left: 100%; top: 50%; margin-left: 8px; white-space: nowrap; font-size: 20px; opacity: 0; transform: translateY(-50%); pointer-events: none; }
   #live-funds .flash.up, #live-funds .flash.dn { animation: cashflash 2.5s ease-out forwards; }
   #live-funds .flash.up { color: #7dff9a; } #live-funds .flash.dn { color: var(--err); }
   @keyframes cashflash { 0% { opacity: 0; transform: translateY(-20%); } 10% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-160%); } }
   @media (prefers-reduced-motion: reduce) { #live-funds .flash.up, #live-funds .flash.dn { animation: none; opacity: 1; } }
-  #live .info { margin-bottom: 0; }
   #ledger { position: fixed; z-index: 14; left: 14px; bottom: 132px; width: min(400px, calc(100vw - 28px)); max-height: calc(100vh - 220px); overflow-y: auto; padding: 10px 14px;
     background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid #4f8a5c; border-radius: var(--r); box-shadow: 0 14px 34px #000b; backdrop-filter: blur(8px); scrollbar-width: thin; }
   #ledger[hidden] { display: none; }
@@ -107,10 +111,10 @@
   #rooms button { padding: 1px 12px; border-radius: 999px; border: 2px solid transparent; background: transparent; color: var(--muted); }
   #rooms button:hover { color: var(--text); } #rooms button.on { color: var(--accent); border-color: var(--accent); background: var(--panel-2); }
   /* traits, moodlets, wants, rewards in the needs window (moods.js, wants.js) */
-  #sims .traits { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
-  #sims .trait { padding: 0 8px; font-size: 15px; background: #ffffff10; border: 1px solid var(--line); border-radius: 999px; cursor: help; }
+  #sims .traits { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
+  #sims .trait { padding: 0 8px; font-size: 13px; color: var(--muted); background: #ffffff0a; border: 1px solid var(--line); border-radius: 999px; cursor: help; }
   #sims .moodlets { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
-  #sims .ml { padding: 0 8px; font-size: 14px; border-radius: 999px; cursor: help; } #sims .ml b { font-weight: normal; }
+  #sims .ml { padding: 0 8px; font-size: 12px; border-radius: 999px; cursor: help; } #sims .ml b { font-weight: normal; }
   #sims .ml.up { background: #1f3326; color: #9dffb5; border: 1px solid #4f8a5c; } #sims .ml.dn { background: #3a1a20; color: #ffb3b3; border: 1px solid #8a3a44; }
   #sims .wants, #sims .rewards { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0 0 8px; }
   #sims .wants .nl, #sims .rewards .nl { color: var(--muted); font-size: 15px; letter-spacing: 1px; }

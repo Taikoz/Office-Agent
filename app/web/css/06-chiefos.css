@@ -74,8 +74,6 @@
   @media (max-width: 760px) { #rooms button { padding: 1px 6px; } }
 
   /* Créer ton chef (chiefedit.js), Create-a-Sim style */
-  #live .info { position: relative; } #live-edit { position: absolute; right: -6px; top: -10px; width: 26px; height: 26px; padding: 0; font-size: 13px; color: var(--text); background: var(--panel-2); border: 2px solid var(--line); border-radius: 50%; cursor: pointer; }
-  #live-edit:hover { border-color: var(--accent); }
   #cas { position: fixed; z-index: 32; inset: 64px max(14px, calc(50vw - 560px)) 24px; display: flex; flex-direction: column; overflow: hidden;
     background: radial-gradient(90% 120% at 25% 40%, #3a5a9a 0%, #1f2f5a 45%, #141a33 100%); border: 2px solid #5a7ac4; border-radius: 20px; box-shadow: 0 24px 70px #000d; }
   #cas[hidden] { display: none; }

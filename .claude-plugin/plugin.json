@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "agent-office",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Bureau pixel art de vos agents Claude Code : tableau des tickets, écran du dev (code + terminal), salle de repos, coûts et budgets, alertes, rapport du jour, stats, succès et quêtes. Local, lecture seule des transcripts.",
   "author": {
     "name": "Adrien Quennehen"
