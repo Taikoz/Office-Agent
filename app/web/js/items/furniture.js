@@ -40,19 +40,27 @@ const BAG_C = COLORS({ bleu: ["Bleu", "#1f75be"], orange: ["Orange", "#de8001"],
 const WOOD = [{ id: "chene", name: "Chêne", sw: "#8a6a4a", w: "#8a6a4a" }, { id: "noyer", name: "Noyer", sw: "#5c3d27", w: "#5c3d27" }, { id: "blanc", name: "Laqué blanc", sw: "#e6e2d8", w: "#e6e2d8" }, { id: "noir", name: "Laqué noir", sw: "#2a2a33", w: "#3a3a44" }];
 // the hour, the season, the Friday afterwork: what an object shows outdoors (a lit fire pit, the neon of the bar)
 const envNow = t => { const h = clockNow().getHours(), dim = h >= 19 || h < 8, party = !!dayState.party; return { dim, party, lit: dim || party, season: hub.seasonNow(), still: hub.focusMode, t }; };
-class Colored extends Furniture { isoState(it, t) { return this.env ? this.env(envNow(t), it) : {}; } artState(st) { return { ...(st.c ? { c: st.c } : {}), ...(st.w ? { w: st.w } : {}), ...(st.kind ? { kind: st.kind } : {}), ...(st.towel ? { towel: st.towel } : {}) }; } }
+export class Colored extends Furniture { isoState(it, t) { return this.env ? this.env(envNow(t), it) : {}; } artState(st) { return { ...(st.c ? { c: st.c } : {}), ...(st.w ? { w: st.w } : {}), ...(st.kind ? { kind: st.kind } : {}), ...(st.towel ? { towel: st.towel } : {}) }; } }
 const addC = def => new Colored(def);
 
 /* ---------- work ---------- */
-class Computer extends Colored {
-  // the screen: the work of the dev of this desk (or the chief's game), painted live on the monitor
+export class Computer extends Colored {
+  // the screen(s): the work of the dev of this desk (or the chief's game), painted live on the monitor; screens:
+  // [{ x, y, z, w, h }] where each is on the model (its front plane at y), tint: a CRT's phosphor (the style's)
   over(it, t, G) {
     if (it.rot >= 2) return;  // seen from behind
     const desk = it.on_ && hub.itemByUid(it.on_), slot = desk?.slot, d = slot != null ? DESKS[slot] : null, e = d && [...ents.values()].find(x => x.desk === d && !x.leaving);
-    const z = this.baseZ(it) + 3, power = hub.Happening.get("power")?.on;
-    const draw = () => power ? px(0, 0, 16, 10, "#08080c") : d && chiefPcSlot() === slot ? drawChiefPcScreen({ x: 8, y: 12 }, t) : drawDeskScreen({ x: 8, y: 12 }, e, t);
-    if (it.rot === 0) G.face("x", it.x + 2, it.y + 1.85, z, 0, 10, draw, 1, 0.8);
-    else G.face("y", it.x + 1.85, it.y + 18, z, 0, 10, draw, 1, 0.8);  // turned: the screen on the side toward +x, read from front to back
+    const power = hub.Happening.get("power")?.on, tint = hub.styleOf(it).tint;
+    const draw = () => {
+      if (power) return px(0, 0, 16, 10, "#08080c");
+      if (d && chiefPcSlot() === slot) drawChiefPcScreen({ x: 8, y: 12 }, t); else drawDeskScreen({ x: 8, y: 12 }, e, t);
+      if (tint) { ctx.globalAlpha = 0.4; px(0, 0, 16, 10, tint); ctx.globalAlpha = 1; for (let y = 0; y < 10; y += 1.4) px(0, y, 16, 0.4, "rgba(0,0,0,.3)"); }
+    };
+    for (const s of this.screens || [{ x: 2, y: 1.85, z: 3, w: 16, h: 8 }]) {
+      const z = this.baseZ(it) + s.z, kx = s.w / 16, ky = s.h / 10;
+      if (it.rot === 0) G.face("x", it.x + s.x, it.y + s.y, z, 0, 10, draw, kx, ky);
+      else G.face("y", it.x + s.y, it.y + s.x + s.w, z, 0, 10, draw, kx, ky);  // turned: the screen on the side toward +x, read from front to back
+    }
   }
 }
 new Computer({ type: "pc", cat: "electronique", name: "Ordinateur", price: 600, room: "any", kind: "top", w: 22, d: 8, art: "isopc", rots: 4,

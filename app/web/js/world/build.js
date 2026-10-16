@@ -77,8 +77,9 @@ function drawNoDesk(d, ent, t) {
 }
 
 /* ---------- what follows the objects: the work stations, the office's spots, the kitchen, the dining table ---------- */
-function kitchenStove() { return itemsIn("lounge").find(it => it.type === "stove") || null; }
-const kitchenReady = () => !!kitchenStove() && itemsIn("lounge").some(it => it.type === "fridge");
+// the kitchen of the break room: a stove and a fridge, whatever their model (items/*.js cook: "stove" / "fridge")
+function kitchenStove() { return itemsIn("lounge").find(it => defOf(it.type).cook === "stove") || null; }
+const kitchenReady = () => !!kitchenStove() && itemsIn("lounge").some(it => defOf(it.type).cook === "fridge");
 function syncKitchen() {
   const s = kitchenStove();
   if (s) {

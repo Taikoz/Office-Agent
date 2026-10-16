@@ -2,6 +2,7 @@
 // on friendship and mood; and with a dev at work in the office: a coffee, cheers, an idea, its screen.
 
 import { hub } from "../hub.js";
+import { MORE_INTERACTIONS } from "./dialogue.js";
 import { CHIEF_NAME, DESK_SP, chief, ents } from "../core/core.js";
 import { crewAdd, mate } from "../sims/crew.js";
 import { chiefGo, chiefToOffice } from "../world/chief.js";
@@ -33,6 +34,8 @@ export const INTERACTIONS = {
   birthday: { icon: "🎁", label: "Souhaiter son anniversaire", ok: () => 1, d: [10, 0], social: 12, moral: 10, lines: ["Joyeux anniversaire ! 🎂"], yes: ["Merci, trop gentil ! 🥳", "Oh, vous y avez pensé !"] },
   apologize: { icon: "🙏", label: "S'excuser", cat: "amical", max: 15, ok: (m, r) => 0.55 + r / 300 + m.moral / 300, d: [10, -2], social: 8, moral: 4, lines: ["Désolé pour l'autre fois…"], yes: ["C'est oublié 🤝", "Allez, on repart à zéro."], no: ["C'est un peu tard."] },
 };
+// more to say (social/dialogue.js), each line kept once
+for (const [k, more] of Object.entries(MORE_INTERACTIONS)) for (const f of ["lines", "yes", "no"]) if (more[f] && INTERACTIONS[k]) INTERACTIONS[k][f] = [...new Set([...(INTERACTIONS[k][f] || []), ...more[f]])];
 // what a dev does by itself to a colleague, from their relationship
 export function autoVerb(r, m) {
   if (r < -20) return Math.random() < 0.5 ? "argue" : "apologize";

@@ -82,6 +82,8 @@ import "./items/stove.js";
 import "./items/plant.js";
 import "./items/decoration.js";
 import "./items/walldeco.js";
+import "./items/gadgets.js";
+import "./items/kitchenset.js";
 import "./items/aquarium.js";
 import "./items/jukebox.js";
 import "./items/chiefdesk.js";

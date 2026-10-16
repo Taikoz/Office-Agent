@@ -1134,3 +1134,6 @@ class IsoDog extends SvgArt {
   }
 }
 ART.isodog = new IsoDog();
+
+// shared with the other isometric art files (svg/isogadgets.js)
+export const ISO_KIT = { K, n2, ipoly, ibox, itop, ifront, iside, iline, iell, icyl, ishadow, wood, T, legs4, gold, chrome, reg };
