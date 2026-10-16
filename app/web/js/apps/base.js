@@ -8,7 +8,7 @@ export class OsApp {
   static all = new Map();  // id → app
   // order of the Activités grid (an app not listed comes last)
   static ORDER = ["questions", "alerts", "gitlab", "browser", "blueprint", "terminal", "skills", "mmx", "dashboard", "notifs", "schedule", "planning",
-    "mr", "pipes", "tickets", "debriefs", "report", "week", "costs", "money", "team", "meteo", "settings"];
+    "mr", "pipes", "tickets", "debriefs", "report", "week", "costs", "money", "team", "network", "meteo", "settings"];
   static list() { const rank = id => (OsApp.ORDER.indexOf(id) + 1) || 999; return [...OsApp.all.values()].filter(a => !a.hidden).sort((a, b) => rank(a.id) - rank(b.id)); }
   static get(id) { return OsApp.all.get(id); }
   // events of an app's window, for the apps that wire them in their own module: handler(ev) runs only while that app

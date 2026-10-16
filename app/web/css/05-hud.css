@@ -152,3 +152,23 @@
   #weekly .q button:hover { background: #ffd060; }
   #buy .bitem.locked { opacity: .55; } #buy .bitem.locked .price { color: var(--muted); }
   #buy .lockmsg { display: block; margin-top: 4px; color: #fbaa08; font-size: 14px; }
+  /* the tutorial (ui/tutorial.js): a card above the clock, the button it is about glowing */
+  #tuto { position: fixed; z-index: 30; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(460px, calc(100% - 32px)); padding: 12px 16px;
+    background: var(--glass-2); border: 1px solid var(--accent); border-radius: 14px; box-shadow: 0 14px 34px #000b; backdrop-filter: blur(10px); }
+  #tuto[hidden] { display: none; }
+  #tuto .n { float: right; color: var(--muted); font-size: 14px; } #tuto b { font-weight: normal; font-size: 21px; color: var(--accent); }
+  #tuto p { margin: 6px 0 10px; font-size: 16px; line-height: 1.3; }
+  #tuto .acts { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  #tuto button { font: inherit; font-size: 15px; padding: 2px 12px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+  #tuto button.go { color: #1c1c24; background: var(--accent); border-color: var(--accent); } #tuto button:hover { border-color: var(--accent); color: var(--text); } #tuto button.go:hover { color: #1c1c24; }
+  #tuto .wait { color: var(--muted); font-size: 14px; animation: tutowait 1.4s ease-in-out infinite; }
+  .tuto-hl { outline: 3px solid var(--accent) !important; outline-offset: 3px; animation: tutohl 1.2s ease-in-out infinite; }
+  @keyframes tutohl { 50% { outline-color: transparent; } } @keyframes tutowait { 50% { opacity: .4; } }
+  @media (prefers-reduced-motion: reduce) { .tuto-hl, #tuto .wait { animation: none; } }
+  body.buy-on #tuto { bottom: auto; top: 64px; }  /* the buy mode fills the bottom: the card goes up */
+  /* ChiefOS → Réseau (apps/network.js) */
+  .netpeers, .netemotes { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  .netpeers .chip { padding: 1px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 15px; }
+  .netchat { max-height: 220px; overflow-y: auto; padding: 6px 8px; margin-bottom: 6px; background: #0003; border: 1px solid var(--line); border-radius: 8px; font-size: 15px; line-height: 1.35; }
+  .netemotes button { padding: 1px 10px; border-radius: 999px; }
+  .netsend { display: flex; gap: 8px; } .netsend input { flex: 1; min-width: 0; }

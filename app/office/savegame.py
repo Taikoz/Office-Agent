@@ -6,11 +6,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+from datetime import date
 from typing import Any
 
 from .config import STATE_DIR
 
 SAVE_FILE = STATE_DIR / "save.json"
+BACKUP_KEEP = 7  # days of copies of the save kept in STATE_DIR/backups
 SAVE_MAX = 2_000_000       # bytes of the whole save
 VALUE_MAX = 600_000        # bytes of one key
 KEY_RE = re.compile(r"^office-[a-z0-9-]{1,40}$")
@@ -42,6 +45,19 @@ def check(data: Any) -> tuple[bool, str]:
     return True, ""
 
 
+def backup_daily() -> None:
+    """Before the first save of a day, the save as it was goes to backups/save-YYYY-MM-DD.json; the oldest go."""
+    if not SAVE_FILE.exists():
+        return
+    backups = STATE_DIR / "backups"
+    backups.mkdir(parents=True, exist_ok=True)
+    today = backups / f"save-{date.today().isoformat()}.json"
+    if not today.exists():
+        shutil.copy2(SAVE_FILE, today)
+    for old in sorted(backups.glob("save-*.json"))[:-BACKUP_KEEP]:
+        old.unlink(missing_ok=True)
+
+
 def save(data: Any) -> tuple[bool, str]:
     """Merges the keys into the saved ones (a partial save, sent while the page closes, never drops progress)
     and writes the file atomically (a crash mid-write never leaves half a file)."""
@@ -53,6 +69,7 @@ def save(data: Any) -> tuple[bool, str]:
     if not ok:
         return False, why
     STATE_DIR.mkdir(parents=True, exist_ok=True)
+    backup_daily()
     tmp = SAVE_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps({"savedAt": data["savedAt"], "keys": keys}, ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, SAVE_FILE)

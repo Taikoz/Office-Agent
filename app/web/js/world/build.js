@@ -32,7 +32,7 @@ export let furni = new SaveSlot(BUILD_KEY, { items: [], seq: 0 }, { version: 2, 
 export const saveBuild = () => { SaveSlot.get(BUILD_KEY).save(furni); syncAll(); };
 
 /* ---------- the catalog: categories (the objects are in js/items/) ---------- */
-export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "Chaises"], ["fauteuils", "🛋️", "Fauteuils"], ["canapes", "🛋️", "Canapés"], ["poufs", "🫘", "Poufs"], ["tables", "🍽️", "Tables"], ["electronique", "🖥️", "Électronique"],
+export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "Chaises"], ["fauteuils", "🛋️", "Fauteuils"], ["canapes", "🛋️", "Canapés"], ["poufs", "🫘", "Poufs"], ["sport", "🏋️", "Sport"], ["bibliotheque", "📖", "Bibliothèque"], ["tables", "🍽️", "Tables"], ["electronique", "🖥️", "Électronique"],
   ["tableaux", "🖼️", "Tableaux"], ["cadres", "🖼️", "Posters"], ["neons", "🌈", "Néons"], ["horloges", "🕰️", "Horloges"], ["rangement", "📚", "Rangement"], ["cafe", "☕", "Café"], ["cuisine", "🍳", "Cuisine"], ["loisirs", "🎮", "Loisirs"],
   ["plantes", "🪴", "Plantes"], ["deco", "🐠", "Déco"], ["lumiere", "💡", "Lumière"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"],
   ["murs", "🧱", "Murs"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["garde", "🎩", "Garde-robe"]];
@@ -262,13 +262,13 @@ function buyPaint(cat, type, color) {
 const FIXED_WALL = {  // the doors (and the office's breaker box)
   get office() { return [[211, 24, 12, 16], [DOOR.x - 16, 8, 36, 62]]; },
   lounge: [[6, 8, 36, 62], [265, 10, 30, 58], [314, 10, 30, 58]],
-  meeting: [[6, 8, 36, 62]],
+  meeting: [[6, 8, 36, 62]], gym: [[6, 8, 36, 62]], library: [[6, 8, 36, 62]],
   terrace: [],
 };
 const FIXED_FLOOR = {
   office: () => [[DOOR.x - 16, 70, 32, 22]],
   lounge: () => [[6, 70, 36, 24], [265, 70, 30, 18], [314, 70, 30, 18]],
-  meeting: () => [[6, 70, 36, 24]],
+  meeting: () => [[6, 70, 36, 24]], gym: () => [[6, 70, 36, 24]], library: () => [[6, 70, 36, 24]],
   terrace: () => [[2, 70, 50, 30]],
 };
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;

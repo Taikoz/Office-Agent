@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -13,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, pricing, questions, routes, savegame, schedules, team, terminal, transcripts  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, net, pricing, questions, routes, savegame, schedules, team, terminal, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -221,6 +222,17 @@ class SaveGameTests(unittest.TestCase):
         self.assertEqual(savegame.load(), data)
         savegame.save({"savedAt": 1700000000001, "keys": {"office-build": '{"seq": 3}'}})  # partial: the wallet stays
         self.assertEqual(savegame.load()["keys"], {"office-wallet": '{"funds": 1500}', "office-build": '{"seq": 3}'})
+
+    def test_daily_backup_keeps_a_week(self) -> None:
+        backups = self.tmp / "backups"
+        backups.mkdir()
+        for d in range(1, 10):
+            (backups / f"save-2026-01-{d:02d}.json").write_text("{}")
+        savegame.save({"savedAt": 1, "keys": {"office-build": "{}"}})  # no save yet: nothing to copy
+        savegame.save({"savedAt": 2, "keys": {"office-build": '{"seq": 1}'}})  # today's copy of the previous save
+        kept = sorted(p.name for p in backups.glob("save-*.json"))
+        self.assertEqual(len(kept), savegame.BACKUP_KEEP)
+        self.assertIn(f"save-{savegame.date.today().isoformat()}.json", kept)
 
     def test_rejects_foreign_keys_and_oversize(self) -> None:
         self.assertFalse(savegame.save({"savedAt": 1, "keys": {"token": "x"}})[0])
@@ -519,3 +531,66 @@ class PlatformTests(unittest.TestCase):
     def test_global_hook_command_is_a_posix_path(self) -> None:
         home = Path.home().resolve()
         self.assertEqual(blueprints.hook_command(home, home / ".claude" / "hooks" / "h.sh"), f'bash "{(home / ".claude" / "hooks" / "h.sh").as_posix()}"')
+
+
+class NetTests(unittest.TestCase):
+    """The office on the internal network: only presence and chat, behind the join code."""
+
+    def setUp(self) -> None:
+        net.HUB.reset()
+
+    def test_hub_cleans_what_it_keeps(self) -> None:
+        ok, me = net.HUB.hello({"name": "Ada\x00<b>" + "x" * 50, "look": {"skin": "#f1c7a3", "evil": "javascript:alert(1)", "Bad": 1, "style": 99, "hat": "crown"}})
+        self.assertTrue(ok)
+        _, other = net.HUB.hello({"name": "Bob"})
+        ok, snap = net.HUB.snapshot(other["sid"], 0)
+        peer = snap["peers"][0]
+        self.assertEqual(peer["name"], ("Ada <b>" + "x" * 50)[:24].strip())
+        self.assertEqual(peer["look"], {"skin": "#f1c7a3", "hat": "crown"})
+        self.assertNotIn("sid", peer)
+        self.assertNotIn(me["sid"], json.dumps(snap))  # the others never see a sid
+        self.assertFalse(net.HUB.state({"sid": me["sid"], "x": "nope"})[0])
+        self.assertTrue(net.HUB.state({"sid": me["sid"], "room": "../../etc", "x": 1e9, "y": -5})[0])
+        ok, snap = net.HUB.snapshot(other["sid"], 0)
+        self.assertEqual((snap["peers"][0]["room"], snap["peers"][0]["x"], snap["peers"][0]["y"]), ("office", 900.0, 0.0))
+        self.assertTrue(net.HUB.say({"sid": me["sid"], "text": "salut " * 100})[0])
+        self.assertLessEqual(len(net.HUB.chat[-1]["text"]), 200)
+        self.assertFalse(net.HUB.say({"sid": "unknown", "text": "hop"})[0])
+
+    def test_full_office(self) -> None:
+        for i in range(net.MAX_PEERS):
+            self.assertTrue(net.HUB.hello({"name": f"c{i}"})[0])
+        self.assertFalse(net.HUB.hello({"name": "one more"})[0])
+
+    def test_lan_server_needs_the_code_and_serves_nothing_else(self) -> None:
+        from http.server import ThreadingHTTPServer
+        import urllib.request
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), net.LanHandler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        net.STATE["code"] = "ABC234"
+        base = f"http://127.0.0.1:{srv.server_port}"
+        def call(path: str, body: dict | None = None, code: str = "", origin: str = "") -> tuple[int, dict, dict]:
+            req = urllib.request.Request(base + path, data=json.dumps(body).encode() if body is not None else None, method="POST" if body is not None else "GET")
+            req.add_header("Content-Type", "application/json")
+            if code:
+                req.add_header("X-Join-Code", code)
+            if origin:
+                req.add_header("Origin", origin)
+            try:
+                with urllib.request.urlopen(req) as r:
+                    return r.status, json.loads(r.read()), dict(r.headers)
+            except urllib.error.HTTPError as e:
+                return e.code, json.loads(e.read() or b"{}"), dict(e.headers)
+        try:
+            self.assertEqual(call("/api/state")[0], 404)
+            self.assertEqual(call("/net/hello", {"name": "x"})[0], 403)
+            self.assertEqual(call("/net/hello", {"name": "x"}, "WRONG1")[0], 403)
+            status, body, headers = call("/net/hello", {"name": "Guest"}, "abc234", "http://127.0.0.1:8765")
+            self.assertEqual(status, 200)
+            self.assertEqual(headers.get("Access-Control-Allow-Origin"), "http://127.0.0.1:8765")
+            self.assertIsNone(call("/net/hello", {"name": "y"}, "ABC234", "https://evil.example")[2].get("Access-Control-Allow-Origin"))
+            status, snap, _ = call(f"/net/peers?sid={body['sid']}&since=0", None, "ABC234")
+            self.assertEqual(status, 200)
+            self.assertIn("chat", snap)
+        finally:
+            srv.shutdown(); srv.server_close(); net.STATE["code"] = ""

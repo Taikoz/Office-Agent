@@ -25,6 +25,8 @@ export const PROJECTS = [
   { id: "open2", icon: "🏙️", name: "Recruter deux devs de plus", desc: "L'équipe passe à douze.", price: 9000, ok: () => con.level === 1, done: () => con.level >= 2, needs: "Recruter les deux premiers d'abord" },
   { id: "meeting", icon: "🤝", name: "Salle de réunion", desc: "Une grande table : réunis l'équipe (social, moral).", price: 4000, ok: () => !hasRoom("meeting"), done: () => hasRoom("meeting") },
   { id: "terrace", icon: "🌿", name: "Terrasse", desc: "En plein air, avec barbecue : l'afterwork du vendredi s'y tient.", price: 6000, ok: () => !hasRoom("terrace"), done: () => hasRoom("terrace") },
+  { id: "gym", icon: "🏋️", name: "Salle de sport", desc: "Les devs s'ennuient moins et y retrouvent le moral (les sportifs adorent).", price: 5000, ok: () => !hasRoom("gym"), done: () => hasRoom("gym") },
+  { id: "library", icon: "📚", name: "Bibliothèque", desc: "Un coin calme où les devs fatigués viennent lire et se reposer.", price: 4500, ok: () => !hasRoom("library"), done: () => hasRoom("library") },
 ];
 
 /* ---------- the open space grows: new devs hired (their desks are bought in the buy mode, build.js) ---------- */
@@ -48,15 +50,15 @@ export function buyProject(id) {
     toast("CONSTRUCTION 🏗️", `${p.name} : ${TEAM.length} devs`, `Bienvenue à ${TEAM.slice(before).join(" et ")} ! Achète-leur un bureau.`);
     setTimeout(() => hub.Happening?.get("welcome")?.start(performance.now(), TEAM.slice(before)), 4000);  // the welcome drink (social/officetalk.js)
   }
-  else { con.rooms.push(id); saveCon(); toast("CONSTRUCTION 🏗️", `${p.name} construite`, "Sa porte est dans la salle de repos ; la pièce est aussi dans la barre du haut."); renderRoomBar(); }
+  else { con.rooms.push(id); saveCon(); toast("CONSTRUCTION 🏗️", `${p.name} construite`, ["gym", "library"].includes(id) ? "Elle est dans la barre du haut ; achète ses meubles pour que les devs y viennent." : "Sa porte est dans la salle de repos ; la pièce est aussi dans la barre du haut."); renderRoomBar(); }
   sfx("level"); saveCon(); renderBuy();
 }
 /* ---------- the rooms' size: longer, deeper, or smaller when the furniture still fits ---------- */
-const BASE = { office: [560, 300], lounge: [560, 300], meeting: [400, 232], terrace: [600, 320] };
+const BASE = { office: [560, 300], lounge: [560, 300], meeting: [400, 232], terrace: [600, 320], gym: [420, 270], library: [400, 270] };
 const LIMIT = { w: [400, 840], h: [232, 420] };
 con.sizes = con.sizes || {};
 for (const [id, [w, h]] of Object.entries(con.sizes)) setRoomSize(id, w, h);
-const ROOM_NAMES = { office: "🏢 Bureau", lounge: "☕ Salle de repos", meeting: "🤝 Salle de réunion", terrace: "🌿 Terrasse" };
+const ROOM_NAMES = { office: "🏢 Bureau", lounge: "☕ Salle de repos", meeting: "🤝 Salle de réunion", terrace: "🌿 Terrasse", gym: "🏋️ Salle de sport", library: "📚 Bibliothèque" };
 const resizeCost = (dw, dh) => dw > 0 ? 2500 : dh > 0 ? 2000 : 0;  // growing costs; shrinking is free
 // whether every object of the room still fits in w × h
 function fits(room, w, h) {
@@ -107,8 +109,8 @@ function renderRoomBar() {
 }
 roomBar.addEventListener("click", ev => { const b = ev.target.closest("[data-room]"); if (b) { setView(b.dataset.room); if (buy.on) renderBuy(); } });
 renderRoomBar();
-const curRoom = () => ["lounge", "meeting", "terrace"].includes(view) ? view : "office";
-for (const r of ["meeting", "terrace"]) if (!decor[r]) decor[r] = { ...DECOR_DEFAULT[r] };
+const curRoom = () => ["lounge", "meeting", "terrace", "gym", "library"].includes(view) ? view : "office";
+for (const r of ["meeting", "terrace", "gym", "library"]) if (!decor[r]) decor[r] = { ...DECOR_DEFAULT[r] };
 
 // meeting: the idle devs of the break room sit around the table for a minute
 const meeting = { on: false, until: 0, who: [] };

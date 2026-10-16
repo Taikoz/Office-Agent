@@ -1,9 +1,15 @@
-// First launch: create the team (chief, 8 devs, cat), name the office and add a logo if you want. Editable later from ÉQUIPE.
+// First launch: create the household, Sims style (the chief, 8 devs, the cat), name the office and add a logo if you
+// want. Each dev's card shows the face and the two traits its name gives (they follow what is typed); a die per card,
+// one for the whole team. Editable later from ÉQUIPE.
 
 import { CHIEF_NAME, TEAM } from "./core.js";
 import { esc } from "./data.js";
 import { closePanel, panel } from "../ui/panel.js";
 import { openOverlay } from "../agents/insight.js";
+import { ART } from "../svg/base.js";
+import { lookFor } from "../agents/entities.js";
+import { TRAITS, traitsOf } from "../sims/moods.js";
+import { CHIEF_LOOK } from "../world/chief.js";
 
 const NAME_POOL = ["Alice", "Bruno", "Chloé", "David", "Emma", "Farid", "Gaëlle", "Hugo", "Inès", "Jules", "Karim", "Léa", "Malik", "Nina",
   "Oscar", "Paula", "Quentin", "Rose", "Sami", "Tess", "Ugo", "Vera", "Wassim", "Yasmine", "Zoé", "Louis", "Mina", "Noé", "Sarah", "Théo"];
@@ -11,6 +17,25 @@ const LOGO_MAX = 300_000, LOGO_PX = 512;
 let setupLogo;  // undefined = keep the current logo, null = remove it, data URL = new logo
 
 if (OFFICE_CFG.office) document.title = `${OFFICE_CFG.office} — Agent Office`;
+
+/* ---------- the cards: a face (from the name, like in the office), the traits the name gives ---------- */
+const face = (look, tux = false) => `<img alt="" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(ART.person.markup({ look, tux, smile: true })
+  .replace(/viewBox="[^"]*" width="\d+" height="\d+"/, 'viewBox="-7 -25 14 16"'))}">`;
+const devFace = name => face({ ...lookFor(name || "?", null), team: true });
+const traitsChips = name => name ? traitsOf(name).map(id => `<span class="trait" title="${esc(TRAITS[id].desc)}">${TRAITS[id].icon} ${esc(TRAITS[id].name)}</span>`).join("") : `<span class="muted">un prénom…</span>`;
+const devCard = (n, i) => `<div class="dev" data-i="${i}"><div class="face">${devFace(n)}</div><div class="body"><span class="desk">Bureau ${i + 1}</span>
+  <input data-desk="${i}" maxlength="20" required value="${esc(n)}" aria-label="Prénom du dev du bureau ${i + 1}"><span class="traits">${traitsChips(n)}</span></div>
+  <button type="button" class="dice" data-dice="${i}" title="Un autre prénom">🎲</button></div>`;
+function refreshCard(i) {
+  const card = document.querySelector(`#setup-team .dev[data-i="${i}"]`), name = card.querySelector("input").value.trim();
+  card.querySelector(".face").innerHTML = devFace(name); card.querySelector(".traits").innerHTML = traitsChips(name);
+}
+const refreshSign = () => { document.getElementById("setup-sign").textContent = document.getElementById("setup-office").value.trim() || "Agent Office"; };
+function freeName() {
+  const used = new Set([...document.querySelectorAll("#setup-team input"), document.getElementById("setup-chief")].map(i => i.value.trim().toLowerCase()));
+  const pool = NAME_POOL.filter(n => !used.has(n.toLowerCase()));
+  return pool[Math.floor(Math.random() * pool.length)] || "Alex";
+}
 
 function openSetup(first) {
   document.getElementById("setup-title").textContent = first ? "BIENVENUE AU BUREAU" : "MODIFIER L'ÉQUIPE";
@@ -20,8 +45,10 @@ function openSetup(first) {
   document.getElementById("setup-chief").value = OFFICE_CFG.setup ? CHIEF_NAME : (OFFICE_CFG.chief && OFFICE_CFG.chief !== "Chef" ? OFFICE_CFG.chief : "");
   document.getElementById("setup-office").value = OFFICE_CFG.office || "";
   document.getElementById("setup-cat").value = OFFICE_CFG.cat || "";
-  document.getElementById("setup-team").innerHTML = TEAM.map((n, i) =>
-    `<label>Bureau ${i + 1}<input data-desk="${i}" maxlength="20" required value="${esc(n)}"></label>`).join("");
+  document.getElementById("setup-team").innerHTML = TEAM.map(devCard).join("");
+  document.getElementById("setup-chief-face").innerHTML = face(CHIEF_LOOK, true);
+  document.getElementById("setup-cat-face").innerHTML = `<img alt="" src="${ART.cat.url({ pose: "sit", frame: 0 })}">`;
+  refreshSign();
   setupLogo = undefined;
   showLogo(OFFICE_CFG.logo);
   setupMsg("");
@@ -31,7 +58,7 @@ function openSetup(first) {
 
 function showLogo(src) {
   const box = document.getElementById("setup-preview");
-  box.innerHTML = src ? `<img alt="Logo" src="${esc(src)}">` : `<span class="muted">pas de logo</span>`;
+  box.innerHTML = src ? `<img alt="Logo" src="${esc(src)}">` : `<span class="muted">ton logo</span>`;
 }
 
 function setupMsg(text, err) {
@@ -73,8 +100,12 @@ document.getElementById("setup-close").onclick = () => openOverlay("setup", fals
 document.getElementById("setup-dice").onclick = () => {
   const chief = document.getElementById("setup-chief").value.trim().toLowerCase();
   const pool = NAME_POOL.filter(n => n.toLowerCase() !== chief).sort(() => Math.random() - 0.5);
-  document.querySelectorAll("#setup-team input").forEach((inp, i) => { inp.value = pool[i]; });
+  document.querySelectorAll("#setup-team input").forEach((inp, i) => { inp.value = pool[i]; refreshCard(i); });
 };
+// a card follows its name as it is typed; its die draws another one
+document.getElementById("setup-team").addEventListener("input", ev => { const i = ev.target.dataset.desk; if (i != null) refreshCard(+i); });
+document.getElementById("setup-team").addEventListener("click", ev => { const b = ev.target.closest("[data-dice]"); if (!b) return; const i = +b.dataset.dice; document.querySelector(`#setup-team input[data-desk="${i}"]`).value = freeName(); refreshCard(i); });
+document.getElementById("setup-office").addEventListener("input", refreshSign);
 
 document.getElementById("setup-form").onsubmit = async ev => {
   ev.preventDefault();

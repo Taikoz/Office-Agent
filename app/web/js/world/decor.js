@@ -10,7 +10,8 @@ import { SPRITES } from "../svg/sprites.js";
 // a room as it is delivered: plastered walls, a concrete floor (walls and floors are bought in the buy mode, build.js)
 const BARE = { wall: "uni", wallColor: "#cfc8bb", floor: "beton", floorColor: "#8f8f8f", wood: "#8a6a4a",
   rug: "aucun", rugColor: "#3a3a48", curtain: "velours", curtainColor: "#8f2b46", door: "panneaux", doorColor: "#7a5234" };
-export const DECOR_DEFAULT = { office: { ...BARE }, lounge: { ...BARE }, meeting: { ...BARE }, terrace: { ...BARE, floor: "parquet", floorColor: "#8a6a4a" } };
+export const DECOR_DEFAULT = { office: { ...BARE }, lounge: { ...BARE }, meeting: { ...BARE }, terrace: { ...BARE, floor: "parquet", floorColor: "#8a6a4a" },
+  gym: { ...BARE, floor: "beton", floorColor: "#5a5e68", wallColor: "#d8d4cc" }, library: { ...BARE, wall: "boiserie", wallColor: "#5a3a2a", floor: "chevron", floorColor: "#8a6a4a" } };
 export const DECOR_TYPES = {
   wall: [["lambris", "Lambris"], ["uni", "Uni"], ["rayures", "Rayures"], ["briques", "Briques"], ["papier", "Papier peint"], ["boiserie", "Boiserie basse"]],
   floor: [["parquet", "Parquet"], ["chevron", "Point de Hongrie"], ["moquette", "Moquette"], ["carrelage", "Carrelage"], ["damier", "Damier"], ["beton", "Béton ciré"]],

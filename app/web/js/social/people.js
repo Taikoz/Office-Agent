@@ -14,7 +14,7 @@ import { PAN, cooking, drawFork, drawSteam, eaters, fire, socialFx, panAt } from
 export const lounger = n => n === CHIEF_NAME ? null : loungers.get(n);
 export function posOf(n) { if (n === CHIEF_NAME) return { x: chief.lx, y: chief.ly }; const l = loungers.get(n); return l ? { x: l.x, y: l.y } : null; }
 export function here(n) { return n === CHIEF_NAME ? chief.room === "lounge" : !!loungers.get(n) && !loungers.get(n).called; }
-export function idleMate(l, t) { return !l.called && !l.path.length && !l.busy && t > (l.sayUntil || 0) - 2000; }
+export function idleMate(l, t) { return !l.called && !l.partyRoom && !l.path.length && !l.busy && t > (l.sayUntil || 0) - 2000; }
 export function say(n, msg, ms = 3000) {
   const t = performance.now();
   if (n === CHIEF_NAME) { chief.bubble = msg; chief.until = t + ms; } else { const l = loungers.get(n); if (l) { l.say = msg; l.sayUntil = t + ms; } }

@@ -37,6 +37,7 @@ function standSpot() {
 export function revalidateSpots() {
   const keys = new Set(SPOTS().map(s => s.key));
   for (const l of loungers.values()) {
+    if (l.partyRoom) continue;  // in another room (the terrace, the gym…): not the break room's business
     if (l.spot && !l.spot.key?.startsWith("stand:") && !keys.has(l.spot.key)) { l.spot = null; l.next = 0; l.busy = false; }
     else if (l.spot?.key?.startsWith("stand:") && keys.size && !l.busy) l.next = 0;  // something new to use: they go
   }
@@ -89,7 +90,7 @@ function stepLounge(dt, t) {
       if (dist > sp) { l.x += dx / dist * sp; l.y += dy / dist * sp; }
       else { l.x = tgt.x; l.y = tgt.y; l.path.shift(); }
       if (!l.path.length && l.called) loungers.delete(name);
-    } else if (!l.called && !l.busy && t > l.next) sendTo(l, pickSpot(name) || l.spot, t);
+    } else if (!l.called && !l.busy && !l.partyRoom && t > l.next) sendTo(l, pickSpot(name) || l.spot, t);
   }
   // conversations
   while (chatQueue.length && t >= chatQueue[0].at) { const c = chatQueue.shift(); loungeSay(c.name, c.text, t); }
