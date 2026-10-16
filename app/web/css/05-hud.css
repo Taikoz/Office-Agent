@@ -307,8 +307,8 @@
   #visio .vctl button.off { background: #ff3b30; } #visio .vctl button.end { background: #ff3b30; transform: rotate(135deg); margin-left: auto; }
   #visio .vctl input { flex: 1 1 120px; min-width: 0; padding: 6px 12px; font: inherit; font-size: 13px; color: #fff; background: #ffffff10; border: 1px solid #ffffff2a; border-radius: 999px; }
   @media (prefers-reduced-motion: reduce) { #visio .vbig { animation: none; } }
-  /* the scene's layers drawn at fewer pixels than the screen's stay sharp (ui/quality.js) */
-  #c, .isolayer { image-rendering: pixelated; }
+  /* the scene's layers drawn at fewer pixels than the screen's: sharp when blown up by a whole factor (ui/quality.js) */
+  body.crisp #c, body.crisp .isolayer { image-rendering: pixelated; }
   /* économie: no blur behind the panels (it is redone at every frame over the moving scene) */
   body.eco * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   .qbtns { display: flex; gap: 6px; } .qbtns button.on { border-color: var(--accent); color: var(--accent); }

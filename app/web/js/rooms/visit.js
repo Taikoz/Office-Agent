@@ -9,7 +9,7 @@ import { hub } from "../hub.js";
 import { CHIEF_NAME, ROOM, badge, px, text } from "../core/core.js";
 import { ART } from "../svg/base.js";
 import { esc } from "../core/data.js";
-import { bubble, drawPerson, headroom } from "../world/scene.js";
+import { bubble, drawPerson, headroom, stepOf } from "../world/scene.js";
 import { CHIEF_LOOK } from "../world/chief.js";
 import { chiefHat } from "../world/chiefedit.js";
 import { DECOR_DEFAULT, decor, doorSprite, drawWall, roomFloorCanvas } from "../world/decor.js";
@@ -121,7 +121,7 @@ class VisitView extends Room {
     items.push({ pt: [v.x, v.y], draw: () => G.put(v.x, v.y, v.x, v.y, z, () => {
       const em = !walking && net.emote && t < net.emote.until ? net.emote.key : "";
       drawPerson(v.x, v.y, CHIEF_LOOK, emotePose(em, t, { tux: true, smile: true, hat: chiefHat(), dir: walking ? v.dir : pose.dir, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down",
-        frame: walking ? Math.floor(t / 180) : pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0 }));
+        frame: walking ? Math.floor(t / 180) : pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, step: walking ? stepOf(v, v.x, v.y) : null }));
       if (pose.cup) { px(v.x + 4, v.y - 13, 2.5, 3, "#f4f2ea"); px(v.x + 4, v.y - 13, 2.5, 0.8, "#6d4a2e"); }
     }) });
     G.drawSorted(items);

@@ -128,7 +128,8 @@ export function resize() {
   tl.style.width = `${Math.round(Math.min(w, 900))}px`;  // the timeline floats above the clock
   S = Math.max(1.2, w / W);
   // pixels of the layers per CSS pixel: the device's, or fewer (ui/quality.js: a budget, the frames measured)
-  const dpr = hub.renderRes?.(W * S, H * S) || window.devicePixelRatio || 1;
+  const dpr = hub.renderRes?.(W * S, H * S) || window.devicePixelRatio || 1, up = (window.devicePixelRatio || 1) / dpr;
+  document.body.classList.toggle("crisp", up > 1.01 && Math.abs(up - Math.round(up)) < 0.01);  // blown up ×2, ×3: sharp pixels; by 1.2: smooth, never uneven
   cv.width = Math.round(W * S * dpr); cv.height = Math.round(H * S * dpr);
   cv.style.height = `${Math.round(H * S)}px`;
   S *= dpr;

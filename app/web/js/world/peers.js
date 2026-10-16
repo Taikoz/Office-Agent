@@ -9,7 +9,7 @@ import { CHIEF_NAME, ROOM, badge, chief } from "../core/core.js";
 import { CHIEF_LOOK } from "./chief.js";
 import { chiefHat } from "./chiefedit.js";
 import { toast } from "../sims/progress.js";
-import { bubble, drawPerson, headroom } from "./scene.js";
+import { bubble, drawPerson, headroom, stepOf } from "./scene.js";
 import { decor } from "./decor.js";
 import { setView, view } from "./lounge.js";
 import { OFFICE_SPOTS } from "./place.js";
@@ -252,40 +252,58 @@ setInterval(async () => {
 }, 50);
 
 /* ---------- the others (chiefs and, in the office we visit, its team), between two updates ---------- */
-// what comes from the network is shown a little late (about one update and a half), going smoothly from one received
-// position to the next, like an online game: no jerk at each update, no stop between two. The pose goes with the
-// position it came with (one sits when one reaches the chair, not before).
-const shown = new Map();  // key → { buf: [{ t, x, y, pose }], src, last, gap, x, y, room, moving, dir, pose }
+// what comes from the network is shown a little late, going smoothly from one received position to the next, like an
+// online game. The delay follows how regular the updates really are (the slowest of the last ones, and a margin);
+// an update late: the walker goes on the way it went for a moment instead of stopping, then catches up softly. It
+// walks while it really moves on screen (its speed, smoothed), its legs follow the ground covered (scene.js stepOf),
+// turned where it goes; the pose goes with the position it came with (one sits once on the chair, not before).
+const shown = new Map();  // key → { buf: [{ t, x, y, pose }], src, last, gaps, x, y, room, v, vx, vy, dir, pose, at }
 export function smoothed(key, p, t) {
   let s = shown.get(key);
   const far = s && Math.hypot(p.x - s.buf.at(-1).x, p.y - s.buf.at(-1).y) > 120;
   if (!s || s.room !== p.room || far) {  // new, another room, or a jump (a door): there at once
-    s = { buf: [{ t, x: p.x, y: p.y, pose: p.pose }], src: p, last: t, gap: 300, x: p.x, y: p.y, room: p.room, moving: 0, dir: null, pose: p.pose };
+    s = { buf: [{ t, x: p.x, y: p.y, pose: p.pose }], src: p, last: t, gaps: [], x: p.x, y: p.y, room: p.room, v: 0, vx: 0, vy: 0, dir: null, pose: p.pose, at: t };
     shown.set(key, s); return s;
   }
   if (s.src !== p) {  // an update came (each one is a new object)
-    s.src = p; s.gap = s.gap * 0.8 + Math.min(1500, t - s.last) * 0.2; s.last = t;
+    s.src = p; s.gaps.push(Math.min(1500, t - s.last)); if (s.gaps.length > 8) s.gaps.shift(); s.last = t;
     s.buf.push({ t, x: p.x, y: p.y, pose: p.pose });
-    if (s.buf.length > 12) s.buf.shift();
+    if (s.buf.length > 16) s.buf.shift();
   }
-  const rt = t - Math.max(120, Math.min(700, s.gap * 1.5)), b = s.buf;
+  // the delay drifts toward its target (8 % of the time at most: the walk speeds up or slows down a little, never jumps)
+  const want = Math.max(120, Math.min(800, (s.gaps.length ? Math.max(...s.gaps) : 300) * 1.15 + 30)), step = Math.max(1, Math.min(100, t - s.at)) * 0.08;
+  s.delay = s.delay == null ? want : s.delay + Math.max(-step, Math.min(step, want - s.delay));
+  const rt = t - s.delay, b = s.buf;
   let i = b.length - 1;
   while (i > 0 && b[i - 1].t > rt) i--;
   const A = b[Math.max(0, i - 1)], B = b[i];
-  const k = B.t > A.t ? Math.max(0, Math.min(1, (rt - A.t) / (B.t - A.t))) : 1;
-  s.x = A.x + (B.x - A.x) * k; s.y = A.y + (B.y - A.y) * k;
-  const dx = B.x - A.x, dy = B.y - A.y;
-  if (k < 1 && Math.hypot(dx, dy) > 0.8) { s.moving = t; s.dir = [dx, dy]; }
-  s.pose = k >= 1 || !s.moving || t - s.moving > 150 ? B.pose : A.pose;
+  let tx, ty;
+  if (rt <= B.t || b.length < 2) {  // between two received positions
+    const k = B.t > A.t ? Math.max(0, Math.min(1, (rt - A.t) / (B.t - A.t))) : 1;
+    tx = A.x + (B.x - A.x) * k; ty = A.y + (B.y - A.y) * k;
+  } else {  // past the newest: on the way it went, slowing down, 150 ms at most
+    const P = b[b.length - 2], L = b[b.length - 1], dt = Math.max(1, L.t - P.t), late = rt - L.t, ahead = Math.min(150, late - late * late / 600);
+    tx = L.x + (L.x - P.x) / dt * ahead; ty = L.y + (L.y - P.y) / dt * ahead;
+  }
+  // a soft catch-up (no jump when an update corrects the guess), the speed smoothed
+  const dt = Math.max(1, Math.min(100, t - s.at)); s.at = t;
+  const f = Math.min(1, dt / 70), nx = s.x + (tx - s.x) * f, ny = s.y + (ty - s.y) * f;
+  const vx = (nx - s.x) / dt, vy = (ny - s.y) / dt;
+  s.vx = s.vx * 0.75 + vx * 0.25; s.vy = s.vy * 0.75 + vy * 0.25; s.v = Math.hypot(s.vx, s.vy);
+  s.x = nx; s.y = ny;
+  if (s.v > 0.006) s.dir = [s.vx, s.vy];
+  s.pose = s.v > 0.01 ? A.pose : B.pose;
   return s;
 }
-// the drawPerson options of someone shown from the network: walking (moving now, or said so) or its pose
+const walkingNow = s => s.v > 0.01;  // 10 units a second (a walk: about 60)
+// the drawPerson options of someone shown from the network: walking (it moves on screen) or its pose
 export function netPose(p, s, t, extra = {}) {
-  const pose = s.pose || p.pose || {}, walking = t - s.moving < 120;
-  if (walking) { const d = s.dir || pose.dir; return { ...extra, frame: Math.floor(t / 180), dir: d, back: !!d && d[1] < 0 && Math.abs(d[1]) >= Math.abs(d[0]) }; }
+  const pose = s.pose || p.pose || {};
+  if (walkingNow(s)) { const d = s.dir || pose.dir; return { ...extra, step: stepOf(s, s.x, s.y), dir: d, back: !!d && d[1] < 0 && Math.abs(d[1]) >= Math.abs(d[0]) }; }
+  stepOf(s, s.x, s.y);
   return { ...extra, frame: pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", dir: pose.dir || (pose.seated ? null : s.dir) };  // still: turned where it went
 }
-export const liftOf = (p, s, t) => t - s.moving < 120 ? 0 : (s.pose || p.pose)?.z || 0;
+export const liftOf = (p, s, t) => walkingNow(s) ? 0 : (s.pose || p.pose)?.z || 0;
 // an emote's body language: arms up and down, a little jump for a dance
 export function emotePose(key, t, o) {
   if (!key) return o;

@@ -3,7 +3,7 @@
 
 import { hub } from "../hub.js";
 import { CHIEF_NAME, DOOR, HAIRS, SKINS, TEAM, badge, chief, hash, px, text } from "../core/core.js";
-import { bubble, drawPerson, headroom } from "../world/scene.js";
+import { bubble, drawPerson, headroom, stepOf } from "../world/scene.js";
 import { chiefGo, chiefToOffice, officeRoute } from "../world/chief.js";
 import { pick } from "../world/lounge.js";
 import { sfx, toast } from "../sims/progress.js";
@@ -43,7 +43,7 @@ class ClientVisit extends Happening {
   draw(t) {
     const v = this.visitor; if (!v) return;
     const walking = v.path.length > 0;
-    drawPerson(v.x, v.y, v.look, { tux: true, smile: v.phase !== "out" || v.say.includes("signe"), frame: walking ? Math.floor(t / 180) : 0, back: walking && v.path[0].y < v.y, dir: walking ? [v.path[0].x - v.x, v.path[0].y - v.y] : null });
+    drawPerson(v.x, v.y, v.look, { tux: true, smile: v.phase !== "out" || v.say.includes("signe"), frame: walking ? Math.floor(t / 180) : 0, step: walking ? stepOf(v, v.x, v.y) : null, back: walking && v.path[0].y < v.y, dir: walking ? [v.path[0].x - v.x, v.path[0].y - v.y] : null });
     px(v.x + 4, v.y - 9, 4, 3, "#5c3d27");  // briefcase
     badge(v.x, v.y + 2, "CLIENT", "#d6a77f");
     if (v.phase === "wait") { const left = Math.max(0, Math.ceil((v.until - t) / 1000)); text(`⏳ ${left} s`, v.x, v.y - 32, "#fbaa08", 4.4, "center"); }

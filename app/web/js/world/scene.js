@@ -132,7 +132,17 @@ export function drawCabinet(t, hover) {
   if (pending) { px(x + w - 3, y - 10, 6, 5, "#fbaa08"); text(String(pending), x + w, y - 10.4, "#1c1c24", 3.6, "center"); }
 }
 
+// a walker's step: the legs follow the ground covered (a step every STRIDE units, not a fixed beat: no sliding at any
+// speed), state: any object of the walker, kept from frame to frame. Its phase goes to drawPerson (opts.step).
+const STRIDE = 6.5;
+export function stepOf(state, x, y) {
+  const d = Math.hypot(x - (state._sx ?? x), y - (state._sy ?? y));
+  state._sx = x; state._sy = y;
+  if (d < 15) state._sd = (state._sd || 0) + d;  // more: a jump (a door, another room), no step
+  return (state._sd || 0) / STRIDE;
+}
 export function drawPerson(x, y, look, opts = {}) {
+  if (opts.step != null) { opts = { ...opts, frame: Math.floor(opts.step) }; y -= Math.abs(Math.sin(opts.step * Math.PI)) * 0.7; }  // up between two steps, down on each
   const hat = opts.hat || (look === hub.CHIEF_LOOK ? hub.chiefHat() : look.team ? hub.shop.hat : "");  // opts.hat: a VR headset…
   const o = { frame: (opts.frame || 0) % 2, back: !!opts.back, seated: !!opts.seated, arms: opts.arms || "down", tux: !!opts.tux, smile: !!opts.smile, hat };
   // the isometric view: in volume, turned toward where they go or look (opts.dir: a 2D direction; else facing us, or
