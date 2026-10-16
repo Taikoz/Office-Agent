@@ -82,7 +82,7 @@ class SkyArt extends SvgArt {
 }
 ART.sky = new SkyArt();
 
-const CLOUD_TONES = {
+export const CLOUD_TONES = {
   day: ["#ffffff", "#eef4fb", "#c9d8ea"], dawn: ["#fff1e6", "#f6c7b8", "#d99a9a"], dusk: ["#f9c9b8", "#d98fa0", "#8f5a86"],
   night: ["#5d6a9a", "#46527f", "#323c63"], snow: ["#f4f6fb", "#dfe5ee", "#c3cdda"], cloud: ["#eef1f5", "#cfd6df", "#a8b3c1"], rain: ["#9aa5b5", "#7e8a9c", "#626d80"], storm: ["#6a7288", "#4f566b", "#3a4054"],
 };

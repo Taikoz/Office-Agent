@@ -224,13 +224,29 @@ OsApp.listen("terminal", "keydown", ev => {
   const d = keyData(ev, t); if (d == null) return;
   ev.preventDefault(); ev.stopPropagation();
   el.scrollTop = el.scrollHeight;
+  if (d === "\r" && hub.runCheat(t.line || screenCommand(t))) { t.line = ""; termSend(termActive, "\x15"); return; }  // the line is erased, not run
+  t.line = typedLine(t.line ?? "", d);
   termSend(termActive, d);
 });
+// the command on the cursor's row, as the screen shows it (after the shell's prompt: ❯ $ # % » ›, a frame): what was typed
+// even through the history, completion or a paste
+function screenCommand(t) {
+  const row = t.vt.buf[t.vt.y] || [], text = row.slice(0, t.vt.x).map(c => c.ch || " ").join("");
+  return text.replace(/^.*[❯$#%»›➜]\s+/, "").replace(/^[^\p{L}\p{N}]+/u, "").trim();  // and the prompt's frame (╰─ …)
+}
+// the line being typed, as far as the page can tell: null once it cannot (arrows, history, completion, a paste)
+function typedLine(line, d) {
+  if (line === null) return d === "\r" || d === "\x03" || d === "\x15" ? "" : null;
+  if (d === "\r" || d === "\x03" || d === "\x15") return "";
+  if (d === "\x7f") return line.slice(0, -1);
+  return d.length === 1 && d >= " " ? line + d : null;
+}
 OsApp.listen("terminal", "paste", ev => {
   if (!ev.target.closest?.(".termscreen")) return;
   const t = terms.get(termActive); if (!t) return;
   ev.preventDefault();
   const text = ev.clipboardData.getData("text").replace(/\r?\n/g, "\r");
+  t.line = null;
   termSend(termActive, t.vt.mode.paste ? `\x1b[200~${text}\x1b[201~` : text);
 });
 OsApp.listen("terminal", "focusin", ev => { if (ev.target.closest?.(".termscreen")) drawTerm(); });

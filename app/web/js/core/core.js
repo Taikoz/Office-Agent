@@ -106,7 +106,10 @@ export function clip(t, n) { t = (t || "").replace(/\s+/g, " ").trim(); return t
 // the office fills the whole window, Sims style: the bars and panels float over it
 export function resize() {
   const stage = document.getElementById("stage"), tl = document.getElementById("timeline");
-  const w = Math.max(240, Math.min(stage.clientWidth - 12, (stage.clientHeight - 66) * W / H));
+  // the scene fills the window: as wide as it, the overflow cut at the bottom (floor, under the HUD), at most 15 % of
+  // it; a window narrower than the scene keeps thin bars on the sides rather than cutting the doors
+  const vw = stage.clientWidth, vh = stage.clientHeight, contain = Math.min(vw / W, vh / H);
+  const w = Math.max(240, W * (vw / W >= vh / H ? Math.min(vw / W, contain * 1.15) : contain));
   cv.style.width = `${Math.round(w)}px`;
   tl.style.width = `${Math.round(Math.min(w, 900))}px`;  // the timeline floats above the clock
   S = Math.max(1.2, w / W);

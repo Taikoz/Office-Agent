@@ -21,7 +21,7 @@ const saveCon = () => SaveSlot.get("office-construct").save(con);
 const hasRoom = r => con.rooms.includes(r);
 const HIRES = ["Inès", "Jules", "Karim", "Léa", "Malik", "Nina", "Oscar", "Paul"];
 const LAYOUTS = [{ cols: 4, sp: 88 }, { cols: 5, sp: 68 }, { cols: 6, sp: 56 }];
-const PROJECTS = [
+export const PROJECTS = [
   { id: "open1", icon: "🏢", name: "Agrandir l'open space", desc: "10 bureaux au lieu de 8, et 2 devs recrutés (bureaux fournis).", price: 5000, ok: () => con.level === 0, done: () => con.level >= 1 },
   { id: "open2", icon: "🏙️", name: "Open space XXL", desc: "12 bureaux, 2 devs de plus.", price: 9000, ok: () => con.level === 1, done: () => con.level >= 2, needs: "Agrandir l'open space d'abord" },
   { id: "meeting", icon: "🤝", name: "Salle de réunion", desc: "Une grande table : réunis l'équipe (social, moral).", price: 4000, ok: () => !hasRoom("meeting"), done: () => hasRoom("meeting") },
@@ -52,10 +52,10 @@ function hire(n) {
   for (let i = 0; i < DESKS.length; i++) if (!hasDesk(i)) furni.items.push({ uid: ++furni.seq, type: "desk", style: "decor", room: "office", x: DESKS[i].x - 18, y: DESKS[i].y - 14, slot: i });
   saveBuild();
 }
-function buyProject(id) {
+export function buyProject(id) {
   const p = PROJECTS.find(x => x.id === id); if (!p || !p.ok() || !spend(p.price, p.name)) return;
   if (id === "open1" || id === "open2") { con.level++; const before = TEAM.length; hire(2); toast("CONSTRUCTION 🏗️", `${p.name} : ${DESKS.length} bureaux`, `Bienvenue à ${TEAM.slice(before).join(" et ")} !`); }
-  else { con.rooms.push(id); saveCon(); toast("CONSTRUCTION 🏗️", `${p.name} construite`, "Elle apparaît dans la barre des pièces, en haut."); renderRoomBar(); }
+  else { con.rooms.push(id); saveCon(); toast("CONSTRUCTION 🏗️", `${p.name} construite`, "Sa porte est dans la salle de repos ; la pièce est aussi dans la barre du haut."); renderRoomBar(); }
   sfx("level"); saveCon(); renderBuy();
 }
 function constructGridHtml() {

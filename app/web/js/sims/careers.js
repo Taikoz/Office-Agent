@@ -17,7 +17,7 @@ import { onMission } from "./days.js";
 const CAREER = [["Junior", 0, 0], ["Confirmé", 5, 3], ["Senior", 15, 5], ["Expert", 30, 7], ["Lead", 50, 9]];  // [title, missions, best skill]
 const RECRUITS = ["Inès", "Jules", "Karim", "Léa", "Malik", "Nina", "Oscar", "Paul", "Rose", "Sami", "Théo", "Yasmine", "Zoé", "Noé", "Lina", "Victor"];
 export let careerBook = new SaveSlot("office-careers", { missions: {}, grade: {}, unhappy: {}, warned: {}, vacant: [], renames: {}, newbies: {} }).data;
-const saveCareers = () => SaveSlot.get("office-careers").save(careerBook);
+export const saveCareers = () => SaveSlot.get("office-careers").save(careerBook);
 // recruits replaced people who left: applied before the game uses the names
 for (let i = 0; i < TEAM.length; i++) for (let guard = 0; careerBook.renames[TEAM[i]] && guard < 20; guard++) TEAM[i] = careerBook.renames[TEAM[i]];
 

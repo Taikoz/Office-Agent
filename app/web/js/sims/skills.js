@@ -14,8 +14,8 @@ export const SKILLS = [
   ["review", "🔍", "Review"], ["lead", "🧭", "Pilotage"], ["orga", "📋", "Organisation"], ["explo", "🔭", "Exploration"],
 ];
 const SKILL_XP = [0, 3, 8, 15, 24, 35, 48, 63, 80, 100];
-let skillBook = new SaveSlot("office-skills", { xp: {} }).data;
-const saveSkills = () => SaveSlot.get("office-skills").save(skillBook);
+export let skillBook = new SaveSlot("office-skills", { xp: {} }).data;
+export const saveSkills = () => SaveSlot.get("office-skills").save(skillBook);
 
 // the skill an agent works with, from its type (the user's own agents are matched on words of their name)
 export function skillOf(type) {

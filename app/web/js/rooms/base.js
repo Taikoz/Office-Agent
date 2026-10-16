@@ -14,7 +14,7 @@ export class Room {
   render(_t) {}
   hit(_x, _y) { return null; }
   floorClick(_p) {}
-  click(_p, _t) {}               // a room that takes the clicks itself (a game)
+  click(_p, _t) { return false; }  // a click the room takes itself (a game, the meeting room's board and TV): true
   step(_dt, _t) {}
 }
 
