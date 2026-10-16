@@ -594,3 +594,44 @@ class NetTests(unittest.TestCase):
             self.assertIn("chat", snap)
         finally:
             srv.shutdown(); srv.server_close(); net.STATE["code"] = ""
+
+
+class NetVisitTests(unittest.TestCase):
+    """Each in its office; the layout an office sends is what its visitors get."""
+
+    def setUp(self) -> None:
+        net.HUB.reset()
+
+    def test_sync_visiting_and_layout(self) -> None:
+        _, a = net.HUB.hello({"name": "A"})
+        _, b = net.HUB.hello({"name": "B"})
+        self.assertRegex(a["pid"], r"^[0-9a-f]{8}$")
+        ok, snap = net.act("sync", {"sid": b["sid"], "room": "lounge", "x": 10, "y": 90, "visiting": a["pid"], "since": 0})
+        self.assertTrue(ok)
+        ok, snap = net.act("sync", {"sid": a["sid"], "room": "office", "x": 1, "y": 80, "visiting": "not-a-pid", "since": 0})
+        self.assertEqual(snap["peers"][0]["visiting"], a["pid"])
+        self.assertEqual(net.HUB.peers[a["sid"]]["visiting"], "")
+        self.assertTrue(net.act("layout", {"sid": a["sid"], "layout": {"rooms": ["office"], "items": []}})[0])
+        ok, got = net.act("layout", {"sid": b["sid"], "pid": a["pid"]})
+        self.assertEqual(got["layout"]["rooms"], ["office"])
+        self.assertFalse(net.act("layout", {"sid": a["sid"], "layout": {"x": "y" * (net.LAYOUT_MAX + 1)}})[0])
+        self.assertFalse(net.act("layout", {"sid": "nobody", "pid": a["pid"]})[0])
+
+
+class NetMessagesTests(unittest.TestCase):
+    def setUp(self) -> None:
+        net.HUB.reset()
+
+    def test_private_messages_and_calls_reach_only_the_two(self) -> None:
+        _, a = net.HUB.hello({"name": "A"})
+        _, b = net.HUB.hello({"name": "B"})
+        _, c = net.HUB.hello({"name": "C"})
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "text": "à tous"})[0])
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "text": "rien que pour B", "to": b["pid"]})[0])
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "kind": "invite", "to": b["pid"]})[0])
+        self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "invite"})[0])  # a call needs someone to call
+        self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "hack", "to": b["pid"], "text": "x"})[0])
+        texts = lambda who: [m["text"] or m["kind"] for m in net.HUB.snapshot(who["sid"], 0)[1]["chat"] if m["kind"] != "system"]
+        self.assertEqual(texts(b), ["à tous", "rien que pour B", "invite"])
+        self.assertEqual(texts(c), ["à tous"])
+        self.assertEqual(texts(a), ["à tous", "rien que pour B", "invite"])

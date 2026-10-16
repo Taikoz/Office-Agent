@@ -49,7 +49,7 @@ const deskStyle = slot => { const it = (furni.items || []).find(o => defOf(o.typ
 
 /* ---------- drawing what is not a piece of furniture: rugs on the floor, objects on the walls ---------- */
 export const drawItem = (it, t, alpha = 1) => defOf(it.type).draw2d(it, t, alpha);
-function drawRug(it, alpha = 1) {
+export function drawRug(it, alpha = 1) {
   const d = defOf(it.type), st = styleOf(it), [fw, fd] = footDims(d, it.rot), c = rugCanvas(d.shape || "uni", st.c || st.sw, fw, fd);
   if (alpha < 1) ctx.globalAlpha = alpha;
   ctx.drawImage(c, Math.round(it.x * S), Math.round(it.y * S));
@@ -180,6 +180,7 @@ export function drawChiefPcScreen(d, t, type = "pc") {
 export const buy = { on: false, cat: "bureau", sel: null, style: null, rot: 0, placing: null, moving: null, pick: null, mx: -99, my: -99, sx: -99, sy: -99 };
 const buyBox = document.getElementById("buy"), buyTool = document.getElementById("buytool"), buyBtn = document.getElementById("buybtn");
 export function toggleBuy(open = !buy.on) {
+  if (open && view === "visit") return toast("MODE ACHAT", "Tu es en visite", "Rentre à ton bureau pour acheter et placer des objets.");
   buy.on = open; buy.placing = buy.moving = buy.pick = null;
   document.body.classList.toggle("buy-on", open); buyBox.hidden = !open; buyBtn.classList.toggle("on", open); buyBtn.setAttribute("aria-expanded", open);
   buyTool.hidden = true; closePie(); if (open) { if (view === "game") setView("lounge"); renderBuy(); }

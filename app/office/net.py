@@ -23,6 +23,8 @@ MAX_PEERS = 8           # chiefs at once (the host included)
 PEER_TTL = 20.0         # seconds without news: gone
 CHAT_KEEP = 80          # messages kept
 BODY_MAX = 4096         # bytes of a request
+LAYOUT_MAX = 400_000    # bytes of an office's layout (its rooms, furniture, decor), for the visitors
+PID = re.compile(r"^[0-9a-f]{8}$")
 RATE = 30               # requests per second and per address
 CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
 ROOMS = {"office", "lounge", "meeting", "terrace", "gym", "library"}
@@ -60,6 +62,7 @@ class Hub:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.peers: dict[str, dict[str, Any]] = {}
+        self.layouts: dict[str, tuple[float, str]] = {}  # pid → (when, the layout as JSON), for whoever visits
         self.chat: list[dict[str, Any]] = []
         self.seq = 0
 
@@ -67,10 +70,12 @@ class Hub:
         with self.lock:
             self.peers.clear()
             self.chat.clear()
+            self.layouts.clear()
 
     def prune(self) -> None:
         now = time.time()
         for sid in [s for s, p in self.peers.items() if now - p["seen"] > PEER_TTL]:
+            self.layouts.pop(self.peers[sid]["pid"], None)
             del self.peers[sid]
 
     def hello(self, data: dict[str, Any], host: bool = False) -> tuple[bool, dict[str, Any]]:
@@ -80,9 +85,9 @@ class Hub:
                 return False, {"error": "bureau complet"}
             sid = secrets.token_urlsafe(12)
             self.peers[sid] = {"pid": secrets.token_hex(4), "name": clean_text(data.get("name"), 24) or "Chef", "look": clean_look(data.get("look")), "room": "office",
-                               "x": 280.0, "y": 120.0, "bubble": "", "seen": time.time(), "host": host}
-            self.say_system(f"{self.peers[sid]['name']} a rejoint le bureau")
-            return True, {"sid": sid}
+                               "x": 280.0, "y": 120.0, "bubble": "", "seen": time.time(), "host": host, "visiting": ""}
+            self.say_system(f"{self.peers[sid]['name']} est connecté")
+            return True, {"sid": sid, "pid": self.peers[sid]["pid"]}
 
     def state(self, data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
         with self.lock:
@@ -94,27 +99,32 @@ class Hub:
                 x, y = float(data.get("x") or 0), float(data.get("y") or 0)
             except (TypeError, ValueError):
                 return False, {"error": "position invalide"}
+            visiting = str(data.get("visiting") or "")
             p.update({"room": room if room in ROOMS else "office", "bubble": clean_text(data.get("bubble"), 80), "seen": time.time(),
-                      "x": max(0.0, min(900.0, x)), "y": max(0.0, min(500.0, y))})
+                      "x": max(0.0, min(900.0, x)), "y": max(0.0, min(500.0, y)), "visiting": visiting if PID.match(visiting) else ""})
             if "look" in data:
                 p["look"] = clean_look(data.get("look"))
             return True, {}
 
     def say(self, data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """A message: to everyone, or to one chief (to: its pid; then only the two of them get it). kind: a text, or a
+        phone call (invite) and its answer (accept / decline). Kept in memory only: gone when the server closes."""
         with self.lock:
             p = self.peers.get(str(data.get("sid", "")))
+            kind = str(data.get("kind") or "text")
+            to = str(data.get("to") or "")
             text = clean_text(data.get("text"), 200)
-            if not p or not text:
+            if not p or kind not in ("text", "invite", "accept", "decline") or (to and not PID.match(to)) or (kind == "text" and not text) or (kind != "text" and not to):
                 return False, {"error": "message refusé"}
             p["seen"] = time.time()
             self.seq += 1
-            self.chat.append({"id": self.seq, "t": time.time(), "name": p["name"], "text": text})
+            self.chat.append({"id": self.seq, "t": time.time(), "name": p["name"], "from": p["pid"], "to": to, "kind": kind, "text": text})
             del self.chat[:-CHAT_KEEP]
             return True, {}
 
     def say_system(self, text: str) -> None:
         self.seq += 1
-        self.chat.append({"id": self.seq, "t": time.time(), "name": "", "text": text})
+        self.chat.append({"id": self.seq, "t": time.time(), "name": "", "from": "", "to": "", "kind": "system", "text": text})
         del self.chat[:-CHAT_KEEP]
 
     def snapshot(self, sid: str, since: int) -> tuple[bool, dict[str, Any]]:
@@ -124,7 +134,28 @@ class Hub:
                 return False, {"error": "session inconnue"}
             self.peers[sid]["seen"] = time.time()
             others = [{k: v for k, v in p.items() if k != "seen"} for s, p in self.peers.items() if s != sid]  # never the others' sid
-            return True, {"peers": others, "chat": [m for m in self.chat if m["id"] > since]}
+            mine = self.peers[sid]["pid"]  # a private message, a call: only to the two chiefs concerned
+            return True, {"peers": others, "chat": [m for m in self.chat if m["id"] > since and (not m["to"] or m["to"] == mine or m["from"] == mine)]}
+
+    def put_layout(self, data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """A chief's office as it is (rooms, furniture, decor): what its visitors see. Kept as given, only bounded."""
+        with self.lock:
+            p = self.peers.get(str(data.get("sid", "")))
+            layout = data.get("layout")
+            if not p or not isinstance(layout, dict):
+                return False, {"error": "plan refusé"}
+            raw = json.dumps(layout, ensure_ascii=False)
+            if len(raw.encode()) > LAYOUT_MAX:
+                return False, {"error": "plan trop grand"}
+            self.layouts[p["pid"]] = (time.time(), raw)
+            return True, {}
+
+    def get_layout(self, sid: str, pid: str) -> tuple[bool, dict[str, Any]]:
+        with self.lock:
+            if sid not in self.peers:
+                return False, {"error": "session inconnue"}
+            got = self.layouts.get(pid)
+            return (True, {"at": got[0], "layout": json.loads(got[1])}) if got else (False, {"error": "pas de plan"})
 
     def leave(self, sid: str) -> None:
         with self.lock:
@@ -240,25 +271,28 @@ class LanHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
-        if not self.path.startswith("/net/peers?"):
+        if not self.path.startswith(("/net/peers?", "/net/layout?")):
             self.reply(404, {"error": "inconnu"})
             return
         if not self.allowed():
             return
         q = dict(p.split("=", 1) for p in self.path.split("?", 1)[1].split("&") if "=" in p)
-        since = int(q.get("since", "0")) if q.get("since", "0").isdigit() else 0
-        ok, body = HUB.snapshot(q.get("sid", ""), since)
+        if self.path.startswith("/net/layout?"):
+            ok, body = HUB.get_layout(q.get("sid", ""), q.get("pid", ""))
+        else:
+            since = int(q.get("since", "0")) if q.get("since", "0").isdigit() else 0
+            ok, body = HUB.snapshot(q.get("sid", ""), since)
         self.reply(200 if ok else 400, body)
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path not in ("/net/hello", "/net/state", "/net/chat", "/net/leave"):
+        if self.path not in ("/net/hello", "/net/state", "/net/sync", "/net/chat", "/net/layout", "/net/leave"):
             self.reply(404, {"error": "inconnu"})
             return
         if not self.allowed():
             return
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if size > BODY_MAX:
+            if size > (LAYOUT_MAX + 1000 if self.path == "/net/layout" else BODY_MAX):
                 raise ValueError("trop gros")
             data = json.loads(self.rfile.read(size) or b"{}")
             if not isinstance(data, dict):
@@ -279,6 +313,14 @@ def act(action: str, data: dict[str, Any], host: bool = False) -> tuple[bool, di
         return HUB.hello(data, host)
     if action == "state":
         return HUB.state(data)
+    if action == "sync":  # where I am, then who is there and what was said: one request
+        ok, body = HUB.state(data)
+        if not ok:
+            return ok, body
+        since = data.get("since", 0)
+        return HUB.snapshot(str(data.get("sid", "")), since if isinstance(since, int) else 0)
+    if action == "layout":
+        return HUB.put_layout(data) if "layout" in data else HUB.get_layout(str(data.get("sid", "")), str(data.get("pid", "")))
     if action == "chat":
         return HUB.say(data)
     if action == "peers":
