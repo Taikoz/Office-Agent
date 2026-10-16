@@ -16,7 +16,7 @@ import { loadDetail, openPanel } from "../ui/panel.js";
 /* ---------- game: scene events, bosses, XP, achievements, quests, sounds ---------- */
 // the trophy shelf and the employee of the week's frame, where they hang (bought: build.js; offscreen: none)
 export const SHELF = { x: -999, y: -999, w: 50 }, FRAME = { x: -999, y: -999, w: 20, h: 26 };
-export const FX_BG = { pass: "#51cf66", fail: "#ff6b6b", mr: "#fbaa08", push: "#5aa9ff", commit: "#d5eeff", verify: "#5aa9ff", boss: "#fbaa08" };
+export const FX_BG = { talk: "#f4f2ea", pass: "#51cf66", fail: "#ff6b6b", mr: "#fbaa08", push: "#5aa9ff", commit: "#d5eeff", verify: "#5aa9ff", boss: "#fbaa08" };
 export let game = null, gameSeen = null, banner = null;
 export const evSeen = new Map(), particles = [], planes = [];
 let recentCups = new Map();
@@ -48,6 +48,7 @@ function react(a, ev) {
     commit: "commit ✓", verify: "→ To Verify ✓", boss: "BOSS VAINCU !" }[kind];
   if (!msg) return;
   e.fxKind = kind; e.fxMsg = msg; e.fxUntil = now + (kind === "boss" ? 3200 : 2600);
+  hub.colleaguesReact?.(e, kind);  // the others at their desks cheer or comfort (social/officetalk.js)
   if (kind === "pass") rain(x, y, "#51cf66");
   else if (kind === "fail") smoke(x, y - 12);
   else if (kind === "push") planes.push({ x, y: y - 10, sx: x, sy: y - 10, t0: now });

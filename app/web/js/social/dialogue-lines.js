@@ -206,6 +206,14 @@ export const TOPICS = [
     "Le pire monstre, c'est un bug en prod. | Le vendredi à 18 h. ;Sans les logs. | Avec un client au téléphone. ;Et la CI en vacances. | Moi c'est les araignées. ;Les réunions, plutôt. | Joyeux Halloween => Bouh !"] : [
     "Tu fais quoi pour Noël ? | En famille, comme chaque année. ;Je pars à la montagne. | Je code mon cadeau. ;Je mange, surtout. | Rien, je travaille. ;Je reste chez moi. | On fait un Secret Santa ? => Je participe !",
     "J'ai déjà mis le sapin chez moi. | Trop bien ! ;Moi pas encore. | En octobre ? ;Avec des guirlandes RGB ? | C'est trop tôt. ;Pas de sapin chez moi. | Je vais en mettre un ici => {chief} va adorer."] },
+  /* ---------- events ---------- */
+  { id: "hackathon", w: 8, when: c => c.hackathon, threads: [
+    "T'as une idée pour le hackathon ? | Oui, un bot qui commande les pizzas ! ;Je pensais à un tableau de bord pour {cat}. | Un détecteur de café vide. ;Une IA qui fait la sieste à ma place. | Pas encore, je cherche. ;Je suis à court d'idées. | On fait équipe ? => Carrément !",
+    "On code tout en une heure, c'est fou. | C'est ça qui est drôle ! ;J'adore l'énergie. | On dort quand ? ;Les tests, ce sera pour demain. | Trop de pression pour moi. ;Je préfère prendre mon temps. | Démo à la fin ? => Je prépare les slides.",
+    "Le hackathon, c'est le meilleur moment du mois. | Grave, on se lâche. ;On apprend plein de trucs. | Surtout pour les pizzas. ;Et le droit de coder en chaussettes. | Moi ça me stresse un peu. ;Je préfère mes tickets. | L'an dernier on a gagné => Cette année aussi !",
+  ] },
+  { id: "welcome", w: 8, when: c => !!c.welcome, threads: c => c.welcome.map(n => `Bienvenue à ${n} dans l'équipe ! | Ravi de l'accueillir. ;Il a l'air sympa. | On lui fait le coup de la machine à café ? ;Il va découvrir la CI rouge. | Encore un qui va me piquer mon pouf. ;On était bien à huit. | Je lui fais visiter => Bonne idée, montre-lui la salle de repos.`)
+    .concat(["Santé, pour les nouveaux ! 🥂 | Santé ! ;À l'équipe ! | Ils vont pas tenir une semaine. ;On les bizute au baby ? | Je trinque au jus d'orange. ;Moi je bosse encore. | Il reste du gâteau ? => Une part, pour toi."]) },
   /* ---------- life ---------- */
   { id: "hobby", w: 3, threads: [
     "T'as vu le match hier soir ? | Oui, quel final ! ;J'ai vu la fin seulement. | J'ai regardé le replay du replay. ;Je suis encore en colère. | Je regarde pas le sport. ;J'ai dormi devant. | On le regarde ensemble la prochaine fois ? => Je ramène les chips.",

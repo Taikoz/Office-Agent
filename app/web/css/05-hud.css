@@ -137,3 +137,13 @@
   #buy .bitem.paint { align-items: stretch; gap: 4px; } #buy .pswatches { display: flex; flex-wrap: wrap; gap: 3px; }
   #buy .psw { padding: 0; width: 34px; height: 24px; border: 2px solid transparent; border-radius: 4px; overflow: hidden; background: none; cursor: pointer; }
   #buy .psw img { display: block; width: 100%; height: 100%; image-rendering: pixelated; } #buy .psw.on { border-color: var(--accent); } #buy .psw:hover { border-color: #9dffb5; }
+  /* the game on a computer (ui/pcgames.js): a window over the office, the pixels big */
+  #pcgame { position: fixed; z-index: 40; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px; background: #14141c; border: 3px solid #3a3a46; border-radius: 14px;
+    box-shadow: 0 0 0 6px #0008, 0 24px 60px #000c; }
+  #pcgame[hidden] { display: none; }
+  #pcgame header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; } #pcgame header b { font-weight: normal; font-size: 22px; color: var(--accent); }
+  #pcgame .sc { flex: 1; color: var(--muted); font-size: 16px; }
+  #pcgame .x { width: 28px; height: 28px; padding: 0; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; }
+  #pcgame .x:hover { color: var(--text); border-color: var(--accent); }
+  #pcgame canvas { display: block; width: min(640px, 86vw); aspect-ratio: 16 / 10; image-rendering: pixelated; border-radius: 6px; box-shadow: inset 0 0 0 2px #000; }
+  #pcgame footer { margin-top: 6px; color: var(--muted); font-size: 15px; text-align: center; }

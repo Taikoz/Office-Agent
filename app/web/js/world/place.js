@@ -111,8 +111,9 @@ export const OFFICE_SPOTS = { podium: null, console: null };
 export function syncOffice() {
   const first = type => hub.itemsIn("office").find(it => hub.defOf(it.type).role === type);
   const front = (it, k) => { const s = spotsOf(it)[k || 0]; return s ? { x: Math.round(s.x), y: Math.round(s.y) } : null; };
-  const coffee = first("coffee");
-  Object.assign(COFFEE, coffee ? { ...front(coffee), ok: true } : { x: 465, y: 80, ok: false });
+  // the best coffee machine of the office (items/*.js coffee: its tier, what a cup gives)
+  const coffee = hub.itemsIn("office").filter(it => hub.defOf(it.type).role === "coffee").sort((a, b) => (hub.defOf(b.type).coffee?.tier || 0) - (hub.defOf(a.type).coffee?.tier || 0))[0];
+  Object.assign(COFFEE, coffee ? { ...front(coffee), ok: true, uid: coffee.uid, cup: hub.defOf(coffee.type).coffee || null } : { x: 465, y: 80, ok: false, uid: null, cup: null });
   const podium = first("podium"), console = first("console");
   OFFICE_SPOTS.podium = podium ? front(podium) : null;
   OFFICE_SPOTS.console = console ? front(console) : null;
