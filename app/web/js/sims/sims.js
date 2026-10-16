@@ -146,7 +146,7 @@ function stepChiefNeeds(dt) {
 
 /* Sims 4 needs window (bottom-left button, B): one sim at a time, the chief by default — he is the one you control.
    While it is open, a click on a dev shows that dev's needs instead of its screen; the chief still walks where you click. */
-let simSel = CHIEF_NAME, simsOpen = false, simHist = {}, simsHtml = "";
+let simSel = CHIEF_NAME, simsOpen = false, simHist = {}, simsHtml = "", simsMore = false;
 const simsFlag = new Flag("office-sims");
 simsOpen = simsFlag.on;
 const simsBox = document.getElementById("sims"), simsBtn = document.getElementById("simsbtn");
@@ -203,27 +203,25 @@ function renderSims() {
   const name = simSel, m = ensureNeeds(mate(name), name), now = performance.now(), mood = Math.round(m.moral), col = moodColor(m.moral);
   const isChief = name === CHIEF_NAME, e = [...ents.values()].find(x => x.who === name && !x.leaving);
   const needs = NEEDS.map(([id, label, , get, icon]) => {
-    const v = Math.round(get(m)), tr = simTrend(name, id, get(m), now);
-    return `<div class="need${v < 25 ? " low" : ""}"><span class="ic">${icon}</span><span class="nl">${label}</span>
-      <span class="bar"><i style="width:${v}%;background:${needColor(v)}"></i></span><span class="tr${tr.startsWith("▼") ? " dn" : ""}">${tr}</span></div>`;
+    const v = Math.round(get(m)), tr = simTrend(name, id, get(m), now), dn = tr.startsWith("▼");
+    return `<div class="need${v < 25 ? " low" : ""}" title="${label} : ${v} %"><span class="ic">${icon}</span><span class="nl">${label.charAt(0) + label.slice(1).toLowerCase()}</span>
+      <span class="bar"><i style="width:${v}%;background:${needColor(v)}"></i></span><span class="tr${dn ? " dn" : ""}">${tr ? (dn ? "▾" : "▴") : ""}</span></div>`;
   }).join("");
-  const house = [CHIEF_NAME, ...TEAM].map(n => `<button data-sim="${esc(n)}" class="${n === name ? "on" : ""}" title="${esc(n)} · ${esc(moodWord(mate(n)))}" style="--m:${moodColor(mate(n).moral)}">${simPortrait(n)}</button>`).join("");
-  const acts = isChief
-    ? `<button data-simact="cas">✏️ Personnaliser</button><span class="muted">👑 C'est toi : clique sur le sol, la machine à café, la console, le podium ou la porte ; en salle de repos, sur un dev, la cuisine ou la table.</span>`
-    : `<button data-simact="chief">👑 Revenir au chef</button><button data-simact="mate">💬 Fiche</button>${e && e.agent.id ? `<button data-simact="pc">🖥️ Écran</button>` : ""}`;
-  const html = `<div class="who"><div class="face" style="--m:${col}"><svg class="crystal" viewBox="0 0 12 20" aria-hidden="true"><path fill="${col}" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg>${simPortrait(name)}</div>
-    <div class="id"><b>${esc(isChief ? `${name} 👑` : nameTag(name))} <small class="career">${esc(careerTitle(name))}</small></b><span class="muted">${simStatus(name)}</span>
-    <span class="mood" style="--m:${col}">${esc(moodWord(m))} <span class="bar"><i style="width:${mood}%;background:${col}"></i></span></span></div>
+  const acts = isChief ? `<button data-simact="cas">✏️ Personnaliser</button>`
+    : `<button data-simact="chief">👑 Le chef</button><button data-simact="mate">💬 Fiche</button>${e && e.agent.id ? `<button data-simact="pc">🖥️ Écran</button>` : ""}`;
+  const more = `${bondsHtml(name)}${wantsHtml(name)}${simSocialHtml(name)}`;
+  const html = `<div class="who"><div class="face" style="--m:${col}">${simPortrait(name)}</div>
+    <div class="id"><b>${esc(isChief ? `${name} 👑` : nameTag(name))}</b><span class="muted">${esc(careerTitle(name))} · ${simStatus(name)}</span>
+    <span class="mood" style="--m:${col}"><span class="word">${esc(moodWord(m))}</span><span class="bar"><i style="width:${mood}%;background:${col}"></i></span></span></div>
     <button class="x" data-simact="close" title="Fermer (B)">×</button></div>
-    ${traitsHtml(name)}${bondsHtml(name)}${moodletsHtml(name)}
+    ${traitsHtml(name)}${moodletsHtml(name)}
     <div class="needs">${needs}</div>
-    ${wantsHtml(name)}
-    ${simSocialHtml(name)}
-    <div class="house">${house}</div>
-    <div class="acts">${acts}</div>`;
+    <div class="acts">${acts}</div>
+    <details class="more"${simsMore ? " open" : ""}><summary>Envies, liens, compétences</summary>${more}</details>`;
   if (html !== simsHtml) simsBox.innerHTML = simsHtml = html;  // unchanged: keep the DOM (hover, a click in progress)
 }
 simsBtn.onclick = () => toggleSims();
+simsBox.addEventListener("toggle", ev => { if (ev.target.matches("details.more")) simsMore = ev.target.open; }, true);  // the details stay open or closed
 simsBox.addEventListener("click", ev => {
   const s = ev.target.closest("[data-sim]"); if (s) return selectSim(s.dataset.sim, true);
   const a = ev.target.closest("[data-simact]")?.dataset.simact;

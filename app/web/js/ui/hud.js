@@ -3,13 +3,12 @@
 // the missions in a panel that folds away on the right.
 
 import { hub, provide } from "../hub.js";
-import { CHIEF_NAME, chief, curSession } from "../core/core.js";
+import { CHIEF_NAME, TEAM, curSession, ents } from "../core/core.js";
 import { Flag } from "../save/flag.js";
 import { ART } from "../svg/base.js";
 import { lookKey } from "../svg/figures.js";
 import { mate, moodWord } from "../sims/crew.js";
 import { CHIEF_LOOK } from "../world/chief.js";
-import { setView, view } from "../world/lounge.js";
 import { esc } from "../core/data.js";
 import { actQueue, cancelAction, chiefActivity } from "./actions.js";
 import { chiefHat } from "../world/chiefedit.js";
@@ -42,20 +41,32 @@ tlBtn.onclick = () => toggleTimeline();
 toggleSide(sideFlag.on);
 toggleTimeline(timelineFlag.on);
 
-/* ---------- bottom-left: your sim and its action queue ---------- */
-const liveFace = document.getElementById("live-face"), liveQueue = document.getElementById("live-queue");
-let liveHtml = "", faceKey = "";
+/* ---------- bottom-left: the household in a row (the chief, then the team, small), the money; the action queue over it ---------- */
+const liveFace = document.getElementById("live-face"), liveQueue = document.getElementById("live-queue"), liveTeam = document.getElementById("live-team");
+let liveHtml = "", faceKey = "", teamKey = "";
+// who works (an agent at its desk) and who is selected in the needs window
+const onMission = n => [...ents.values()].some(e => e.who === n && !e.leaving);
+function renderTeam() {
+  const sel = hub.simsOpen ? hub.simSel : null;
+  const rows = TEAM.map(n => { const m = mate(n); return { n, col: moodColor(m.moral), word: moodWord(m), work: onMission(n), low: hub.NEEDS?.find(x => x[0] === hub.urgentNeed?.(n)) || null }; });
+  const key = sel + rows.map(r => `${r.n}${r.col}${r.work}${r.low?.[0] || ""}`).join("|") + hub.simPortraits?.size;
+  if (key === teamKey) return;
+  teamKey = key;
+  liveTeam.innerHTML = rows.map(r => `<button data-sim="${esc(r.n)}" class="${r.n === sel ? "on" : ""}${r.work ? " work" : ""}" style="--m:${r.col}"
+    title="${esc(r.n)} · ${esc(r.word)}${r.work ? " · en mission" : ""}">${simPortrait(r.n)}${r.low ? `<span class="need" title="${esc(r.low[1])}">${r.low[4]}</span>` : ""}</button>`).join("");
+  liveFace.classList.toggle("on", sel === CHIEF_NAME);
+}
+liveTeam.addEventListener("click", ev => { const b = ev.target.closest("[data-sim]"); if (!b) return; const n = b.dataset.sim; hub.simsOpen && hub.simSel === n ? hub.toggleSims(false) : hub.selectSim(n, true); renderTeam(); });
 function renderLive() {
   const m = mate(CHIEF_NAME), col = moodColor(m.moral);
   const key = `${col}|${m.moral >= 50}|${lookKey(CHIEF_LOOK)}|${chiefHat()}`;  // the look may change (chiefedit.js)
   if (key !== faceKey) {
     faceKey = key;
-    liveFace.innerHTML = `<svg class="crystal" viewBox="0 0 12 20" aria-hidden="true"><path fill="${col}" d="M6 0L11 9L6 20L1 9Z"/><path fill="#fff" fill-opacity=".5" d="M6 0L3.5 9H6Z"/><path fill="#000" fill-opacity=".2" d="M6 20L11 9H6Z"/></svg>${simPortrait(CHIEF_NAME)}`;
+    liveFace.innerHTML = simPortrait(CHIEF_NAME);
     liveFace.style.setProperty("--m", col);
   }
-  document.getElementById("live-name").textContent = `${CHIEF_NAME} 👑`;
-  const mood = document.getElementById("live-mood");
-  mood.textContent = moodWord(m); mood.style.setProperty("--m", col);
+  liveFace.title = `${CHIEF_NAME} 👑 · ${moodWord(m)} — ses besoins`;
+  renderTeam();
   const now = chiefActivity();
   const cur = `<button class="act cur" ${now.id ? `data-cancel="${now.id}" title="${esc(now.label)} — clic pour annuler"` : `title="${esc(now.label)}" disabled`}>
     <span class="ic">${now.icon}</span>${now.id ? '<span class="x">×</span>' : ""}</button><span class="curlbl">${esc(now.label)}</span>`;
@@ -65,7 +76,7 @@ function renderLive() {
   liveQueue.querySelector(".cur")?.style.setProperty("--p", `${Math.round((now.progress ?? 0) * 100)}%`);
 }
 liveQueue.addEventListener("click", ev => { const b = ev.target.closest("[data-cancel]"); if (b) { cancelAction(+b.dataset.cancel); renderLive(); } });
-liveFace.onclick = () => { if (view !== "game") setView(chief.room === "lounge" ? "lounge" : "office"); };
+liveFace.onclick = () => { if (hub.simsOpen && hub.simSel === CHIEF_NAME) hub.toggleSims(false); else hub.selectSim(CHIEF_NAME, true); renderTeam(); };
 setInterval(renderLive, 250);
 
 /* ---------- bottom-center: day, hour, sun and moon (the real clock) ---------- */

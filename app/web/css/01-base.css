@@ -104,7 +104,7 @@
     #office-name, header .lbl, #clock .time span, #clock-phase { display: none; }
     #side { left: 12px; width: auto; }
     header .tools { grid-template-columns: 1fr; }
-    #live .curlbl, #live .info { display: none; }
+    #live .curlbl, #live .team { display: none; }
   }
   canvas.hover { cursor: pointer; }
   #panel {

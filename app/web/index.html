@@ -54,11 +54,14 @@
 </header>
 <main>
 <div id="stage"><canvas id="c" title="Maj + souris : pointeur laser pour Brume"></canvas>
-<section id="live" aria-label="Ton personnage et sa file d'actions">
-  <button id="live-face" class="portrait" title="Aller voir le chef"></button>
-  <div class="col"><div id="live-queue" class="queue" aria-label="File d'actions"></div>
-    <div class="info"><b id="live-name"></b><span id="live-mood"></span><button id="live-edit" title="Créer ton chef : look et personnalité">✏️</button></div>
-    <button id="live-funds" title="Argent du foyer : relevé des salaires et dépenses" aria-expanded="false" aria-controls="ledger"><b></b><span class="flash"></span></button></div>
+<section id="live" aria-label="Ton foyer : le chef, l'équipe, la file d'actions">
+  <div id="live-queue" class="queue" aria-label="File d'actions"></div>
+  <div class="household">
+    <button id="live-face" class="portrait chief" title="Le chef : ses besoins"></button>
+    <div id="live-team" class="team" aria-label="L'équipe"></div>
+    <button id="live-funds" title="Argent du foyer : relevé des salaires et dépenses" aria-expanded="false" aria-controls="ledger"><b></b><span class="flash"></span></button>
+    <button id="live-edit" title="Créer ton chef : look et personnalité">✏️</button>
+  </div>
   <section id="ledger" hidden aria-label="Relevé"></section>
 </section>
 <section id="clock" aria-label="Jour et heure">
