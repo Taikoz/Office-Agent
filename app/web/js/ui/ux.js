@@ -5,7 +5,6 @@ import { W, booted, chief, ents, px } from "../core/core.js";
 import { Flag } from "../save/flag.js";
 import { ART } from "../svg/base.js";
 import { view } from "../world/lounge.js";
-import { toggleDecor } from "../world/decor.js";
 import { particles, toast } from "../sims/progress.js";
 import { openOverlay } from "../agents/insight.js";
 
@@ -32,7 +31,7 @@ renderFocusBtn();
 const SHORTCUTS = [
   ["?", "cette aide"], ["A", "aller à la question en attente"], ["M", "mur de toutes les sessions"],
   ["S", "statistiques"], ["R", "rapport du jour"], ["J", "journal des réponses"], ["/", "recherche"], ["L", "salle de repos"],
-  ["B", "besoins façon Sims"], ["D", "déco du bureau et de la salle de repos"], ["E", "émotions (losanges au-dessus des têtes)"], ["F", "mode focus"], ["Échap", "fermer"],
+  ["B", "besoins façon Sims"], ["E", "émotions (losanges au-dessus des têtes)"], ["F", "mode focus"], ["Échap", "fermer"],
 ];
 document.getElementById("help-body").innerHTML = `<table>${SHORTCUTS.map(([k, d]) => `<tr><td><kbd>${k}</kbd></td><td>${d}</td></tr>`).join("")}</table>
   <p class="muted">Astuces : glisse un ticket du tableau sur un bureau libre pour lancer un agent ; clic sur un ticket = son historique ; Maj + souris = laser pour Brume.</p>`;
@@ -45,7 +44,7 @@ addEventListener("keydown", ev => {
   const actions = {
     "?": () => openOverlay("help", document.getElementById("help").hidden),
     a: () => click("qbadge"), m: () => click("wallbtn"), s: () => click("perfbtn"), r: () => click("reportbtn"),
-    j: () => click("answersbtn"), "/": () => click("searchbtn"), l: () => click("loungebtn"), f: toggleFocus, e: hub.toggleEmotions, b: () => hub.toggleSims(), d: () => toggleDecor(),
+    j: () => click("answersbtn"), "/": () => click("searchbtn"), l: () => click("loungebtn"), f: toggleFocus, e: hub.toggleEmotions, b: () => hub.toggleSims(),
   };
   const f = actions[k.toLowerCase?.() === k ? k : k.toLowerCase()];
   if (f) { ev.preventDefault(); f(); }
@@ -70,7 +69,7 @@ function season() {
 function drawSeason(t) {
   const s = season();
   if (s === "halloween") {
-    for (const [x, y] of [[292, 60], [214, 84], [30, 206]]) {  // pumpkins, lit inside
+    for (const [x, y] of [[432, 60], [274, 84], [30, 282]]) {  // pumpkins, lit inside
       const glow = Math.floor(t / 400 + x) % 3 ? 1 : 0;
       ART.pumpkin.draw(x - 5, y - 7, { glow: !!glow });
     }
@@ -78,11 +77,11 @@ function drawSeason(t) {
     ART.cobweb.draw(W - 14, 0, {}, { flip: true });
   } else if (s === "noel") {
     const blink = Math.floor(t / 400) % 2;
-    ART.tree.draw(326, 36, { blink });
-    for (let i = 0; i < 10; i++) px(232 + i * 5, 7 + (i % 2), 3, 1.2, i % 2 ? "#ff6b6b" : "#51cf66");  // garland over the window
-    for (let i = 0; i < 18; i++) px((i * 23 + t / 60) % W, (i * 37 + t / 40) % 66, 0.8, 0.8, "#ffffff");  // snow in the room's top
+    ART.tree.draw(426, 36, { blink });
+    for (let i = 0; i < 10; i++) px(372 + i * 5, 7 + (i % 2), 3, 1.2, i % 2 ? "#ff6b6b" : "#51cf66");  // garland over the window
+    for (let i = 0; i < 26; i++) px((i * 23 + t / 60) % 560, (i * 37 + t / 40) % 66, 0.8, 0.8, "#ffffff");  // snow in the room's top
   } else if (s === "galette") {
-    ART.galette.draw(205, 76.4);
+    ART.galette.draw(265, 76.4);
   }
 }
 // drawn over the people: the Halloween bat, the chief's crown for the galette

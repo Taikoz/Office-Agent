@@ -25,6 +25,9 @@ export const outlineDefs = radius => `<defs><filter id="o" x="-20%" y="-20%" wid
 
 export const ART = {};  // every piece by name: ART.arcade.draw(x, y, { frame, playing })
 
+// while the isometric view captures a piece for PixiJS (iso/pixi.js), the images become sprites instead of being drawn
+export const artHook = { emit: null };
+
 export class SvgArt {
   static images = new Map();  // `${name}|${state}@${scale}` → Image
   static last = new Map();    // `${name}|${state}` → the image of the previous scale, shown while the new one loads
@@ -65,6 +68,7 @@ export class SvgArt {
     const img = this.image(state);
     if (!img) return false;
     const [bx, by, w, h] = this.box(state), p = this.pad, dw = Math.round((w + 2 * p) * S), dh = Math.round((h + 2 * p) * S), dy = Math.round((y + by - p) * S);
+    if (artHook.emit) { artHook.emit(img, Math.round((x + bx - p) * S), dy, dw, dh, flip); return true; }  // a sprite of the isometric view (iso/pixi.js)
     if (flip) {
       ctx.save(); ctx.translate(Math.round((x + bx + w / 2) * S), 0); ctx.scale(-1, 1);
       ctx.drawImage(img, Math.round((-w / 2 - p) * S), dy, dw, dh); ctx.restore();

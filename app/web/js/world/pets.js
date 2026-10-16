@@ -3,6 +3,7 @@
 // work, and the chief can pet it, feed it or throw it a ball. Kept in this browser.
 
 import { hub, provide } from "../hub.js";
+import { isoDrawing, petRot } from "../iso/engine.js";
 import { CAT_NAME, CHIEF_NAME, DOOR, LANE, TEAM, badge, chief, ents, px } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART } from "../svg/base.js";
@@ -22,8 +23,6 @@ const savePets = () => { petBook.at = Date.now(); SaveSlot.get("office-pets").sa
 export const DOG_NAME = "Biscuit", DOG_PRICE = 2000;
 
 /* ---------- Brume's needs and her bowl ---------- */
-BUY_CATS.splice(BUY_CATS.length - 1, 0, ["animaux", "🐾", "Animaux"]);
-if (furni.items && !furni.bowlSeeded) { furni.items.push({ uid: ++furni.seq, type: "bowl", style: "rouge", room: "office", x: 8, y: 104, on: true }); furni.bowlSeeded = true; saveBuild(); }
 const bowl = () => furni.items.find(i => i.type === "bowl" && i.room === "office");
 
 { // time away: Brume was fed by the night guard, but she missed you
@@ -58,6 +57,7 @@ function dogGo(x, y) { dog.path = officeRoute(dog.x, dog.y, x, y); dog.mode = "w
 function stepDog(dt, t) {
   if (!petBook.dog) return;
   if (dog.path.length) {
+    hub.routeAhead(dog.path, dog.x, dog.y, "office");  // around the furniture (world/route.js)
     const tgt = dog.path[0], dx = tgt.x - dog.x, dy = tgt.y - dog.y, dist = Math.hypot(dx, dy), sp = (dog.ball ? 0.09 : 0.045) * dt;
     if (Math.abs(dx) > 0.5) dog.dir = dx > 0 ? 1 : -1;
     if (dist > sp) { dog.x += dx / dist * sp; dog.y += dy / dist * sp; return; }
@@ -75,12 +75,13 @@ function stepDog(dt, t) {
   const r = Math.random();
   if (r < 0.35 && working.length) { const e = pick(working); dog.visit = e.who; dogGo(e.desk.x + 14, e.desk.y + 26); }
   else if (r < 0.55 && chief.room === "office") dogGo(Math.max(12, chief.x - 12), Math.max(76, chief.y));
-  else dogGo(20 + Math.random() * 340, pick([LANE, 150, 212]));
+  else dogGo(20 + Math.random() * 480, pick([LANE, 168, 254]));
 }
 function drawDog(t) {
   if (!petBook.dog || view !== "office") return;
   const walking = dog.path.length > 0, f = Math.floor(t / (dog.ball ? 90 : 160)) % 2;
-  ART.dog.draw(dog.x, dog.y, { frame: f, sit: !walking }, { flip: dog.dir < 0 });
+  if (isoDrawing()) ART.isodog.draw(dog.x, dog.y, { frame: f, sit: !walking, rot: walking ? petRot(dog, dog.dir) : 0 });  // in volume (svg/iso.js)
+  else ART.dog.draw(dog.x, dog.y, { frame: f, sit: !walking }, { flip: dog.dir < 0 });
   if (dog.ball && dog.ballAt) { const k = Math.min(1, (t - dog.ballAt) / 700); px(dog.ball.x0 + (dog.ball.x - dog.ball.x0) * k, dog.ball.y0 + (dog.ball.y - dog.ball.y0) * k - Math.sin(k * Math.PI) * 18, 2.4, 2.4, "#d4e157"); }
   badge(dog.x, dog.y + 1, `🐶 ${DOG_NAME}`, "#c98b4f");
   if (t < dog.sayUntil) bubble(dog.x, dog.y - 13, dog.say, "#f4f2ea");
@@ -92,7 +93,7 @@ function dogAction(id) {
   if (id === "pet") { d.love = clamp(d.love + 15); dog.say = "Wouf ! ❤️"; dog.sayUntil = t + 2000; burst(dog.x, dog.y - 8, ["#ff6b6b", "#e98fc4"], 5, 0.4); crewAdd(CHIEF_NAME, { ennui: -5, moral: 3 }); }
   if (id === "feed") { if (!spend(5, "Croquettes")) return; d.faim = 100; dog.say = "Miam ! 🍖"; dog.sayUntil = t + 2000; }
   if (id === "ball") {  // the ball flies from the chief, Biscuit runs for it and brings it back
-    const x = 30 + Math.random() * 320, y = pick([LANE, 150, 212]);
+    const x = 30 + Math.random() * 460, y = pick([LANE, 168, 254]);
     dog.ball = { x0: chief.x, y0: chief.y - 14, x, y }; dog.ballAt = t; dog.say = "!!!"; dog.sayUntil = t + 1200;
     dogGo(x, y);
   }
@@ -119,4 +120,4 @@ function petsRowHtml() {
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get DOG_NAME() { return DOG_NAME; }, get dogAction() { return dogAction; }, get dogPie() { return dogPie; }, get drawDog() { return drawDog; }, get fillBowl() { return fillBowl; }, get hitDog() { return hitDog; }, get petBook() { return petBook; }, get petsGridHtml() { return petsGridHtml; }, get petsRowHtml() { return petsRowHtml; }, get stepDog() { return stepDog; } });
+provide({ get DOG_NAME() { return DOG_NAME; }, get dog() { return dog; }, get dogAction() { return dogAction; }, get dogPie() { return dogPie; }, get drawDog() { return drawDog; }, get fillBowl() { return fillBowl; }, get hitDog() { return hitDog; }, get petBook() { return petBook; }, get petsGridHtml() { return petsGridHtml; }, get petsRowHtml() { return petsRowHtml; }, get stepDog() { return stepDog; } });

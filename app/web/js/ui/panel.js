@@ -21,12 +21,21 @@ const STEP_ICON = { done: "✓", current: "▶", todo: "·" };
 // what is under the pointer, in the room on screen (js/rooms/): an id the click below acts on
 function hit(ev) {
   if (!booted) return null;
-  const { x, y } = canvasPoint(ev);
+  const { x, y, uid, wall } = canvasPoint(ev);
+  if (uid != null && wall === "back" && !hub.buy.on) { const own = hub.Room.current().hit(x, y); if (own && own !== `item:${uid}`) return own; }  // on the right wall: the board's cards, the whiteboard, the TV first
+  if (uid != null) {  // an object bought (build.js), in front of anything else drawn there; the MMX cabinet and the trophies keep their panels
+    const role = hub.defOf(hub.itemByUid(uid)?.type)?.role;
+    return role === "mmx" ? "store" : role === "trophies" ? "trophies" : `item:${uid}`;
+  }
   return hub.Room.current().hit(x, y);
 }
+// the point of the scene under the pointer; in isometric view, the 2D point drawn there (iso/engine.js toScene),
+// with sx, sy: where it is on the screen (a menu opens there)
 export function canvasPoint(ev) {
-  const r = cv.getBoundingClientRect();
-  return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+  const r = cv.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W, sy = (ev.clientY - r.top) / r.height * H;
+  const room = booted && hub.Room.current();
+  if (room?.iso?.()) { const p = hub.ISO.toScene(sx, sy, hub.buy.on && !!(hub.buy.placing || hub.buy.moving)); return { ...p, sx, sy }; }  // uid: an object bought, drawn there
+  return { x: sx, y: sy, sx, sy };
 }
 
 // mouse wheel over a board column with several pages: flip it
@@ -40,6 +49,7 @@ cv.addEventListener("wheel", ev => {
 cv.addEventListener("mousemove", ev => { const p = canvasPoint(ev); laser.x = p.x; laser.y = p.y; laser.over = true; if (match) { match.mouseY = p.y; match.mouseX = p.x; } const id = hit(ev); cat.hover = id === "cat"; cv.classList.toggle("hover", !!id); cv.classList.toggle("hover-store", id === "store"); });
 cv.addEventListener("mouseleave", () => { cv.classList.remove("hover-store"); cat.hover = false; laser.over = false; if (match) match.mouseY = match.mouseX = null; });
 cv.addEventListener("click", ev => {
+  if (hub.ISO.takeDrag()) return;  // the scene was dragged (iso/engine.js camera), not clicked
   hub.closePie();
   if (hub.buy.on && view !== "game") return hub.buyClick(canvasPoint(ev));  // buy mode: place, pick, move, sell (build.js)
   if (hub.Room.current().click(canvasPoint(ev), performance.now())) return;  // a game, the meeting room's board and TV (js/rooms/)
@@ -57,7 +67,11 @@ cv.addEventListener("click", ev => {
   if (id === "meet-table") return hub.startMeeting();
   if (id === "dog") return hub.openPie("dog", null, canvasPoint(ev));  // the break-room door: back to work
   if (id.startsWith("incident:")) return Incident.solveId(id.slice(9));
-  if (id.startsWith("item:")) return hub.itemPieItems(id.slice(5)).length ? hub.openPie("item", id.slice(5), canvasPoint(ev)) : null;  // Sims pie of the object
+  if (id.startsWith("item:")) {  // Sims pie of the object (the dining table: the meal on it)
+    const it = hub.itemByUid(id.slice(5));
+    if (it && hub.defOf(it.type).role === "table" && it.room === "lounge") return hub.openPie("table", null, canvasPoint(ev));
+    return hub.itemPieItems(id.slice(5)).length ? hub.openPie("item", id.slice(5), canvasPoint(ev)) : null;
+  }
   if (id.startsWith("boss:")) return hub.whackBoss(id.slice(5));
   if (id.startsWith("boardpg:")) { const [, st, dir] = id.split(":"); return flipBoard(st, +dir); }
   if (id.startsWith("chief:")) return hub.chiefOrder(id.slice(6));

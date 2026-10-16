@@ -4,7 +4,7 @@
 // ?hour=20&day=5 in the URL previews another time.
 
 import { hub, provide } from "../hub.js";
-import { CHIEF_NAME, H, TEAM, W, ctx, ents, px } from "../core/core.js";
+import { CHIEF_NAME, H, TEAM, W, ctx, ents, px, fillScreen } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { crewAdd } from "./crew.js";
 import { LD, LOUNGE_CORRIDOR, loungeSay, loungers, pick, sendTo } from "../world/lounge.js";
@@ -89,11 +89,14 @@ function endParty() {
   dayState.party = null;
 }
 // over the break room: garland and disco lights during the party
-export function drawPartyOver(room, t) {
+// (along: in isometric view, the point at u ∈ 0..1 of the walls' top, where the garland hangs)
+export function drawPartyOver(room, t, along = null) {
   if (!dayState.party || (room === "lounge") === !!dayState.party.terrace) return;
-  for (let x = 4; x < W; x += 10) { const c = ["#ff6b6b", "#fbaa08", "#51cf66", "#5aa9ff", "#b48cff"][(x / 10 + Math.floor(t / 400)) % 5 | 0]; px(x, 6 + Math.sin(x / 18) * 2, 2, 2.4, c); }
+  const flag = k => ["#ff6b6b", "#fbaa08", "#51cf66", "#5aa9ff", "#b48cff"][(k + Math.floor(t / 400)) % 5 | 0];
+  if (along) for (let k = 0; k <= 60; k++) { const p = along(k / 60); px(p.x - 1, p.y + Math.abs(Math.sin(k * Math.PI / 6)) * 3, 2, 2.4, flag(k)); }
+  else for (let x = 4; x < W; x += 10) px(x, 6 + Math.sin(x / 18) * 2, 2, 2.4, flag(x / 10));
   if (dayState.party.big) for (let i = 0; i < 6; i++) { const x = (i * 71 + t / 30) % W, y = 20 + ((t / 15 + i * 40) % 180); px(x, y, 1.6, 1.6, ["#ff6b9a", "#fbaa08", "#5fd38d"][i % 3]); }
-  ctx.globalAlpha = 0.08; px(0, 0, W, H, ["#ff6b9a", "#5aa9ff", "#fbaa08"][Math.floor(t / 600) % 3]); ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.08; fillScreen(["#ff6b9a", "#5aa9ff", "#fbaa08"][Math.floor(t / 600) % 3]); ctx.globalAlpha = 1;
 }
 export function emptyLoungeText() {
   if (dayState.party?.terrace) return "Tout le monde est sur la terrasse ! 🍻";

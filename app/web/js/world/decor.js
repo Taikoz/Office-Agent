@@ -1,20 +1,17 @@
-// Decor editor (🎨 DÉCO, D): wall, floor, wood, rug, curtains and door of the office and of the break room.
-// Kept in the localStorage; the floor and the wall are painted once per scale and per setting.
+// The decor of each room: its walls and its floor (bought in the buy mode, build.js), the wood, the curtains and the
+// door. Kept in the localStorage; the floor and the wall are painted once per scale and per setting.
 
 import { hub, provide } from "../hub.js";
 import { S, W, ctx } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART, Sprite, shade } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
-import { setView, view } from "./lounge.js";
 
-export const DECOR_DEFAULT = {
-  office: { wall: "lambris", wallColor: "#2f4f4f", floor: "parquet", floorColor: "#5f4936", wood: "#8a6a4a",
-    rug: "liseré", rugColor: "#3a3a48", curtain: "velours", curtainColor: "#8f2b46", door: "panneaux", doorColor: "#7a5234" },
-  lounge: { wall: "lambris", wallColor: "#8c5a3c", floor: "moquette", floorColor: "#b5ad9e", wood: "#8a6a4a",
-    rug: "rond", rugColor: "#d9824f", curtain: "velours", curtainColor: "#8f2b46", door: "panneaux", doorColor: "#7a5234" },
-};
-const DECOR_TYPES = {
+// a room as it is delivered: plastered walls, a concrete floor (walls and floors are bought in the buy mode, build.js)
+const BARE = { wall: "uni", wallColor: "#cfc8bb", floor: "beton", floorColor: "#8f8f8f", wood: "#8a6a4a",
+  rug: "aucun", rugColor: "#3a3a48", curtain: "velours", curtainColor: "#8f2b46", door: "panneaux", doorColor: "#7a5234" };
+export const DECOR_DEFAULT = { office: { ...BARE }, lounge: { ...BARE }, meeting: { ...BARE }, terrace: { ...BARE, floor: "parquet", floorColor: "#8a6a4a" } };
+export const DECOR_TYPES = {
   wall: [["lambris", "Lambris"], ["uni", "Uni"], ["rayures", "Rayures"], ["briques", "Briques"], ["papier", "Papier peint"], ["boiserie", "Boiserie basse"]],
   floor: [["parquet", "Parquet"], ["chevron", "Point de Hongrie"], ["moquette", "Moquette"], ["carrelage", "Carrelage"], ["damier", "Damier"], ["beton", "Béton ciré"]],
   rug: [["liseré", "Liseré"], ["uni", "Uni"], ["rayé", "Rayé"], ["persan", "Persan"], ["rond", "Rond"], ["aucun", "Aucun"]],
@@ -23,7 +20,7 @@ const DECOR_TYPES = {
 };
 const WOODS = [["Chêne", "#8a6a4a"], ["Noyer", "#5c3d27"], ["Érable", "#c9a06a"], ["Merisier", "#9a4f2e"], ["Wengé", "#3b2a20"],
   ["Bouleau", "#d8c3a0"], ["Laqué blanc", "#e6e2d8"], ["Laqué noir", "#2a2a33"]];
-const DECOR_COLORS = {
+export const DECOR_COLORS = {
   wallColor: ["#0d2766", "#14317a", "#2b2d42", "#3d5a80", "#2f4f4f", "#4a5d3a", "#6b2d3c", "#8c5a3c", "#c9b79c", "#e8e2d0", "#7a7f8c", "#1c1c24"],
   floorColor: ["#5f4936", "#7a5a3c", "#a07850", "#c9a374", "#3b2a20", "#3a4a73", "#4a4a52", "#8c8c8c", "#b5ad9e", "#2f3e2f", "#6b2d3c", "#d8d2c4"],
   rugColor: ["#22336a", "#d9824f", "#8f2b46", "#2f6e3c", "#4a2f6b", "#c9a24b", "#1f75be", "#3a3a48", "#b8643c", "#e8e2d0"],
@@ -36,8 +33,8 @@ const DECOR_ROWS = [  // [type key, color key, label]; the wood has named preset
 ];
 
 export let decor = (() => {
-  const s = new SaveSlot("office-decor", {}).data;
-  return { office: { ...DECOR_DEFAULT.office, ...(s.office || {}) }, lounge: { ...DECOR_DEFAULT.lounge, ...(s.lounge || {}) } };
+  const s = new SaveSlot("office-decor", {}, { version: 2, migrations: { 2: () => ({}) } }).data;  // 2: a new game, the rooms delivered bare
+  return Object.fromEntries(Object.keys(DECOR_DEFAULT).map(r => [r, { ...DECOR_DEFAULT[r], ...(s[r] || {}) }]));
 })();
 const decorSig = (room, keys) => keys.map(k => decor[room][k]).join("|");
 const lum = hex => { const n = parseInt(hex.slice(1, 7), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
@@ -154,13 +151,13 @@ function paintRug(p, x0, y0, w, h, type, base) {
 
 // floor of a room (everything below the wall), with its rugs; cached per scale and setting
 const floorCaches = {};
-export function roomFloorCanvas(room, h, rugs) {
-  const d = decor[room], sig = `${S}|${decorSig(room, ["floor", "floorColor", "rug", "rugColor"])}|${JSON.stringify(rugs)}`;
+export function roomFloorCanvas(room, h, rugs, fw = W) {
+  const d = decor[room], sig = `${S}|${fw}|${h}|${decorSig(room, ["floor", "floorColor", "rug", "rugColor"])}|${JSON.stringify(rugs)}`;
   if (floorCaches[room]?.sig === sig) return floorCaches[room].c;
-  const p = decorPainter(W, h);
-  paintFloor(p, W, h, d.floor, d.floorColor);
+  const p = decorPainter(fw, h);
+  paintFloor(p, fw, h, d.floor, d.floorColor);
   for (const [x, y, w, hh] of rugs) paintRug(p, x, y, w, hh, d.rug, d.rugColor);
-  for (let k = 0; k < 8; k++) p.rect(0, k, W, 1, `rgba(10, 8, 30, ${0.28 - k * 0.035})`);  // shade cast by the wall
+  for (let k = 0; k < 8; k++) p.rect(0, k, fw, 1, `rgba(10, 8, 30, ${0.28 - k * 0.035})`);  // shade cast by the wall
   floorCaches[room] = { sig, c: p.c };
   return p.c;
 }
@@ -222,44 +219,39 @@ export function drawWindow(room, x, y) {
   ART.window.draw(x, y, { style: curtain, color: curtainColor });
 }
 
-/* ---------- the editor panel ---------- */
-let decorOpen = false, decorRoom = "office";
-const decorBox = document.getElementById("decor"), decorBtn = document.getElementById("decorbtn");
-export function toggleDecor(open = !decorOpen) {
-  decorOpen = open;
-  decorBox.hidden = !open; decorBtn.classList.toggle("on", open); decorBtn.setAttribute("aria-expanded", open);
-  if (open) { decorRoom = view === "lounge" ? "lounge" : "office"; renderDecor(); }
+// a room's walls or floor bought in the buy mode (build.js): kept with the decor
+export function applyDecor(room, kv) {
+  decor[room] = { ...(decor[room] || DECOR_DEFAULT.office), ...kv };
+  SaveSlot.get("office-decor").save(decor);
 }
-function renderDecor() {
-  const d = decor[decorRoom], chip = (k, v, label, on) => `<button class="chip${on ? " on" : ""}" data-k="${k}" data-v="${v}">${hub.esc(label)}</button>`;
-  const rows = DECOR_ROWS.map(([tk, ck, label]) => {
-    const lbl = tk ? label : decorRoom === "office" ? "Bureaux (bois)" : "Meubles (bois)";
-    const types = tk ? DECOR_TYPES[tk].map(([v, l]) => chip(tk, v, l, d[tk] === v)).join("") : WOODS.map(([l, v]) => chip(ck, v, l, d[ck] === v)).join("");
-    const sw = tk ? (DECOR_COLORS[ck] || []).map(c => `<button class="sw${d[ck] === c ? " on" : ""}" data-k="${ck}" data-v="${c}" style="--c:${c}" title="${c}" aria-label="${c}"></button>`).join("") : "";
-    return `<div class="drow"><div class="dl">${lbl}</div><div class="chips">${types}</div>
-      <div class="sws">${sw}<label class="pick" title="Couleur personnalisée"><input type="color" data-k="${ck}" value="${d[ck]}"><span>autre…</span></label></div></div>`;
-  }).join("");
-  decorBox.innerHTML = `<div class="dhead"><b>🎨 DÉCO</b>
-      <div class="tabs">${[["office", "🏢 Bureau"], ["lounge", "☕ Salle de repos"]].map(([r, l]) => `<button data-room="${r}"${decorRoom === r ? ' class="on"' : ""}>${l}</button>`).join("")}</div>
-      <button class="x" data-close title="Fermer (D)">×</button></div>
-    ${rows}
-    <div class="dfoot"><button data-reset>↺ Réinitialiser cette pièce</button><button data-copy>⇄ Copier vers ${decorRoom === "office" ? "la salle de repos" : "le bureau"}</button></div>`;
+// a rug bought (build.js): its footprint painted on a canvas (shape: liseré, uni, rayé, persan, rond)
+const rugs = new Map();
+export function rugCanvas(shape, color, w, d) {
+  const key = `${S}|${shape}|${color}|${w}|${d}`;
+  if (rugs.has(key)) return rugs.get(key);
+  const p = decorPainter(w, d); paintRug(p, 1, 1, w - 2, d - 2, shape, color);
+  if (rugs.size > 60) rugs.clear();
+  rugs.set(key, p.c); return p.c;
 }
-function setDecor(k, v, rerender = true) {
-  decor[decorRoom][k] = v; SaveSlot.get("office-decor").save(decor);
-  if (rerender) renderDecor();
+// a sample of a wall or floor for the buy mode's cards
+const swatches = new Map();
+export function decorSwatch(kind, type, color) {
+  const key = `${kind}|${type}|${color}`;
+  if (swatches.has(key)) return swatches.get(key);
+  const was = S; const p = decorPainter(48, 32);
+  if (kind === "floor") paintFloor(p, 48, 32, type, color);
+  else { p.rect(0, 0, 48, 32, color); paintWallSample(p, type, color); }
+  const url = p.c.toDataURL(); swatches.set(key, url); void was;
+  return url;
 }
-decorBtn.onclick = () => toggleDecor();
-decorBox.addEventListener("click", ev => {
-  const b = ev.target.closest("button"); if (!b) return;
-  if (b.dataset.close !== undefined) return toggleDecor(false);
-  if (b.dataset.room) { decorRoom = b.dataset.room; if (view !== "game") setView(decorRoom); return renderDecor(); }
-  if (b.dataset.reset !== undefined) { decor[decorRoom] = { ...DECOR_DEFAULT[decorRoom] }; SaveSlot.get("office-decor").save(decor); return renderDecor(); }
-  if (b.dataset.copy !== undefined) { const other = decorRoom === "office" ? "lounge" : "office"; decor[other] = { ...decor[decorRoom] }; SaveSlot.get("office-decor").save(decor); hub.toast("DÉCO", "Style copié", other === "office" ? "Vers le bureau." : "Vers la salle de repos."); return; }
-  if (b.dataset.k) setDecor(b.dataset.k, b.dataset.v);
-});
-decorBox.addEventListener("input", ev => { if (ev.target.type === "color") setDecor(ev.target.dataset.k, ev.target.value, false); });  // live preview
-decorBox.addEventListener("change", ev => { if (ev.target.type === "color") renderDecor(); });
+function paintWallSample(p, type, base) {
+  const { rect } = p;
+  if (type === "lambris") for (let x = 0; x < 48; x += 8) rect(x, 0, 0.6, 32, shade(base, 0.87));
+  else if (type === "rayures") for (let x = 0; x < 48; x += 8) { rect(x, 0, 4, 32, shade(base, 1.12)); }
+  else if (type === "briques") for (let row = 0, y = 0; y < 32; row++, y += 5) for (let x = row % 2 ? -6 : 0; x < 48; x += 12) rect(x + 0.5, y + 0.5, 11, 4, shade(base, 0.85 + ((row + x) % 3) * 0.08));
+  else if (type === "papier") for (let y = 4; y < 32; y += 8) for (let x = 2; x < 48; x += 8) rect(x, y, 2, 2, shade(base, 0.82));
+  else if (type === "boiserie") { rect(0, 18, 48, 14, "#7a5a3e"); rect(0, 18, 48, 1, "#a07c58"); }
+}
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
 provide({ get decor() { return decor; }, get doorSprite() { return doorSprite; }, get drawWall() { return drawWall; }, get drawWindow() { return drawWindow; }, get roomFloorCanvas() { return roomFloorCanvas; }, get woodSprite() { return woodSprite; } });

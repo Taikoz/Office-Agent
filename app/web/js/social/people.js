@@ -2,12 +2,13 @@
 // and pluses, friendships changing, moving them to a place; and what is drawn over everybody.
 
 import { hub, provide } from "../hub.js";
-import { CHIEF_NAME, chief, ctx, px, text } from "../core/core.js";
+import { CHIEF_NAME, chief, ctx, px, text, roomSize } from "../core/core.js";
+import { anchored } from "../iso/engine.js";
 import { chiefToLounge } from "../world/chief.js";
 import { LOUNGE_CORRIDOR, loungers, sendTo } from "../world/lounge.js";
 import { toast } from "../sims/progress.js";
 import { rel, relAdd, relLevel } from "./relations.js";
-import { PAN, cooking, drawFork, drawSteam, eaters, fire, socialFx } from "./kitchen.js";
+import { PAN, cooking, drawFork, drawSteam, eaters, fire, socialFx, panAt } from "./kitchen.js";
 
 /* ---------- people: where they are, what they say ---------- */
 export const lounger = n => n === CHIEF_NAME ? null : loungers.get(n);
@@ -48,8 +49,8 @@ export function chiefTo(sp, act, on) {
 }
 // next to someone: on the side with room, through the same detour as their spot
 export function besideOf(l) {
-  const end = l.path.length ? l.path.at(-1) : l, side = end.x > 330 ? -11 : 11;
-  return { x: Math.max(12, Math.min(388, end.x + side)), y: Math.max(76, end.y), via: l.spot?.via };
+  const end = l.path.length ? l.path.at(-1) : l, W2 = roomSize("lounge").w, side = end.x > W2 - 70 ? -11 : 11;
+  return { x: Math.max(12, Math.min(W2 - 12, end.x + side)), y: Math.max(76, end.y), via: l.spot?.via };
 }
 // every order to the chief goes through here: he comes from the office first if he is not in the break room
 export function chiefDo(fn) {
@@ -62,20 +63,20 @@ function burstLounge(x, y, colors) { for (let i = 0; i < 8; i++) floatUp(x - 14 
 // over everything: progress bar of the cook, forks, floating pluses and hearts
 export function drawSocialOver(t) {
   drawSteam(t);
-  for (const [n, e] of eaters) { const p = posOf(n); if (p && e.sat) drawFork(p.x, p.y, e.seat, t, e.start); }
+  for (const [n, e] of eaters) { const p = posOf(n); if (p && e.sat) anchored(p.x, p.y, () => drawFork(p.x, p.y, e.seat, t, e.start)); }
   if (cooking?.arrived) {
     const p = posOf(cooking.cook), k = Math.min(1, (t - cooking.start) / cooking.ms);
-    if (p) {
+    if (p) anchored(p.x, p.y, () => {
       const x = p.x - 12, y = p.y - 54;
       px(x - 0.6, y - 0.6, 25.2, 4.2, "#081746"); px(x, y, 24, 3, "#1a2340"); px(x, y, 24 * k, 3, cooking.burning ? "#ff9f43" : "#51cf66"); px(x, y, 24 * k, 0.8, "#ffffff55");
       text(cooking.recipe.icon, x - 5, y - 1.2, "#fff", 4.6);
-    }
+    });
   }
-  if (fire && !(fire.out > 0)) text("🔥 AU FEU !", PAN.x + 4, PAN.y - 16 + Math.sin(t / 120), Math.floor(t / 250) % 2 ? "#ff6b35" : "#ffd43b", 6, "center");
+  if (fire && !(fire.out > 0)) panAt(() => text("🔥 AU FEU !", PAN.x + 4, PAN.y - 16 + Math.sin(t / 120), Math.floor(t / 250) % 2 ? "#ff6b35" : "#ffd43b", 6, "center"));
   for (const f of socialFx) {
     const k = (t - f.born) / f.life; if (k < 0) continue;
     ctx.globalAlpha = Math.max(0, 1 - k * k);
-    text(f.txt, f.x + Math.sin(k * 7 + f.x) * 1.2, f.y - k * 14, f.color, f.txt.length > 1 ? 5 : 7, "center");
+    anchored(f.x, f.y + 20, () => text(f.txt, f.x + Math.sin(k * 7 + f.x) * 1.2, f.y - k * 14, f.color, f.txt.length > 1 ? 5 : 7, "center"));  // ~ the feet under it
     ctx.globalAlpha = 1;
   }
 }

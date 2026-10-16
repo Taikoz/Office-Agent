@@ -5,15 +5,17 @@ import { ART } from "../svg/base.js";
 import { Incident } from "./base.js";
 
 class ThirstyPlant extends Incident {
-  static PLANTS = [[300, 54], [6, 206]];
-  constructor() { super("plant"); this.which = -1; }
-  start(t) { super.start(t); this.which = Math.floor(Math.random() * ThirstyPlant.PLANTS.length); hub.toast("ALERTE VERTE", "Une plante a soif", "Clique dessus pour l'arroser."); }
-  draw(_t, blink) { const [x, y] = ThirstyPlant.PLANTS[this.which]; ART.wilted.draw(x - 2, y - 6); this.mark(x + 5, y - 7, blink); }
-  hit(x, y) { const [px0, py0] = ThirstyPlant.PLANTS[this.which]; return x >= px0 - 3 && x <= px0 + 13 && y >= py0 - 8 && y <= py0 + 14; }
+  constructor() { super("plant"); this.uid = null; }
+  plants() { return hub.itemsIn("office").filter(it => hub.defOf(it.type).plant); }
+  weight() { return this.plants().length ? 1 : 0; }  // no plant bought: none to water
+  get at() { const p = this.uid && hub.itemByUid(this.uid); if (!p) return null; const [x0, y0, x1, y1] = hub.footOf(p); return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: 30 }; }
+  start(t) { const ps = this.plants(); this.uid = ps[Math.floor(Math.random() * ps.length)]?.uid ?? null; super.start(t); hub.toast("ALERTE VERTE", "Une plante a soif", "Clique dessus pour l'arroser."); }
+  draw() {}
+  hit(x, y) { const p = this.uid && hub.itemByUid(this.uid); if (!p) return false; const [x0, y0, x1, y1] = hub.footOf(p); return x >= x0 - 1 && x <= x1 + 1 && y >= y0 - 1 && y <= y1 + 1; }
   solve(t) {
     super.solve(t);
-    const [x, y] = ThirstyPlant.PLANTS[this.which]; this.which = -1;
-    hub.rain(x + 5, y + 6, "#5aa9ff"); Incident.reward("Plante arrosée", "Elle reprend des couleurs.");
+    const a = this.at; this.uid = null;
+    if (a) hub.rain(a.x, a.y - 10, "#5aa9ff"); Incident.reward("Plante arrosée", "Elle reprend des couleurs.");
   }
 }
 new ThirstyPlant();

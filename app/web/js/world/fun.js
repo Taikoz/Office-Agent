@@ -1,7 +1,7 @@
 // Laser pointer and random office events.
 
 import { hub } from "../hub.js";
-import { H, W, ctx, cv, px } from "../core/core.js";
+import { H, W, ctx, cv, px, roomSize } from "../core/core.js";
 import { view } from "./lounge.js";
 
 /* ---------- fun: laser, office events, shop, mini-games, kudos ---------- */
@@ -18,7 +18,7 @@ export function stepLaser(dt, t) {
   if (!laserActive()) { if (hub.cat.mode === "chase") { hub.cat.mode = "sit"; hub.cat.until = t + 2000; } return false; }
   if (t < (hub.cat.boredUntil || 0)) return false;
   if (hub.cat.mode !== "chase") { hub.cat.mode = "chase"; hub.cat.chaseStart = t; hub.cat.path = []; if (hub.cat.desk) { hub.cat.y = hub.cat.desk.y + 28; hub.cat.desk = null; } }
-  const tx = Math.max(6, Math.min(W - 6, laser.x)), ty = Math.max(74, Math.min(H - 4, laser.y));
+  const R = roomSize("office"), tx = Math.max(6, Math.min(R.w - 6, laser.x)), ty = Math.max(74, Math.min(R.h - 4, laser.y));
   const dx = tx - hub.cat.x, dy = ty - hub.cat.y, dist = Math.hypot(dx, dy), sp = 0.1 * dt;
   if (dx) hub.cat.dir = Math.sign(dx);
   if (dist > sp) { hub.cat.x += dx / dist * sp; hub.cat.y += dy / dist * sp; }

@@ -4,6 +4,7 @@
 
 import { hub, provide } from "../hub.js";
 import { view } from "../world/lounge.js";
+import { ISO } from "../iso/engine.js";
 
 export class Room {
   static all = new Map();  // id → room
@@ -12,6 +13,13 @@ export class Room {
   constructor(id, label) { Object.assign(this, { id, label }); Room.all.set(id, this); }
   get open() { return true; }   // on the room bar
   render(_t) {}
+  // the isometric view (iso/engine.js): every room has one (the mini-games keep their own screen)
+  iso() { return !!this.renderIso; }
+  // a frame: in isometric view, or in 2D
+  frame(t) {
+    if (!this.iso()) { ISO.off(); return this.render(t); }
+    ISO.begin(this.id); try { this.renderIso(t, ISO); } finally { ISO.end(); }
+  }
   hit(_x, _y) { return null; }
   floorClick(_p) {}
   click(_p, _t) { return false; }  // a click the room takes itself (a game, the meeting room's board and TV): true

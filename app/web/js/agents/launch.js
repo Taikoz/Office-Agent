@@ -33,9 +33,9 @@ function hitBoardCard(x, y) { return boardCards.find(c => x >= c.x && x <= c.x +
 cv.addEventListener("mousedown", ev => {
   if (view !== "office") return;
   const p = canvasPoint(ev), c = hitBoardCard(p.x, p.y);
-  if (c?.agent.ticket) { drag = { ticket: c.agent.ticket, from: c.agent, x: p.x, y: p.y, moved: false }; ev.preventDefault(); }
+  if (c?.agent.ticket) { drag = { ticket: c.agent.ticket, from: c.agent, x: p.x, y: p.y, sx: p.sx, sy: p.sy, moved: false }; ev.preventDefault(); }
 });
-addEventListener("mousemove", ev => { if (!drag) return; const p = canvasPoint(ev); drag.moved ||= Math.hypot(p.x - drag.x, p.y - drag.y) > 3; drag.x = p.x; drag.y = p.y; });
+addEventListener("mousemove", ev => { if (!drag) return; const p = canvasPoint(ev); drag.moved ||= Math.hypot(p.sx - drag.sx, p.sy - drag.sy) > 3; drag.x = p.x; drag.y = p.y; drag.sx = p.sx; drag.sy = p.sy; });
 addEventListener("mouseup", () => {
   if (!drag) return;
   const d = drag; drag = null;
@@ -45,10 +45,11 @@ addEventListener("mouseup", () => {
 });
 function drawDrag(t) {
   if (!drag?.moved) return;
-  const over = hitDesk(drag.x, drag.y);
-  if (over) { const d = DESKS[+over.slice(5)]; px(d.x - 20, d.y - 26, 40, 2, "#51cf66"); px(d.x - 20, d.y + 24, 40, 2, "#51cf66"); }
-  px(drag.x - 14, drag.y - 5, 28, 9, "#fff7b8"); px(drag.x - 14, drag.y - 5, 1.5, 9, "#fbaa08");
-  text(drag.ticket, drag.x - 11, drag.y - 4, "#0c2470", 4.6);
+  const over = hitDesk(drag.x, drag.y), iso = hub.Room.current().iso();
+  if (over && !iso) { const d = DESKS[+over.slice(5)]; px(d.x - 20, d.y - 26, 40, 2, "#51cf66"); px(d.x - 20, d.y + 24, 40, 2, "#51cf66"); }
+  const w = iso ? hub.ISO.toWorld(drag.sx, drag.sy) : drag, x = w.x, y = w.y;  // the note under the pointer (isometric view: through the camera)
+  px(x - 14, y - 5, 28, 9, over ? "#c8f7c5" : "#fff7b8"); px(x - 14, y - 5, 1.5, 9, "#fbaa08");
+  text(drag.ticket, x - 11, y - 4, "#0c2470", 4.6);
 }
 
 async function renderLaunch(arg) {

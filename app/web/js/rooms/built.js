@@ -1,13 +1,13 @@
 // The rooms built in construction mode (construct.js): a meeting room and a terrace, on the room bar once built.
 
-import { hub } from "../hub.js";
-import { H, S, W, badge, clip, ctx, curSession, cv, data, hash, px, specialty, text } from "../core/core.js";
+import { hub, provide } from "../hub.js";
+import { H, S, W, badge, clip, ctx, curSession, cv, data, fillScreen, hash, px, roomSize, specialty, text } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
 import { CLOUD_TONES, SKY, skyPhase } from "../svg/sky.js";
 import { BOARD_INK } from "../svg/meeting.js";
-import { FLOOR_Y, bubble, drawPerson } from "../world/scene.js";
+import { FLOOR_Y, bubble, drawPerson, headroom } from "../world/scene.js";
 import { crew } from "../sims/crew.js";
 import { CHIEF_LOOK } from "../world/chief.js";
 import { loungers, view } from "../world/lounge.js";
@@ -17,7 +17,9 @@ import { canvasPoint } from "../ui/panel.js";
 import { toast } from "../sims/progress.js";
 import { weather } from "../agents/events2.js";
 import { focusMode } from "../ui/ux.js";
-import { buy, drawBuyOverlay, drawRoomItems, hitItem, roomDepthItems } from "../world/build.js";
+import { buy, drawBuyOverlay, drawBuyOverlayIso, drawRoomItems, hitItem, roomDepthItems } from "../world/build.js";
+import { P, anchored } from "../iso/engine.js";
+import { isoItems, lampsOver, leftWallDecor } from "../iso/rooms.js";
 import { clockNow, dayState, drawPartyOver } from "../sims/days.js";
 import { Room } from "./base.js";
 
@@ -32,10 +34,15 @@ class BuiltRoom extends Room {
   shell(t, title) {
     drawWall(this.id);
     ctx.drawImage(roomFloorCanvas(this.id, H - FLOOR_Y, []), 0, Math.round(FLOOR_Y * S));
-    px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828");
     text(title, 200, 4, "#fbaa08", 6, "center");
+    drawRoomItems(this.id, t, "rug");
+    this.wallStrip(t);
+  }
+  // on the wall: the baseboard, the door back to the office, the wall objects
+  wallStrip(t) {
+    px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828");
     doorSprite("office").draw(8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
-    drawRoomItems(this.id, t, "rug"); drawRoomItems(this.id, t, "wall");
+    drawRoomItems(this.id, t, "wall");
   }
 }
 
@@ -43,8 +50,9 @@ class BuiltRoom extends Room {
 // (a click changes the channel: agents live, tickets, time and weather, a cartoon, off; slides during a meeting),
 // the conference table where the free devs sit for a minute (startMeeting, construct.js), a wall clock
 const boardSlot = new SaveSlot("office-whiteboard", { strokes: [] });
-const BOARD = { x: 51, y: 17, w: 142, h: 42 }, BOARD_POINTS = 40000;
-const TV = { x: 234, y: 10, w: 100, h: 42 }, TV_CHANNELS = [["agents", "Agents"], ["tickets", "Tickets"], ["clock", "Heure"], ["cartoon", "Dessin animé"], ["off", "Éteinte"]];
+// the whiteboard, the TV and the clock bought for the meeting room (build.js), where they hang (offscreen: none)
+const BOARD = { x: -999, y: -999, w: 142, h: 42 }, BOARD_POINTS = 40000;
+const TV = { x: -999, y: -999, w: 100, h: 42 }, CLOCK = { x: -999, y: -999 }, TV_CHANNELS = [["agents", "Agents"], ["tickets", "Tickets"], ["clock", "Heure"], ["cartoon", "Dessin animé"], ["off", "Éteinte"]];
 const inRect = (r, p, m = 0) => p.x >= r.x - m && p.x <= r.x + r.w + m && p.y >= r.y - m && p.y <= r.y + r.h + m;
 class MeetingRoom extends BuiltRoom {
   constructor() {
@@ -98,8 +106,8 @@ class MeetingRoom extends BuiltRoom {
     g.stroke();
   }
   // the TV: slides during a meeting, else the channel chosen
-  drawTv(t) {
-    const { x, y, w, h } = TV, ch = hub.meeting.on ? "slides" : TV_CHANNELS[this.channel][0];
+  drawTv(t, at = TV) {
+    const { x, y, w, h } = at, ch = hub.meeting.on ? "slides" : TV_CHANNELS[this.channel][0];
     ART.walltv.draw(x - 2, y - 2, { on: ch !== "off" });
     if (ch === "off") return;
     ctx.save(); ctx.beginPath(); ctx.rect(x * S, y * S, w * S, h * S); ctx.clip();
@@ -139,36 +147,69 @@ class MeetingRoom extends BuiltRoom {
   }
   render(t) {
     this.shell(t, "SALLE DE RÉUNION");
-    // the whiteboard and the drawing on it (the stroke being drawn too)
-    ART.whiteboard.draw(48, 14, { sel: this.tool });
-    ctx.drawImage(this.boardImage(), Math.round(BOARD.x * S), Math.round(BOARD.y * S));
-    if (this.stroke) { ctx.save(); ctx.lineCap = ctx.lineJoin = "round"; this.paintStroke(ctx, this.stroke, Math.round(BOARD.x * S), Math.round(BOARD.y * S)); ctx.restore(); }
-    if (!boardSlot.data.strokes.length && !this.stroke) text("Dessine ici ✏️", BOARD.x + BOARD.w / 2, BOARD.y + 16, "#b8bcc8", 5, "center");
-    this.drawTv(t);
-    // the wall clock, at the real time
-    ART.wallclock.draw(354, 14);
-    const d = clockNow(), hand = (k, len, col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd * S; ctx.beginPath(); ctx.moveTo(362 * S, 22 * S); ctx.lineTo((362 + Math.sin(k * Math.PI * 2) * len) * S, (22 - Math.cos(k * Math.PI * 2) * len) * S); ctx.stroke(); };
-    hand(((d.getHours() % 12) + d.getMinutes() / 60) / 12, 3.4, "#2a2a33", 0.7); hand(d.getMinutes() / 60, 5, "#2a2a33", 0.45); hand(d.getSeconds() / 60, 5.2, "#d64545", 0.25);
+    this.wallPieces(t);
     // the table, the chairs, the team, by depth
     const items = [{ y: 172, draw: () => ART.conftable.draw(124, 132) }, { y: 92, draw: () => ART.bigplant.draw(372, 68) }, { y: 92, draw: () => ART.bigplant.draw(204, 68) }];
     for (const s of hub.MEET_SEATS) items.push({ y: s.y - 3, draw: () => ART.officechair.draw(s.x - 7, s.y - (s.y < 150 ? 17 : 14), { back: s.y > 150 }) });
-    hub.meeting.who.forEach((n, i) => { const l = loungers.get(n); if (!l || !hub.meeting.on) return; const s = hub.MEET_SEATS[i]; items.push({ y: s.y, draw: () => drawPerson(s.x, s.y, l.look, { seated: true, back: s.y > 150, frame: Math.floor(t / 400) + i, smile: true }) }); });
-    if (hub.meeting.on) items.push({ y: 151, draw: () => drawPerson(110, 151, CHIEF_LOOK, { tux: true, arms: "baton", frame: Math.floor(t / 600), smile: true }) });
+    hub.meeting.who.forEach((n, i) => { const l = loungers.get(n); if (!l || !hub.meeting.on) return; const s = hub.MEET_SEATS[i]; items.push({ y: s.y, draw: () => this.drawMate(l, s, i, t) }); });
+    if (hub.meeting.on) items.push({ y: 151, draw: () => this.drawChief(t) });
     items.push(...roomDepthItems("meeting", t));
     items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
-    hub.meeting.who.forEach((n, i) => { const l = loungers.get(n); if (l && hub.meeting.on && Math.floor(t / 2500 + i) % 4 === 0) bubble(hub.MEET_SEATS[i].x, hub.MEET_SEATS[i].y - 22, ["D'accord.", "Bonne idée !", "Je m'en occupe.", "Et les tests ?"][i % 4]); });
-    if (!hub.meeting.on) text("Clique sur la table pour réunir l'équipe", 200, 196, "#d5eeff", 5, "center");
+    this.drawOver(t);
     drawBuyOverlay("meeting", t);
+  }
+  drawMate(l, s, i, t) { drawPerson(s.x, s.y, l.look, { seated: true, back: s.back ?? s.y > 150, dir: s.face, frame: Math.floor(t / 400) + i, smile: true }); }
+  drawChief(t, at = { x: 110, y: 151 }) { drawPerson(at.x, at.y, CHIEF_LOOK, { tux: true, arms: "baton", frame: Math.floor(t / 600), smile: true, dir: [1, 0] }); }
+  drawOver(t) {
+    hub.meeting.who.forEach((n, i) => { const l = loungers.get(n), s = hub.MEET_SEATS[i]; if (l && hub.meeting.on && Math.floor(t / 2500 + i) % 4 === 0) anchored(s.x, s.y, () => bubble(s.x, s.y - 22 - headroom(), ["D'accord.", "Bonne idée !", "Je m'en occupe.", "Et les tests ?"][i % 4])); });
+    if (!hub.meeting.on) text(hub.MEET_SEATS.length ? "Clique sur la table pour réunir l'équipe" : "Salle vide : achète une table de réunion et des chaises (🛒 ACHAT)", 200, hub.Room.current().iso() ? 26 : 196, "#d5eeff", 5, "center");
+  }
+  // the whiteboard and the drawing on it (the stroke being drawn too), the TV, the wall clock
+  wallPieces(t) { this.drawWhiteboard(); this.drawTv(t); this.drawClock(); }
+  // the whiteboard and what is drawn on it (at: its drawing area; a ghost in the buy mode elsewhere)
+  drawWhiteboard(at = BOARD) {
+    if (at.x < -100) return;
+    ART.whiteboard.draw(at.x - 3, at.y - 3, { sel: this.tool });
+    ctx.drawImage(this.boardImage(), Math.round(at.x * S), Math.round(at.y * S));
+    if (this.stroke && at === BOARD) { ctx.save(); ctx.lineCap = ctx.lineJoin = "round"; this.paintStroke(ctx, this.stroke, Math.round(BOARD.x * S), Math.round(BOARD.y * S)); ctx.restore(); }
+    if (!boardSlot.data.strokes.length && !this.stroke) text("Dessine ici ✏️", at.x + at.w / 2, at.y + 16, "#b8bcc8", 5, "center");
+  }
+  // the wall clock, at the real time
+  drawClock(at = CLOCK) {
+    if (at.x < -100) return;
+    ART.wallclock.draw(at.x, at.y);
+    const cx = at.x + 8, cy = at.y + 8, d = clockNow(), hand = (k, len, col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd * S; ctx.beginPath(); ctx.moveTo(cx * S, cy * S); ctx.lineTo((cx + Math.sin(k * Math.PI * 2) * len) * S, (cy - Math.cos(k * Math.PI * 2) * len) * S); ctx.stroke(); };
+    hand(((d.getHours() % 12) + d.getMinutes() / 60) / 12, 3.4, "#2a2a33", 0.7); hand(d.getMinutes() / 60, 5, "#2a2a33", 0.45); hand(d.getSeconds() / 60, 5.2, "#d64545", 0.25);
+  }
+  // in isometric view: the board, the TV and the clock on the right wall, the table and the chairs in volume
+  renderIso(t, G) {
+    G.back(() => {  // the back layer: the room's shell, what hangs on its walls, the rugs
+      G.shell({ wall: () => drawWall("meeting"), wallColor: hub.decor.meeting.wallColor, floor: roomFloorCanvas("meeting", H - FLOOR_Y, []) });
+      text("SALLE DE RÉUNION", 200, 3, "#fbaa08", 6, "center");
+      G.onFloor(() => drawRoomItems("meeting", t, "rug"));
+      G.onBackWall(() => this.wallStrip(t));  // its board, TV and clock: objects bought (build.js)
+      G.onLeftWall(() => leftWallDecor("meeting", t));
+    });
+    const items = [];
+    hub.meeting.who.forEach((n, i) => { const l = loungers.get(n), s = hub.MEET_SEATS[i]; if (l && s && hub.meeting.on) items.push({ pt: [s.x, s.y], draw: () => G.put(s.x, s.y, s.x, s.y, s.lift, () => this.drawMate(l, s, i, t)) }); });
+    const table = hub.itemsIn("meeting").find(it => hub.defOf(it.type).role === "conftable"), head = table ? (() => { const [x0, y0, , y1] = hub.footOf(table); return { x: x0 - 14, y: (y0 + y1) / 2 }; })() : { x: 110, y: 151 };
+    if (hub.meeting.on) items.push({ pt: [head.x, head.y], draw: () => anchored(head.x, head.y, () => this.drawChief(t, head)) });
+    isoItems("meeting", t, G, items);
+    G.drawSorted(items);
+    lampsOver("meeting");
+    this.drawOver(t);
+    drawBuyOverlayIso("meeting", t, G);
   }
   // the board (drawn with the pointer), its tray (markers, eraser, sponge), the TV: taken here, not by the floor
   click(p) {
     if (inRect(BOARD, p)) return true;
-    if (p.y >= 56 && p.y <= 67 && p.x >= 48 && p.x <= 196) {
-      const i = Math.floor((p.x - 56) / 13);
-      if (i >= 0 && i < BOARD_INK.length && p.x - 56 - i * 13 <= 11) { this.tool = i; return true; }
-      const ex = 56 + BOARD_INK.length * 13 + 4;
+    const ox = BOARD.x - 51, oy = BOARD.y - 17;  // the tray, under the board
+    if (p.y >= 56 + oy && p.y <= 67 + oy && p.x >= 48 + ox && p.x <= 196 + ox) {
+      const i = Math.floor((p.x - 56 - ox) / 13);
+      if (i >= 0 && i < BOARD_INK.length && p.x - 56 - ox - i * 13 <= 11) { this.tool = i; return true; }
+      const ex = 56 + ox + BOARD_INK.length * 13 + 4;
       if (p.x >= ex && p.x <= ex + 12) { this.tool = -1; return true; }
-      if (p.x >= 174 && p.x <= 188) {
+      if (p.x >= 174 + ox && p.x <= 188 + ox) {
         if (performance.now() > this.clearArmed) { this.clearArmed = performance.now() + 3000; toast("TABLEAU", "Tout effacer ?", "Reclique sur l'éponge pour effacer le tableau (Ctrl+Z annule un trait)."); return true; }
         boardSlot.data.strokes = []; boardSlot.save(); this.version++; this.clearArmed = 0; return true;
       }
@@ -178,17 +219,19 @@ class MeetingRoom extends BuiltRoom {
     return false;
   }
   hit(x, y) {
-    if (inRect(BOARD, { x, y }) || inRect(TV, { x, y }, 2) || (y >= 56 && y <= 67 && x >= 48 && x <= 196)) return "meeting-board";
-    return x >= 124 && x <= 276 && y >= 130 && y <= 172 ? "meet-table" : super.hit(x, y);
+    const ox = BOARD.x - 51, oy = BOARD.y - 17;
+    if (inRect(BOARD, { x, y }) || inRect(TV, { x, y }, 2) || (y >= 56 + oy && y <= 67 + oy && x >= 48 + ox && x <= 196 + ox)) return "meeting-board";
+    return super.hit(x, y);
   }
 }
 new MeetingRoom();
+provide({ get MEET_PIECES() { return { BOARD, TV, CLOCK }; } });
 
 // the roof terrace: the city behind a glass railing, the stair kiosk, a pergola over the banquet table, the bar, the
 // grill, the fire pit, an outdoor lounge, deckchairs, planters, string lights; the Friday afterwork happens here
 class TerraceRoom extends BuiltRoom {
   // where the team stands during the afterwork: at the bar, around the fire pit, by the grill, at the banquet table
-  static SPOTS = [[318, 150], [338, 152], [358, 150], [178, 166], [214, 168], [242, 192], [250, 132], [276, 134], [86, 150], [116, 152], [146, 150], [232, 150]].map(([x, y]) => ({ x, y }));
+  static SPOTS = [[486, 152], [506, 154], [526, 152], [196, 190], [254, 196], [232, 238], [352, 140], [378, 142], [86, 150], [116, 152], [146, 150], [300, 170]].map(([x, y]) => ({ x, y }));
   constructor() { super("terrace", "🌿 Terrasse"); }
   // a string of lights hanging between two points: a wire, bulbs lit at dusk, at night and during the afterwork
   strand(x0, y0, x1, y1, sag, lit, t) {
@@ -269,6 +312,80 @@ class TerraceRoom extends BuiltRoom {
     hub.drawSeasonTerrace(t);  // seasons.js: snow, leaves, petals
     drawPartyOver("terrace", t);
     drawBuyOverlay("terrace", t);
+  }
+  // the deck under the whole terrace: the 2D deck repeated (cached per scale)
+  deckFloor() {
+    const img = ART.deck.image({}), R = roomSize("terrace");
+    if (!img) return null;
+    if (this.deck?.img === img) return this.deck.c;
+    const c = document.createElement("canvas"); c.width = Math.ceil(R.w * S); c.height = Math.ceil((R.h - 70) * S);
+    const g = c.getContext("2d"); g.imageSmoothingEnabled = false;
+    for (let x = 0; x < R.w; x += 400) for (let y = 0; y < R.h - 70; y += 158) g.drawImage(img, Math.round(x * S), Math.round(y * S), Math.round(400 * S), Math.round(160 * S));
+    this.deck = { img, c };
+    return c;
+  }
+  // in isometric view: the sky and the city behind, the deck as a raised floor with its glass railing, the stairs'
+  // kiosk (fixed); everything else is bought (build.js)
+  renderIso(t, G) {
+    const { h, phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow();
+    const party = !!dayState.party, lit = dim || party, still = focusMode, R = roomSize("terrace");
+    G.back(() => {  // the back layer: the room's shell, what hangs on its walls, the rugs
+      G.screen(() => {  // the sky and the city stay behind, whatever the camera
+      px(0, 0, W, H, st[2]);
+      ART.terracesky.draw(0, 0, { stops: st });
+      if (dark) {
+        for (let i = 0; i < 40; i++) if ((Math.floor(t / 600) + i) % 7) px((i * 53) % W, (i * 17) % 34, i % 5 ? 0.7 : 1, i % 5 ? 0.7 : 1, "#f4f2ff");
+        ART.terracemoon.draw(318, 6, { bg: st[0] });
+      } else { const k = Math.max(0, Math.min(1, (h - 6) / 15)); ART.sun.draw(20 + k * 350, 30 - Math.sin(k * Math.PI) * 26, { color: phase === "day" ? "#ffe066" : "#ff9f43" }); }
+      const tone = CLOUD_TONES[phase];
+      for (let i = 0; i < 5; i++) { const kind = "abc"[i % 3], cw = ART.cloud.width(kind), x = ((still ? 0 : t / (700 + i * 160)) + i * 97) % (W + cw + 20) - cw - 10; ART.cloud.draw(x, 4 + (i * 7) % 18, { kind, tone }); }
+      ART.city.draw(0, 22, { phase, blink: Math.floor(t / 700) % 2 });
+      const roofs = ctx.createLinearGradient(0, 72 * S, 0, H * S);  // the roofs below, fading into the haze
+      roofs.addColorStop(0, dark ? "#1a2244" : "#5d6a8c"); roofs.addColorStop(1, dark ? "#080b1c" : "#2a3350");
+      ctx.fillStyle = roofs; ctx.fillRect(0, 72 * S, W * S, (H - 72) * S);
+      for (let i = 0; i < 14; i++) { const x = (i * 61) % W, y = 80 + (i * 37) % 140, w = 18 + (i % 4) * 8; px(x, y, w, 6, dark ? "#121935" : "#46527a"); px(x, y, w, 1, dark ? "#2a3460" : "#7381a6"); if (dark && i % 3 === 0) px(x + 4, y + 2, 2, 1.4, "#ffd27a"); }
+      });
+      G.shell({ floor: this.deckFloor(), walls: false });
+      G.onFloor(() => drawRoomItems("terrace", t, "rug"));
+      // the glass railing along the two back edges
+      const glass = (a, b) => { ctx.globalAlpha = 0.28; ctx.fillStyle = dark ? "#9fb3d9" : "#d5eeff"; ctx.beginPath(); for (const [i, q] of [P(a[0], a[1], 0), P(b[0], b[1], 0), P(b[0], b[1], 13), P(a[0], a[1], 13)].entries()) i ? ctx.lineTo(q.x * S, q.y * S) : ctx.moveTo(q.x * S, q.y * S); ctx.fill(); ctx.globalAlpha = 1; };
+      for (let x = 0; x < R.w; x += 25) glass([x, 70], [x + 25, 70]);
+      for (let y = 70; y < R.h; y += 25) glass([0, y], [0, y + 25]);
+      for (let x = 0; x <= R.w; x += 25) { const a = P(x, 70), b = P(x, 70, 14); px(a.x - 0.5, b.y, 1, a.y - b.y, "#9aa0b2"); }
+      for (let y = 70; y <= R.h; y += 25) { const a = P(0, y), b = P(0, y, 14); px(a.x - 0.5, b.y, 1, a.y - b.y, "#9aa0b2"); }
+      ctx.strokeStyle = "#c9ccd6"; ctx.lineWidth = S * 0.8; ctx.beginPath(); [P(0, R.h, 14), P(0, 70, 14), P(R.w, 70, 14)].forEach((q, i) => i ? ctx.lineTo(q.x * S, q.y * S) : ctx.moveTo(q.x * S, q.y * S)); ctx.stroke();
+      text("TERRASSE", 200, 2, "#fbaa08", 6, "center");
+    });
+    const items = [];
+    const stand = (ax, ay, fn, box) => items.push({ pt: [ax, ay], draw: () => anchored(ax, ay, fn, box) });
+    const k = P(4, 70); items.push({ fp: [4, 70, 48, 96], draw: () => { ART.isokiosk.draw(k.x, k.y, { night: dim }); G.boxRegion(4, 70, 48, 96, 40, { x: 24, y: 40 }); } });  // the stairs' kiosk (fixed): back to the office
+    items.push({ pt: [26, 97], draw: () => G.put(0, 0, 15, 96, 35, () => text("← BUREAU", 0, 0, "#fbaa08", 3.6, "center")) });
+    for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
+      const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length], x = sp.x, y = sp.y;
+      stand(x, y, () => { drawPerson(x, y, l.look, { arms: Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down", frame: Math.floor(t / 300), smile: true }); px(x + 4, y - 13, 2.5, 3, "#f4c430"); });
+    }
+    isoItems("terrace", t, G, items);
+    G.drawSorted(items);
+    for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
+      const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length];
+      anchored(sp.x, sp.y, () => { badge(sp.x, sp.y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(sp.x, sp.y - 24 - headroom(), l.say, "#f7f7f7", "#081746"); });
+    }
+    // the hour: darker at dusk and at night, then what shines
+    if (dim) fillScreen(dark ? "rgba(8, 12, 40, .38)" : "rgba(40, 20, 60, .16)");
+    const sp = (a, b, sag) => { const p = P(...a), q = P(...b); this.strand(p.x, p.y, q.x, q.y, sag, lit, t); };
+    sp([0, R.h, 14], [0, 70, 14], 4);
+    sp([0, 70, 14], [R.w, 70, 14], 4);
+    const glow = (q, r, col, a) => { ctx.globalAlpha = a; px(q.x - r, q.y - r, r * 2, r * 2, col); ctx.globalAlpha = 1; };
+    for (const it of hub.itemsIn("terrace")) {  // what shines: the bar's neon, the fire pits
+      const [x0, y0, x1, y1] = hub.footOf(it), c = { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+      if (it.type === "bar" && lit) glow(P(c.x, y0 + 3, 36), 9, "#ff5fa2", 0.12);
+      if (it.type === "firepit" && (lit || season === "hiver")) glow(P(c.x, c.y, 8), 12, "#ff9f43", 0.14 + (still ? 0 : Math.sin(t / 120) * 0.03));
+    }
+    lampsOver("terrace");
+    hub.drawSeasonTerrace(t);
+    const D = R.h - 70;  // the garland along the railing
+    drawPartyOver("terrace", t, u => { const L = D / (D + R.w); return u < L ? P(0, R.h - D * u / L, 13) : P(R.w * (u - L) / (1 - L), 70, 13); });
+    drawBuyOverlayIso("terrace", t, G);
   }
 }
 new TerraceRoom();

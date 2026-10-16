@@ -12,7 +12,8 @@ import { budgetOf, budgetsOn, overBudget } from "../agents/budget.js";
 import { gainSkill, skillInfo, skillLevel, skillOf } from "./skills.js";
 
 const WALLET_KEY = "office-wallet";
-export let wallet = new SaveSlot(WALLET_KEY, { funds: 1500, earned: 0, paid: [], log: [], init: false }).data;
+// 2: a new game, 25 000 § to furnish the empty rooms (build.js)
+export let wallet = new SaveSlot(WALLET_KEY, { funds: 25000, earned: 0, paid: [], log: [], init: false }, { version: 2, migrations: { 2: v => ({ ...v, funds: 25000, log: [] }) } }).data;
 export const saveWallet = () => SaveSlot.get(WALLET_KEY).save(wallet);
 export const fmtSim = n => `§ ${Math.round(n).toLocaleString("fr-FR")}`;
 SFX.cash = [[1319, .05], [1568, .05], [2093, .2, "triangle"]];

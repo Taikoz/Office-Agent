@@ -68,7 +68,7 @@ function pieCenter(kind, target) {
 function openPie(kind, target, p, sub = null) {
   pieCtx = { kind, target, p, sub, view };
   const items = pieItems(kind, target, sub), rect = cv.getBoundingClientRect();
-  const cx = Math.max(150, Math.min(innerWidth - 150, rect.left + p.x / W * rect.width)), cy = Math.max(140, Math.min(innerHeight - 140, rect.top + p.y / H * rect.height));
+  const cx = Math.max(150, Math.min(innerWidth - 150, rect.left + (p.sx ?? p.x) / W * rect.width)), cy = Math.max(140, Math.min(innerHeight - 140, rect.top + (p.sy ?? p.y) / H * rect.height));
   const rad = items.length > 6 ? 128 : 112;
   pie.style.left = `${cx}px`; pie.style.top = `${cy}px`;
   pie.innerHTML = `<div class="core">${pieCenter(kind, target)}</div>` + items.map(([id, icon, label, lock], i) => {

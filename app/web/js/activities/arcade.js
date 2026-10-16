@@ -9,7 +9,7 @@ class ArcadeActivity extends Activity {
     return [{ y: 70, draw: () => ART.arcade.draw(350, 34, { frame: Math.floor(t / (on ? 250 : 600)) % 2, playing: on }) }];
   }
 }
-new ArcadeActivity({ id: "arcade", label: "joue à l'arcade", icon: "🕹️", task: "Joue à l'arcade", spots: [{ x: 361, y: 86 }],
+new ArcadeActivity({ id: "arcade", label: "joue à l'arcade", icon: "🕹️", task: "Joue à l'arcade",
   pose: { arms: "type", back: true }, fx: { ennui: -3 }, serves: ["fun"], sport: true,
-  chief: { fx: { ennui: -20 }, line: "Une partie 🎮" }, area: [350, 34, 22, 36],
+  chief: { fx: { ennui: -20 }, line: "Une partie 🎮" },
   lines: ["Nouveau record !", "Encore une pièce…"], want: { label: "Battre son record à l'arcade", pay: 60, pts: 50 } });

@@ -2,21 +2,23 @@
 // the bought objects, the tournament slate, the chief when he takes a break.
 
 import { hub } from "../hub.js";
-import { S, W, badge, chief, ctx, px, selected, text } from "../core/core.js";
-import { ART } from "../svg/base.js";
+import { H, S, W, badge, chief, ctx, px, roomSize, selected, text } from "../core/core.js";
+import { ART, shade } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
 import { drawSky } from "../svg/sky.js";
-import { bubble } from "../world/scene.js";
+import { P, anchored } from "../iso/engine.js";
+import { isoItems, lampsOver, leftWallDecor } from "../iso/rooms.js";
+import { bubble, headroom } from "../world/scene.js";
 import { chiefLoungeWalk, drawChiefLounge, drawChiefLoungeOver } from "../world/chief.js";
-import { ACTS, inArea } from "../activities/base.js";
+import { ACTS, Activity, inArea } from "../activities/base.js";
 import { drawLounger, loungeFloorCanvas, loungers, setView } from "../world/lounge.js";
 import { nameTag } from "../world/shop.js";
 import { decor, doorSprite, drawWall, drawWindow, woodSprite } from "../world/decor.js";
 import { drawTournament } from "../games/base.js";
 import { toast } from "../sims/progress.js";
-import { TABLE, drawKitchenFx, socialItems } from "../social/kitchen.js";
+import { PAN, SEATS, TABLE, drawKitchenFx, drawTableTop, socialItems } from "../social/kitchen.js";
 import { drawSocialOver } from "../social/people.js";
-import { buy, drawBuyOverlay, drawRoomItems, hitItem, renderBuy, roomDepthItems, toggleBuy } from "../world/build.js";
+import { buy, defOf, drawBuyOverlay, drawBuyOverlayIso, drawItem, drawRoomItems, hitItem, itemsIn, renderBuy, roomDepthItems, toggleBuy } from "../world/build.js";
 import { drawPartyOver, emptyLoungeText } from "../sims/days.js";
 import { Room } from "./base.js";
 
@@ -30,7 +32,9 @@ class LoungeRoom extends Room {
     ART.roomdoor.draw(d.x, 19, { room: d.room, built });
     px(d.x - 2, 12, 28, 6, built ? "#f7f7f7" : "#3a3a44"); text(built ? d.label : "🏗️ BIENTÔT", d.x + 12, 12.6, built ? "#081746" : "#fbaa08", 3.6, "center");
   }
-  doorAt(p) { return LoungeRoom.DOORS.find(d => p.x >= d.x - 2 && p.x <= d.x + 26 && p.y >= 11 && p.y <= 67); }
+  doorAt(p) {
+    return LoungeRoom.DOORS.find(d => p.x >= d.x - 2 && p.x <= d.x + 26 && p.y >= 11 && p.y <= 67);
+  }
   click(p) {
     const d = this.doorAt(p); if (!d) return false;
     if (hub.con.rooms.includes(d.room)) setView(d.room);
@@ -77,17 +81,54 @@ class LoungeRoom extends Room {
   hit(x, y) {
     if (this.doorAt({ x, y })) return "room-door";  // taken by click()
     if (x >= 8 && x <= 40 && y >= 10 && y <= 72) return "office";
-    const duel = ACTS.find(a => inArea(a.duel, x, y)); if (duel) return `duel:${duel.id}`;  // challenge a dev (duel.js)
     for (const l of [...loungers.values()].filter(l => !l.partyRoom).sort((a, b) => b.y - a.y)) if (Math.abs(x - l.x) <= 7 && y >= l.y - 22 && y <= l.y + 3) return `mate:${l.name}`;
     const itm = hitItem(x, y, "lounge"); if (itm) return itm;                                           // bought objects (build.js)
-    if (x >= 158 && x <= 214 && y >= 30 && y <= 70) return "kitchen";                                  // pie menu: cook, snack, fire
-    if (x >= TABLE.x - 2 && x <= TABLE.x + TABLE.w + 2 && y >= TABLE.y - 2 && y <= TABLE.y + TABLE.h) return "table";
-    if (chief.room === "lounge") {  // the chief is here: the furniture is for him too
-      const act = ACTS.find(a => inArea(a.area, x, y));
-      if (act) return `chiefact:${act.id}`;
-    }
+    if (TABLE.uid && x >= TABLE.x - 2 && x <= TABLE.x + TABLE.w + 2 && y >= TABLE.y - 2 && y <= TABLE.y + TABLE.h) return "table";
     return null;
   }
-  floorClick(p) { if (chief.room === "lounge" && p.y > 72) chiefLoungeWalk(p); }
+  floorClick(p) {
+    if (chief.room === "lounge" && p.y > 72) chiefLoungeWalk(p);
+  }
+  // the break room in isometric view: its doors; everything else is bought (build.js), the team on the spots of the
+  // objects (world/place.js)
+  renderIso(t, G) {
+    const d = decor.lounge, chiefIn = chief.room === "lounge";
+    G.back(() => {  // the back layer: the room's shell, what hangs on its walls, the rugs
+      G.shell({ wall: () => drawWall("lounge"), wallColor: d.wallColor, floor: loungeFloorCanvas() });
+      text("SALLE DE REPOS", 200, 3, "#fbaa08", 6, "center");
+      G.onFloor(() => drawRoomItems("lounge", t, "rug"));
+      G.onBackWall(() => {
+        px(0, 66.5, roomSize("lounge").w, 3.5, "#1a2340"); px(0, 66.5, roomSize("lounge").w, 0.6, "#2c3a66");  // baseboard
+        doorSprite("lounge").draw(8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
+        for (const door of LoungeRoom.DOORS) this.drawDoor(door);
+        drawRoomItems("lounge", t, "wall");  // the tournament's slate, frames… (objects bought)
+      });
+      G.onLeftWall(() => leftWallDecor("lounge", t));
+    });
+    const items = [];
+    isoItems("lounge", t, G, items);
+    const stove = hub.kitchenStove();
+    if (stove) items.push({ pt: [PAN.fx, PAN.fy + 5.5], draw: () => G.put(PAN.x + 5, PAN.y + 5.6, PAN.fx, PAN.fy, PAN.z, () => drawKitchenFx(t)) });
+    if (TABLE.uid) items.push({ pt: [TABLE.x + TABLE.w / 2, TABLE.y + TABLE.h / 2], z: 13, draw: () => G.put(TABLE.x + TABLE.w / 2, TABLE.y + 8, TABLE.x + TABLE.w / 2, TABLE.y + TABLE.h / 2, 12.7, () => drawTableTop(t)) });
+    // the team and the chief (up on a seat or a stage: the spot's lift)
+    const here = [...loungers.values()].filter(l => !l.partyRoom), lift = (s, walking) => walking ? 0 : s?.lift || 0;
+    for (const l of here) items.push({ pt: [l.x, l.y], draw: () => G.put(l.x, l.y, l.x, l.y, lift(l.spot, l.path.length), () => drawLounger(l, t), { x: l.x - 9, y: l.y - 34, w: 18, h: 37, to: { x: l.x, y: l.y - 8 } }) });
+    if (chiefIn) items.push({ pt: [chief.lx, chief.ly], draw: () => G.put(chief.lx, chief.ly, chief.lx, chief.ly, lift(chief.lspot, chief.lpath.length), () => drawChiefLounge(t)) });
+    G.drawSorted(items);
+    // over everything: names, moods, what is said, the social life
+    for (const l of here) G.put(l.x, l.y, l.x, l.y, lift(l.spot, l.path.length), () => {
+      badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");
+      hub.drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25) - headroom(7), t);
+      if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24) - headroom(), l.say, "#f7f7f7", "#081746");
+    });
+    drawSocialOver(t);
+    if (chiefIn) anchored(chief.lx, chief.ly, () => drawChiefLoungeOver(t));
+    lampsOver("lounge");
+    if (!here.length) text(emptyLoungeText(), W / 2, 24, "#d5eeff", 5, "center");
+    else if (!hub.itemsIn("lounge").length) text("Salle vide : achète un canapé, une machine à café, des jeux… (🛒 ACHAT)", W / 2, 24, "#d5eeff", 5, "center");
+    drawBuyOverlayIso("lounge", t, G);
+    const R = roomSize("lounge"), D = R.h - 70;  // the garland along the walls
+    drawPartyOver("lounge", t, u => { const L = D / (D + R.w); return u < L ? P(0, R.h - D * u / L, 42) : P(R.w * (u - L) / (1 - L), 70, 42); });
+  }
 }
 new LoungeRoom();

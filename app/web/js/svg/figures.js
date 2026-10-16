@@ -84,6 +84,7 @@ class PersonArt extends Figure {
 }
 ART.person = new PersonArt();
 
+
 // Brume: grey tabby, green eyes; poses walk (2 frames), sit (tail sweeping, 2 = blink), sleep; she faces right
 const CAT_C = { fur: "#a3a3ad", furD: "#8a8a96", stripe: "#6e6e7a", belly: "#d4d4dc", ear: "#e8a0b0", eye: "#8bd36b", pupil: "#1c1c24", nose: "#e88a9a" };
 class CatArt extends Figure {

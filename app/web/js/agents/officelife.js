@@ -9,7 +9,7 @@ import { focusMode } from "../ui/ux.js";
 import { clockNow } from "../sims/days.js";
 
 /* stand-up: the main session plans (TodoWrite, plan mode) → the seated devs gather in front of the board */
-const STANDUP_RE = /TodoWrite|plan/i, STANDUP_SPOTS = [34, 58, 82, 106, 130, 154, 178, 196].map(x => ({ x, y: 80 }));
+const STANDUP_RE = /TodoWrite|plan/i, STANDUP_SPOTS = () => [24, 48, 72, 96, 120, 144, 168, 186].map(x => ({ x: hub.BOARD_AT.x + x, y: 80 }));  // in front of the board
 const standup = { on: false, since: 0, until: 0 };
 
 function stepStandup(t) {
@@ -17,10 +17,11 @@ function stepStandup(t) {
   const planning = !!ch && !ch.finished && ch.idle < 60 && STANDUP_RE.test(ch.action || "");
   if (planning && !standup.on && t > standup.until + 30000) {
     const devs = [...ents.values()].filter(e => e.seated && !e.leaving && !e.asking && !e.errand && !e.coffee && !e.visiting);
-    if (devs.length < 2) return;
+    if (devs.length < 2 || hub.BOARD_AT.x < -100) return;  // no board bought: no stand-up
     Object.assign(standup, { on: true, since: t });
-    devs.slice(0, STANDUP_SPOTS.length).forEach((e, i) => {
-      const spot = STANDUP_SPOTS[i];
+    const spots = STANDUP_SPOTS();
+    devs.slice(0, spots.length).forEach((e, i) => {
+      const spot = spots[i];
       e.standup = true; e.seated = false;
       e.path = [...fromDesk(e.desk), { x: spot.x, y: LANE }, { ...spot, on: x => { x.pose = "standup"; } }];
     });
@@ -96,4 +97,4 @@ function drawNight() {
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get drawNight() { return drawNight; }, get drawReviewSign() { return drawReviewSign; }, get pairBubble() { return pairBubble; }, get standup() { return standup; }, get standupBack() { return standupBack; }, get stepOfficeLife() { return stepOfficeLife; } });
+provide({ get drawNight() { return drawNight; }, get nightLevel() { return nightLevel; }, get drawReviewSign() { return drawReviewSign; }, get pairBubble() { return pairBubble; }, get standup() { return standup; }, get standupBack() { return standupBack; }, get stepOfficeLife() { return stepOfficeLife; } });

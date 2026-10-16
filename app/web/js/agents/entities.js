@@ -48,9 +48,10 @@ export function sync(session) {
       if (firstLoad) { e.x = seat.x; e.y = seat.y; e.seated = true; }
       else {
         // door → board (takes its ticket) → desk
-        const bx = 16 + (DESKS.indexOf(desk) % 5) * 9;  // under the TO DO column
-        e.path = [{ x: DOOR.x, y: LANE }, { x: bx, y: LANE }, { x: bx, y: 76, wait: 1100, pose: "pick", on: x => { x.picked = true; } },
-          { x: bx, y: LANE }, ...toDesk(desk)];
+        const bx = hub.BOARD_AT.x + 9 + (DESKS.indexOf(desk) % 5) * 9;  // under the TO DO column of the board (if one is bought)
+        e.path = hub.BOARD_AT.x < -100 ? [{ x: DOOR.x, y: LANE }, ...toDesk(desk)]
+          : [{ x: DOOR.x, y: LANE }, { x: bx, y: LANE }, { x: bx, y: 76, wait: 1100, pose: "pick", on: x => { x.picked = true; } }, { x: bx, y: LANE }, ...toDesk(desk)];
+        if (hub.BOARD_AT.x < -100) e.picked = true;
         // agents launched together come in one after the other
         e.queued = true; arrivals.push(a.id);
       }
@@ -73,7 +74,7 @@ export function sync(session) {
       e.asking = false; e.spot = null;
       e.path = [{ x: e.x, y: LANE }, ...toDesk(e.desk)];
     } else if (e.seated && !e.leaving && a.status === "done" && (hub.mate(e.who).fatigue >= 60 || hub.mate(e.who).cafe <= 30)  // a mission is finished before any break
-      && !hub.focusMode && performance.now() > (e.coffeeNext || 0) && !hub.Incident.get("coffee").on && ![...ents.values()].some(x => x.coffee)) goCoffee(e);
+      && !hub.focusMode && COFFEE.ok && performance.now() > (e.coffeeNext || 0) && !hub.Incident.get("coffee").on && ![...ents.values()].some(x => x.coffee)) goCoffee(e);
   }
   hub.firstLoad = false;
 }
@@ -103,6 +104,7 @@ export function step(dt, t) {
     if (e.queued) continue;
     if (e.pauseUntil) { if (t < e.pauseUntil) continue; e.pauseUntil = 0; e.pose = ""; }
     if (!e.path.length) { if (e.leaving) ents.delete(id); continue; }
+    hub.routeAhead(e.path, e.x, e.y, "office");  // around the furniture (world/route.js)
     const tgt = e.path[0], dx = tgt.x - e.x, dy = tgt.y - e.y, dist = Math.hypot(dx, dy), sp = 0.05 * dt;
     if (dist <= sp) {
       e.x = tgt.x; e.y = tgt.y; e.path.shift();
@@ -116,7 +118,7 @@ export function step(dt, t) {
 // each frame: the room on screen draws itself (js/rooms/)
 export function render(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  hub.Room.current().render(t);
+  hub.Room.current().frame(t);
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
