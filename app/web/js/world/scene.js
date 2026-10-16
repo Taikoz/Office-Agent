@@ -1,7 +1,7 @@
 // Office room, desks, board and people drawing.
 
 import { hub, provide } from "../hub.js";
-import { CAB, DESKS, H, S, STATE_COLORS, W, chief, roomSize, clip, ctx, data, drawerUntil, ents, font, hash, inTransit, mmx, px, raw, text, typeColor } from "../core/core.js";
+import { CAB, DESKS, DOOR, H, S, STATE_COLORS, W, chief, roomSize, clip, ctx, data, drawerUntil, ents, font, hash, inTransit, mmx, px, raw, text, typeColor } from "../core/core.js";
 import { isoDrawing } from "../iso/engine.js";
 import { ART, shade } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
@@ -41,8 +41,8 @@ export function drawRoomWall(t, room = "office", iso = false) {
   if (!iso) { drawSky(374, 12, t); hub.drawWindow(room, 368, 4); ART.glints.draw(368, 4); }  // in isometric view, windows are bought (build.js)
   if (mine && !iso) { hub.drawShelf(t); hub.drawEmployee(t); }  // in isometric view: objects bought (build.js)
   // door
-  hub.doorSprite(room).draw(492, 20);
-  px(493, 10, 28, 8, "#f7f7f7"); text(mine ? `☕ REPOS ${hub.loungers.size}` : "← MON BUREAU", 507, 10.6, "#081746", 4, "center");
+  hub.doorSprite(room).draw(mine ? DOOR.x - 14 : 492, 20);
+  px(mine ? DOOR.x - 13 : 493, 10, 28, 8, "#f7f7f7"); text(mine ? `☕ REPOS ${hub.loungers.size}` : "← MON BUREAU", mine ? DOOR.x + 1 : 507, 10.6, "#081746", 4, "center");
 }
 export function coffeeState(t, mine = true) {
   const brewing = mine && ([...ents.values()].some(e => e.pose === "coffee") || (chief.at === "coffee" && !chief.path.length && chief.coffeeUntil > 0));

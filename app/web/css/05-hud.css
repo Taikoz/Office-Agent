@@ -147,3 +147,8 @@
   #pcgame .x:hover { color: var(--text); border-color: var(--accent); }
   #pcgame canvas { display: block; width: min(640px, 86vw); aspect-ratio: 16 / 10; image-rendering: pixelated; border-radius: 6px; box-shadow: inset 0 0 0 2px #000; }
   #pcgame footer { margin-top: 6px; color: var(--muted); font-size: 15px; text-align: center; }
+  #buy .resize { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; } #buy .resize button { padding: 0 6px; font-size: 14px; }
+  #weekly .q button { margin-left: 6px; padding: 0 8px; font: inherit; font-size: 14px; color: #1c1c24; background: #fbaa08; border: 0; border-radius: 999px; cursor: pointer; }
+  #weekly .q button:hover { background: #ffd060; }
+  #buy .bitem.locked { opacity: .55; } #buy .bitem.locked .price { color: var(--muted); }
+  #buy .lockmsg { display: block; margin-top: 4px; color: #fbaa08; font-size: 14px; }

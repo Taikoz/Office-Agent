@@ -3,7 +3,7 @@
 // wall. A room bar at the top switches between the rooms built.
 
 import { hub, provide } from "../hub.js";
-import { CHIEF_NAME, DESKS, TEAM, ents } from "../core/core.js";
+import { CHIEF_NAME, DESKS, ROOM, TEAM, ents, setRoomSize } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { crewAdd } from "../sims/crew.js";
 import { loungers, setView, view } from "./lounge.js";
@@ -51,8 +51,47 @@ export function buyProject(id) {
   else { con.rooms.push(id); saveCon(); toast("CONSTRUCTION 🏗️", `${p.name} construite`, "Sa porte est dans la salle de repos ; la pièce est aussi dans la barre du haut."); renderRoomBar(); }
   sfx("level"); saveCon(); renderBuy();
 }
+/* ---------- the rooms' size: longer, deeper, or smaller when the furniture still fits ---------- */
+const BASE = { office: [560, 300], lounge: [560, 300], meeting: [400, 232], terrace: [600, 320] };
+const LIMIT = { w: [400, 840], h: [232, 420] };
+con.sizes = con.sizes || {};
+for (const [id, [w, h]] of Object.entries(con.sizes)) setRoomSize(id, w, h);
+const ROOM_NAMES = { office: "🏢 Bureau", lounge: "☕ Salle de repos", meeting: "🤝 Salle de réunion", terrace: "🌿 Terrasse" };
+const resizeCost = (dw, dh) => dw > 0 ? 2500 : dh > 0 ? 2000 : 0;  // growing costs; shrinking is free
+// whether every object of the room still fits in w × h
+function fits(room, w, h) {
+  return (hub.itemsIn?.(room) || []).every(it => {
+    const d = hub.defOf(it.type);
+    if (d.kind === "wall") return (it.side || "back") === "back" ? it.x + d.w <= w - 2 : it.x + d.w <= h - 70 - 2;
+    const [, , x1, y1] = hub.footOf(it); return x1 <= w - 2 && y1 <= h - 2;
+  });
+}
+function resizeRoom(room, dw, dh) {
+  const R = ROOM[room], w = R.w + dw, h = R.h + dh;
+  if (w < LIMIT.w[0] || w > LIMIT.w[1] || h < LIMIT.h[0] || h > LIMIT.h[1]) return toast("CONSTRUCTION", "Impossible", "La pièce ne peut pas être plus grande ou plus petite.");
+  if ((dw < 0 || dh < 0) && !fits(room, w, h)) return toast("CONSTRUCTION", "Des meubles gênent", "Déplace ou vends ce qui dépasse avant de réduire la pièce.");
+  const cost = resizeCost(dw, dh);
+  if (cost && !spend(cost, `Travaux : ${ROOM_NAMES[room]}`)) return;
+  // the left wall's objects keep their distance from the back corner (their strip runs from the front end)
+  if (dh) for (const it of hub.itemsIn(room)) if (hub.defOf(it.type).kind === "wall" && it.side === "left") it.x += dh;
+  setRoomSize(room, w, h); con.sizes[room] = [w, h]; saveCon();
+  hub.ISO?.cams?.delete(room);  // the camera recentres on the new room
+  hub.saveBuild?.(); sfx(cost ? "level" : "commit");
+  toast("CONSTRUCTION 🏗️", `${ROOM_NAMES[room]} : ${w} × ${h - 70}`, dw > 0 || dh > 0 ? "Les ouvriers ont poussé les murs." : "La pièce a été réduite.");
+  renderBuy();
+}
+function sizesHtml() {
+  const rooms = ["office", "lounge", ...con.rooms];
+  return rooms.map(r => {
+    const R = ROOM[r], [bw, bh] = BASE[r];
+    const btn = (dw, dh, label) => `<button data-resize="${r}:${dw}:${dh}"${(dw > 0 || dh > 0) && wallet.funds < resizeCost(dw, dh) ? " disabled" : ""}>${label}</button>`;
+    return `<div class="bitem"><span class="bthumb big">📐</span><b>${esc(ROOM_NAMES[r])}</b><span class="muted" style="font-size:14px">${R.w} × ${R.h - 70}${R.w !== bw || R.h !== bh ? ` (de base ${bw} × ${bh - 70})` : ""}</span>
+      <span class="price">↔ ${fmtSim(2500)} · ↕ ${fmtSim(2000)}</span><span class="resize">${btn(40, 0, "↔ +40")}${btn(0, 20, "↕ +20")}${btn(-40, 0, "↔ −40")}${btn(0, -20, "↕ −20")}</span></div>`;
+  }).join("");
+}
+document.getElementById("buy").addEventListener("click", ev => { const b = ev.target.closest("[data-resize]"); if (!b) return; const [r, dw, dh] = b.dataset.resize.split(":"); resizeRoom(r, +dw, +dh); });
 function constructGridHtml() {
-  return PROJECTS.map(p => {
+  return sizesHtml() + PROJECTS.map(p => {
     const done = p.done(), ok = p.ok();
     return `<div class="bitem${done ? " own" : ""}"><span class="bthumb big">${p.icon}</span><b>${esc(p.name)}</b><span class="muted" style="font-size:14px">${esc(p.desc)}</span>
       <span class="price">${done ? "✓ construit" : fmtSim(p.price)}</span>${done ? "" : `<button data-project="${p.id}"${!ok || wallet.funds < p.price ? " disabled" : ""}${!ok && p.needs ? ` title="${esc(p.needs)}"` : ""}>Construire</button>`}</div>`;

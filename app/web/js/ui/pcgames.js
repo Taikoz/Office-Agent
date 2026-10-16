@@ -123,7 +123,7 @@ function frame(t) {
 }
 function gameOver() {
   const id = run.id, sc = run.s.score;
-  if (sc > best(id)) { saveBest(id, sc); toast("RECORD 🏆", `${PC_GAMES[id].name} : ${sc}`, "Nouveau record sur cet ordinateur !"); sfx("achievement"); hub.addMoodlet?.(CHIEF_NAME, "pcrecord", "🏆", `Record à ${PC_GAMES[id].name}`, 5, 60); }
+  if (sc > best(id)) { saveBest(id, sc); hub.countWeekly?.("pcrecord"); toast("RECORD 🏆", `${PC_GAMES[id].name} : ${sc}`, "Nouveau record sur cet ordinateur !"); sfx("achievement"); hub.addMoodlet?.(CHIEF_NAME, "pcrecord", "🏆", `Record à ${PC_GAMES[id].name}`, 5, 60); }
   else sfx("fail");
   crewAdd(CHIEF_NAME, { ennui: -8 });
 }

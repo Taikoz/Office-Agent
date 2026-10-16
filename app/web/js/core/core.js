@@ -7,6 +7,8 @@ export const W = 400, H = 232;
 // shows W × H of it at a time, the isometric view's camera moves over the rest (iso/engine.js)
 export const ROOM = { office: { w: 560, h: 300 }, lounge: { w: 560, h: 300 }, terrace: { w: 600, h: 320 }, meeting: { w: 400, h: 232 } };
 export const roomSize = id => ROOM[id] || ROOM.meeting;
+// a room resized (world/construct.js): the office's door stays at the right end of its back wall
+export function setRoomSize(id, w, h) { if (!ROOM[id]) return; Object.assign(ROOM[id], { w, h }); if (id === "office") DOOR.x = w - 54; }
 export const cv = document.getElementById("c");
 // where the drawing goes: the scene's canvas, or another one for a while (withCtx: the isometric view paints its back
 // layer and captures its pieces on other canvases, iso/pixi.js); raw.drawn: px() or text() painted something

@@ -56,7 +56,7 @@ export class SvgArt {
     const id = `${this.name}|${this.stateKey(state)}`, key = `${id}@${S}`, imgs = SvgArt.images;
     let img = imgs.get(key);
     if (!img) {
-      if (imgs.size > 1500) imgs.clear();
+      if (imgs.size > 1500) { let k = 0; for (const old of imgs.keys()) { imgs.delete(old); if (++k >= 300) break; } }  // the oldest go (a clock's seconds), not the whole cache
       img = new Image(); img.src = svgUrl(this.markup(state)); imgs.set(key, img);
     }
     if (img.complete && img.naturalWidth) { SvgArt.last.set(id, img); return img; }
