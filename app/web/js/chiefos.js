@@ -30,10 +30,11 @@ function chiefToDesk() {
 /* ---------- ChiefOS ---------- */
 const osBox = document.getElementById("chiefos");
 let osApp = "questions", osReport = null;
-const OS_APPS = [["questions", "📬", "Questions"], ["alerts", "🚨", "Alertes"], ["gitlab", "🦊", "GitLab"], ["browser", "🌐", "Navigateur"], ["blueprint", "🧩", "Blueprints"], ["planning", "📅", "Planning"], ["mr", "🔀", "Merge requests"], ["pipes", "🔴", "Pipelines"], ["tickets", "🎫", "Tickets"],
+const OS_APPS = [["questions", "📬", "Questions"], ["alerts", "🚨", "Alertes"], ["gitlab", "🦊", "GitLab"], ["browser", "🌐", "Navigateur"], ["blueprint", "🧩", "Blueprints"], ["terminal", "💻", "Terminal"], ["skills", "📝", "Skills & agents"], ["mmx", "🧠", "MMX"], ["dashboard", "📊", "Tableau de bord"], ["notifs", "🔔", "Notifications"], ["schedule", "⏰", "Planification"], ["planning", "📅", "Planning"], ["mr", "🔀", "Merge requests"], ["pipes", "🔴", "Pipelines"], ["tickets", "🎫", "Tickets"],
   ["debriefs", "🧾", "Débriefs"], ["report", "📋", "Rapport du jour"], ["week", "🗓️", "Semaine"], ["costs", "💸", "Coûts"], ["money", "💰", "Comptes"], ["team", "👥", "Équipe"], ["meteo", "🌦️", "Météo"], ["settings", "⚙️", "Réglages"]];
 // apps of other modules (alerts.js, planning.js, debrief.js, weekly.js, seasons.js)
-const OS_RENDER = { alerts: () => alertsAppHtml(), planning: () => planAppHtml(), debriefs: () => debriefsAppHtml(), week: () => weekAppHtml(), costs: () => costsAppHtml(), meteo: () => meteoAppHtml(), pipes: () => pipesAppHtml(), settings: () => settingsAppHtml(), gitlab: () => gitlabAppHtml(), browser: () => browserAppHtml(), blueprint: () => blueprintAppHtml() };  // + gitlabapp.js, glview.js  // + gitlabapp.js
+const OS_RENDER = { alerts: () => alertsAppHtml(), planning: () => planAppHtml(), debriefs: () => debriefsAppHtml(), week: () => weekAppHtml(), costs: () => costsAppHtml(), meteo: () => meteoAppHtml(), pipes: () => pipesAppHtml(), settings: () => settingsAppHtml(), gitlab: () => gitlabAppHtml(), browser: () => browserAppHtml(), blueprint: () => blueprintAppHtml(),
+  terminal: () => terminalAppHtml(), skills: () => skillsAppHtml(), mmx: () => mmxAppHtml(), dashboard: () => dashboardAppHtml(), notifs: () => notifsAppHtml(), schedule: () => scheduleAppHtml() };  // + gitlabapp.js, glview.js, browser.js, blueprint.js, terminal.js, skilledit.js, chiefapps.js
 function openChiefOs(app) { if (app) osApp = app; osOverview = false; osBox.hidden = false; renderChiefOs(); }
 function closeChiefOs() { osBox.hidden = true; if (chief.at === "chiefos") chief.at = "free"; }
 function osAppHtml() {
@@ -75,12 +76,12 @@ function osAppHtml() {
 }
 // Ubuntu look (GNOME, Yaru): top bar with Activités and the clock, the dock on the left, the app in a window;
 // Activités (or ⋮⋮⋮ in the dock) shows the grid of applications with a search field
-const APP_TINT = { questions: "#e95420", alerts: "#c7162b", planning: "#0e8420", gitlab: "#fc6d26", browser: "#0060df", blueprint: "#2c7ae0", mr: "#6e49cb", tickets: "#7764d8", debriefs: "#77216f",
+const APP_TINT = { questions: "#e95420", alerts: "#c7162b", planning: "#0e8420", gitlab: "#fc6d26", browser: "#0060df", blueprint: "#2c7ae0", terminal: "#300a24", skills: "#e66100", mmx: "#813d9c", dashboard: "#1c71d8", notifs: "#c64600", schedule: "#26a269", mr: "#6e49cb", tickets: "#7764d8", debriefs: "#77216f",
   report: "#2c7ae0", week: "#19b6ee", costs: "#f99b11", money: "#38b44a", team: "#a3417d", meteo: "#3fa9f5", pipes: "#e01b24", settings: "#77767b" };
 let osOverview = false, osFilter = "";
-function osBadge(id) { const n = id === "questions" ? data.questions?.length : id === "alerts" ? smartAlerts.size : 0; return n ? `<b class="osbadge">${n}</b>` : ""; }
+function osBadge(id) { const n = id === "questions" ? data.questions?.length : id === "alerts" ? smartAlerts.size : id === "notifs" && typeof unreadNotifs === "function" ? unreadNotifs() : 0; return n ? `<b class="osbadge">${n}</b>` : ""; }
 /* ---------- the dock: the main apps only, pinned and ordered by the user (right click, drag and drop, Réglages) ---------- */
-const DOCK_DEFAULT = ["questions", "alerts", "gitlab", "browser", "blueprint", "planning", "report", "team", "settings"];
+const DOCK_DEFAULT = ["questions", "notifs", "terminal", "gitlab", "browser", "blueprint", "dashboard", "planning", "settings"];
 let dockBook = store("office-dock", { apps: DOCK_DEFAULT });
 const dockApps = () => dockBook.apps.filter(id => OS_APPS.some(a => a[0] === id));
 const appOf = id => OS_APPS.find(a => a[0] === id);
@@ -127,6 +128,7 @@ function renderChiefOs() {
   if (osOverview) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   else if (osApp === "browser") mountBrowser();
   else if (osApp === "blueprint") mountBlueprint();  // the editor's canvas (blueprint.js)  // its pages live outside the HTML string (browser.js)
+  else if (osApp === "terminal") mountTerminal();  // the shells' screens (terminal.js)
 }
 osBox.addEventListener("input", ev => { if (ev.target.classList.contains("ubsearch")) { osFilter = ev.target.value; renderChiefOs(); } });
 osBox.addEventListener("keydown", ev => { if (ev.target.classList.contains("ubsearch") && ev.key === "Enter") { const first = osBox.querySelector(".ubgrid [data-os-app]"); if (first) first.click(); } });
@@ -139,10 +141,10 @@ osBox.addEventListener("click", ev => {
   if (b.dataset.osQ) { closeChiefOs(); openPanel(`q:${b.dataset.osQ}`); }
   if (b.dataset.recruit) { recruit(b.dataset.recruit); renderChiefOs(); }
 });
-addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden) { ev.stopImmediatePropagation(); closeChiefOs(); } }, true);
+addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); closeChiefOs(); } }, true);  // Escape belongs to a terminal that has the focus
 document.getElementById("osbtn").onclick = () => chiefToDesk();
 // live apps refresh every 3 s; forms and long pages stay still
-setInterval(() => { if (!osBox.hidden && !osOverview && !["report", "planning", "meteo", "debriefs", "week", "costs", "settings", "pipes", "gitlab", "browser", "blueprint"].includes(osApp)) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
+setInterval(() => { if (!osBox.hidden && !osOverview && !["report", "planning", "meteo", "debriefs", "week", "costs", "settings", "pipes", "gitlab", "browser", "blueprint", "terminal", "skills", "mmx", "dashboard", "notifs", "schedule"].includes(osApp)) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
 
 // right click on an app (dock or Activités): its menu; a click elsewhere closes it
 osBox.addEventListener("contextmenu", ev => {

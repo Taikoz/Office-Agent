@@ -172,10 +172,11 @@ function hitItem(x, y, room) {
 const itemByUid = uid => (furni.items || []).find(it => it.uid === +uid);
 function itemPieItems(uid, sub) {
   const it = itemByUid(uid); if (!it) return [];
-  if (sub === "cook") return RECIPES.map(rc => [`cook:${rc.id}`, rc.icon, `${rc.label} · ${fmtSim(rc.cost)}`, rc.lvl > cookLevel(CHIEF_NAME) ? `niv. ${rc.lvl}` : !kitchenReady() ? "frigo + gazinière" : cooking || fire ? "cuisine occupée" : !canAfford(rc.cost) ? "pas assez de §" : ""]);
+  if (sub === "cook") return RECIPES.map(rc => [`cook:${rc.id}`, rc.icon, rc.label, !kitchenReady() && rc.lvl <= cookLevel(CHIEF_NAME) ? "frigo + gazinière" : recipeLock(rc, cookLevel(CHIEF_NAME))]);
+  if (sub === "shop") return shopItems();
   const out = [];
   if (it.type === "lamp") out.push(["lamp", it.on ? "🌑" : "💡", it.on ? "Éteindre" : "Allumer"]);
-  if (it.type === "fridge") out.push(["snack", "🥪", "Encas · § 5"], ["s:cook", "🍳", "Cuisiner…"]);
+  if (it.type === "fridge") out.push(["snack", "🥪", "Encas · § 5"], ["s:shop", "🛒", "Faire les courses…"], ["s:cook", "🍳", "Cuisiner…"]);
   if (it.type === "stove") out.push(fire ? ["fire", "🧯", "Éteindre le feu"] : ["s:cook", "🍳", "Cuisiner…"]);
   if (it.type === "aquarium") out.push(["feed", "🐟", "Nourrir les poissons"]);
   if (it.type === "jukebox") out.push(["music", jukebox.playing && jukebox.uid === it.uid ? "⏹" : "▶", jukebox.playing && jukebox.uid === it.uid ? "Couper la musique" : "Lancer la musique"]);
@@ -191,7 +192,7 @@ function itemPieItems(uid, sub) {
 function itemPieCenter(uid) {
   const it = itemByUid(uid); if (!it) return "";
   const owner = it.type === "desk" ? `<span class="muted">bureau de ${esc(TEAM[it.slot])}</span>` : "";
-  return `<b>${esc(defOf(it.type).name)}</b><span class="muted">${esc(styleOf(it).name)}</span>${owner}`;
+  return `<b>${esc(defOf(it.type).name)}</b><span class="muted">${esc(styleOf(it).name)}</span>${owner}${it.type === "fridge" ? `<span class="muted">🧊 ${fridgeLine()}</span>` : ""}`;
 }
 function itemPieAction(uid, id) {
   const it = itemByUid(uid); if (!it) return;
@@ -208,6 +209,7 @@ function itemPieAction(uid, id) {
     it.openUntil = performance.now() + 2200; crewAdd(CHIEF_NAME, { faim: 30 }); say(CHIEF_NAME, "🥪 Miam.", 2200);
   })));
   if (id === "fire") return pieAction("kitchen", null, "fire");
+  if (id.startsWith("shop:")) return shopFor(RECIPES.find(r => r.id === id.slice(5)));
   if (id.startsWith("cook:")) {
     if (!kitchenReady()) return say(CHIEF_NAME, "Il faut un frigo et une gazinière.");
     return pieAction("kitchen", null, id);

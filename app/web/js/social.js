@@ -38,6 +38,30 @@ const RECIPES = [
   { id: "curry", cost: 45, icon: "🍛", label: "Curry de légumes", lvl: 4, portions: 5, ms: 18000, fill: 75, food: "#f0b429", top: "#2f9e44" },
   { id: "gateau", cost: 60, icon: "🎂", label: "Gâteau au chocolat", lvl: 6, portions: 8, ms: 22000, fill: 40, food: "#6d4a2e", top: "#f7f7f7", fun: 15 },
 ];
+// the fridge: ingredients bought with § (🛒 Faire les courses), each recipe takes its own; the devs only cook what is in it
+const INGREDIENTS = { pates: ["🍝", "Pâtes", 4], tomates: ["🍅", "Tomates", 5], viande: ["🥩", "Viande hachée", 9], farine: ["🌾", "Farine", 4], oeufs: ["🥚", "Œufs", 5],
+  lait: ["🥛", "Lait", 4], fromage: ["🧀", "Fromage", 12], legumes: ["🥕", "Légumes", 9], riz: ["🍚", "Riz", 5], chocolat: ["🍫", "Chocolat", 14], beurre: ["🧈", "Beurre", 6] };
+const NEEDS_OF = { pates: { pates: 1, tomates: 1, viande: 1 }, crepes: { farine: 1, oeufs: 1, lait: 1 }, pizza: { farine: 1, tomates: 1, fromage: 1 },
+  curry: { legumes: 2, riz: 1 }, gateau: { chocolat: 1, oeufs: 2, farine: 1, beurre: 1 } };
+let pantry = store("office-pantry", { pates: 1, tomates: 1, viande: 1, farine: 1, oeufs: 1, lait: 1 });  // a first shopping bag
+const savePantry = () => save("office-pantry", pantry);
+const missingFor = rc => Object.entries(NEEDS_OF[rc.id] || {}).filter(([k, n]) => (pantry[k] || 0) < n);
+const hasIngredients = rc => !missingFor(rc).length;
+const basketCost = rc => Object.entries(NEEDS_OF[rc.id] || {}).reduce((sum, [k, n]) => sum + INGREDIENTS[k][2] * n, 0);
+const fridgeLine = () => Object.entries(pantry).filter(([k, n]) => n > 0 && INGREDIENTS[k]).map(([k, n]) => `${INGREDIENTS[k][0]}${n}`).join(" ") || "frigo vide";
+function takeIngredients(rc) { if (!hasIngredients(rc)) return false; for (const [k, n] of Object.entries(NEEDS_OF[rc.id] || {})) pantry[k] -= n; savePantry(); return true; }
+function buyBasket(rc) {
+  if (!spend(basketCost(rc), `Courses : ${rc.label}`)) return false;
+  for (const [k, n] of Object.entries(NEEDS_OF[rc.id] || {})) pantry[k] = (pantry[k] || 0) + n;
+  savePantry(); return true;
+}
+function recipeLock(rc, lvl) { return rc.lvl > lvl ? `niv. ${rc.lvl}` : cooking || fire ? "cuisine occupée" : !hasIngredients(rc) ? `manque ${missingFor(rc).map(([k]) => INGREDIENTS[k][0]).join("")}` : ""; }
+const shopItems = () => RECIPES.map(rc => [`shop:${rc.id}`, rc.icon, `Courses ${rc.label.toLowerCase()} · ${fmtSim(basketCost(rc))}`, canAfford(basketCost(rc)) ? "" : "pas assez de §"]);
+function shopFor(rc) {
+  if (!buyBasket(rc)) return say(CHIEF_NAME, "Pas assez d'argent pour les courses…");
+  const fr = itemsIn("lounge").find(it => it.type === "fridge"); if (fr) fr.openUntil = performance.now() + 2200;
+  say(CHIEF_NAME, `🛒 Courses rangées : ${Object.keys(NEEDS_OF[rc.id]).map(k => INGREDIENTS[k][0]).join(" ")}`, 2600); sfx("commit");
+}
 const STAGES = [[0.3, "🔪 prépare"], [0.85, "🔥 cuisine"], [1, "🍽️ dresse"]];
 let cooking = null, dish = null, fire = null, nextAuto = 0, nextVisit = 0;
 const eaters = new Map(), convos = [], socialFx = [], steam = [];
@@ -163,7 +187,7 @@ function chiefDo(fn) {
 function startCooking(cook, recipe, helper = null) {
   if (cooking || fire) return;
   if (!kitchenReady()) return say(cook, "Il faut un frigo et une gazinière… (mode achat)");
-  if (!spend(recipe.cost, `Courses : ${recipe.label}`)) return say(cook, "Plus d'argent pour les courses…");  // groceries, from the household funds
+  if (!takeIngredients(recipe)) return say(cook, `Il manque ${missingFor(recipe).map(([k]) => INGREDIENTS[k][1].toLowerCase()).join(", ")} au frigo… 🛒`);  // groceries bought before (fridge)
   const t = performance.now();
   cooking = { cook, helper, recipe, start: t, ms: recipe.ms * (helper ? 0.75 : 1), stage: -1, arrived: false, helperIn: !helper };
   const onStove = () => { if (cooking?.cook === cook) cooking.arrived = true; };
@@ -293,8 +317,8 @@ function stepAutonomy(t) {
     const cook = free.filter(l => mate(l.name).faim < 40).sort((a, b) => mate(a.name).faim - mate(b.name).faim)[0];
     if (cook) {
       nextAuto = t + 90000;
-      const rs = RECIPES.filter(r => r.lvl <= cookLevel(cook.name) && canAfford(r.cost));
-      if (!rs.length) return;
+      const rs = RECIPES.filter(r => r.lvl <= cookLevel(cook.name) && hasIngredients(r));
+      if (!rs.length) return loungeSay(cook.name, pick(["Le frigo est vide… quelqu'un fait les courses ? 🛒", "Plus rien dans le frigo 😩", "Chef, on a besoin de courses !"]));
       const buddy = free.filter(l => l !== cook && rel(cook.name, l.name) >= 30).sort((a, b) => rel(cook.name, b.name) - rel(cook.name, a.name))[0];
       startCooking(cook.name, rs[rs.length - 1 - Math.floor(Math.random() * Math.min(2, rs.length))], Math.random() < 0.5 ? buddy?.name || null : null);
       return;
@@ -450,7 +474,7 @@ function pieItems(kind, target, sub) {
         ["s:cook", "🍳", "Cuisiner ensemble…"], ["s:duel", "🎮", "Défier…"], ["fiche", "📋", "Fiche"]);
       if (dish?.portions) items.splice(5, 0, ["invite", "🍽️", "Inviter à manger"]);
     } else if (sub === "cook") {
-      for (const rc of RECIPES) items.push([`cook:${rc.id}`, rc.icon, `${rc.label} · ${fmtSim(rc.cost)}`, rc.lvl > Math.max(cookLevel(CHIEF_NAME), cookLevel(target)) ? `niv. ${rc.lvl}` : cooking || fire ? "cuisine occupée" : !canAfford(rc.cost) ? "pas assez de §" : ""]);
+      for (const rc of RECIPES) items.push([`cook:${rc.id}`, rc.icon, rc.label, recipeLock(rc, Math.max(cookLevel(CHIEF_NAME), cookLevel(target)))]);
     } else if (sub === "duel") items.push(["duel:pingpong", "🏓", "Ping-pong"], ["duel:babyfoot", "⚽", "Baby-foot"], ["duel:darts", "🎯", "Fléchettes"]);
     else for (const [id, it] of Object.entries(INTERACTIONS)) {
       if (it.cat !== sub) continue;
@@ -459,8 +483,9 @@ function pieItems(kind, target, sub) {
     }
   } else if (kind === "kitchen") {
     if (fire) items.push(["fire", "🧯", "Éteindre le feu"]);
-    else for (const rc of RECIPES) items.push([`cook:${rc.id}`, rc.icon, `${rc.label} · ${fmtSim(rc.cost)}`, rc.lvl > cookLevel(CHIEF_NAME) ? `niv. ${rc.lvl}` : cooking ? "cuisine occupée" : !canAfford(rc.cost) ? "pas assez de §" : ""]);
-    items.push(["snack", "☕", "Café / encas"]);
+    else if (sub === "shop") items.push(...shopItems());
+    else for (const rc of RECIPES) items.push([`cook:${rc.id}`, rc.icon, rc.label, recipeLock(rc, cookLevel(CHIEF_NAME))]);
+    if (sub !== "shop") items.push(["s:shop", "🛒", "Faire les courses…"], ["snack", "☕", "Café / encas"]);
     if (dish?.portions) items.push(["eat", "🍽️", "Manger une part"]);
   } else if (kind === "table") {
     if (dish?.portions) items.push(["eat", "🍽️", `Manger (${dish.portions} part${dish.portions > 1 ? "s" : ""})`]);
@@ -478,7 +503,7 @@ function pieCenter(kind, target) {
     const r = rel(CHIEF_NAME, target), [, label, col] = relLevel(r), m = mate(target);
     return `<b>${esc(target)}</b><span style="color:${col}">${esc(label)}</span><span class="rbar"><i style="left:${r < 0 ? 50 + r / 2 : 50}%;width:${Math.abs(r) / 2}%;background:${col}"></i></span><span class="muted">${esc(moodWord(m))} · 🍳 niv. ${cookLevel(target)}</span>`;
   }
-  if (kind === "kitchen") return `<b>Cuisine</b><span class="muted">${esc(CHIEF_NAME)} : 🍳 niv. ${cookLevel(CHIEF_NAME)}</span><span class="muted">💰 ${fmtSim(wallet.funds)}</span>${cooking ? `<span class="muted">${esc(cooking.cook)} cuisine ${cooking.recipe.icon}</span>` : ""}`;
+  if (kind === "kitchen") return `<b>Cuisine</b><span class="muted">${esc(CHIEF_NAME)} : 🍳 niv. ${cookLevel(CHIEF_NAME)}</span><span class="muted">💰 ${fmtSim(wallet.funds)}</span><span class="muted">🧊 ${fridgeLine()}</span>${cooking ? `<span class="muted">${esc(cooking.cook)} cuisine ${cooking.recipe.icon}</span>` : ""}`;
   return `<b>Table</b><span class="muted">${dish ? `${dish.recipe.icon} ${esc(dish.recipe.label)}${dish.burnt ? " (cramé)" : ""} · par ${esc(dish.cook)}` : "rien à manger"}</span>`;
 }
 function openPie(kind, target, p, sub = null) {
@@ -526,6 +551,7 @@ function pieAction(kind, target, id) {
   if (id === "invite") {
     return enqueue("🍽️", `Manger avec ${target}`, () => chiefDo(() => { const l = loungers.get(target); if (!l || !dish?.portions) return; say(CHIEF_NAME, `${target}, viens manger !`); l.busy = false; if (goEat(target)) { bond(CHIEF_NAME, target, 3); if (dish?.portions) goEat(CHIEF_NAME); } }));
   }
+  if (id.startsWith("shop:")) return shopFor(RECIPES.find(r => r.id === id.slice(5)));
   if (id.startsWith("cook:")) {
     const rc = RECIPES.find(r => r.id === id.slice(5)), helper = kind === "mate" ? target : null;
     return enqueue(rc.icon, `Cuisiner : ${rc.label}${helper ? ` avec ${helper}` : ""}`, () => chiefDo(() => {
@@ -591,7 +617,7 @@ function chiefActivity() {
   if (chief.room === "lounge") {
     const a = chief.lspot?.act?.id;
     return { kitchen: { icon: "☕", label: "Se fait un café" }, sofa: { icon: "📺", label: "Regarde la télé" }, read: { icon: "📖", label: "Lit" }, chat: { icon: "💬", label: "Papote" },
-      arcade: { icon: "🕹️", label: "Joue à l'arcade" }, darts: { icon: "🎯", label: "Fléchettes" }, pingpong: { icon: "🏓", label: "Ping-pong" }, babyfoot: { icon: "⚽", label: "Baby-foot" } }[a]
+      arcade: { icon: "🕹️", label: "Joue à l'arcade" }, karaoke: { icon: "🎤", label: "Karaoké" }, boardgame: { icon: "🎲", label: "Jeu de société" }, darts: { icon: "🎯", label: "Fléchettes" }, pingpong: { icon: "🏓", label: "Ping-pong" }, babyfoot: { icon: "⚽", label: "Baby-foot" } }[a]
       || { icon: "🛋️", label: "Se détend en salle de repos" };
   }
   return { coffee: { icon: "☕", label: "Pause café" }, console: { icon: "🎮", label: "Joue à la console" }, pc: { icon: "💻", label: "Joue sur l'ordinateur" }, chiefos: { icon: "🖥️", label: "Sur ChiefOS" }, podium: { icon: "👑", label: "Dirige l'équipe" } }[chief.at] || { icon: "🧍", label: "Fait un tour" };

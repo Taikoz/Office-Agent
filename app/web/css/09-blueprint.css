@@ -1,0 +1,46 @@
+  /* ChiefOS → 🧩 Blueprints (blueprint.js), Unreal-Blueprint style */
+  #chiefos .ubwin:has(.bpapp) .osapp { padding: 0; overflow: hidden; display: flex; }
+  #chiefos .bpapp { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: #1b1b1f; }
+  #chiefos .bptop { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #26262c; border-bottom: 1px solid #111; }
+  #chiefos .bptop button, #chiefos .bpapp .osacts button { padding: 4px 12px; color: #eee; background: #3a3a44; border: 0; border-radius: 6px; cursor: pointer; font-weight: 500; }
+  #chiefos .bptop button:hover { background: #4a4a56; } #chiefos .bpkind { display: flex; padding: 2px; background: #111; border-radius: 8px; }
+  #chiefos .bpkind button { background: transparent; } #chiefos .bpkind button.on { background: var(--ub-orange); }
+  #chiefos .bpname { width: 220px; font-family: "Ubuntu Mono", monospace !important; } #chiefos .bpspacer { flex: 1; }
+  #chiefos .bpbody { flex: 1; min-height: 0; display: grid; grid-template-columns: 190px 1fr 270px; }
+  #chiefos .bppal { overflow-y: auto; padding: 8px; background: #202026; border-right: 1px solid #111; scrollbar-width: thin; }
+  #chiefos .bpcat { margin-bottom: 10px; } #chiefos .bpcat small { display: block; margin: 4px 2px; color: var(--c); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; font-size: 11px; }
+  #chiefos .bpcat button { display: block; width: 100%; margin: 2px 0; padding: 5px 8px; text-align: left; color: #e8e8ee; background: #2c2c34; border: 0; border-left: 3px solid var(--c); border-radius: 4px; cursor: grab; font-size: 13px; }
+  #chiefos .bpcat button:hover { background: #383842; }
+  #chiefos .bpcanvas { position: relative; overflow: hidden; cursor: grab; touch-action: none;
+    background-color: #1e1e22; background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px), linear-gradient(#ffffff12 1px, transparent 1px), linear-gradient(90deg, #ffffff12 1px, transparent 1px);
+    background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px; }
+  #chiefos .bpcanvas:active { cursor: grabbing; }
+  #chiefos .bpworld { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #chiefos .bpwires { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+  #chiefos .bpwire { fill: none; stroke: var(--c, #ddd); stroke-width: 2.6; opacity: .85; pointer-events: stroke; cursor: pointer; } #chiefos .bpwire:hover, #chiefos .bpwire.sel { stroke-width: 4.5; opacity: 1; }
+  #chiefos .bpwire.temp { stroke: #fff; stroke-dasharray: 6 4; pointer-events: none; }
+  #chiefos .bpnode { position: absolute; width: 220px; background: #2a2a31ee; border: 1px solid #0a0a0c; border-radius: 10px; box-shadow: 0 6px 18px #000a; font-size: 13px; }
+  #chiefos .bpnode.sel { box-shadow: 0 0 0 2px #fbaa08, 0 6px 18px #000a; }
+  #chiefos .bphead { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 16px; color: #fff; background: linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 45%, #2a2a31)); border-radius: 9px 9px 0 0; cursor: move; user-select: none; }
+  #chiefos .bphead b { font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #chiefos .bpin { position: absolute; left: -7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; background: #ddd; border: 2px solid #111; border-radius: 50%; }
+  #chiefos .bpsum { padding: 6px 10px; color: #c8c8d2; min-height: 18px; overflow-wrap: anywhere; }
+  #chiefos .bpouts { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 0 0 8px; }
+  #chiefos .bpout { position: relative; display: flex; align-items: center; gap: 6px; padding-right: 8px; color: #aaa; font-size: 11px; cursor: crosshair; }
+  #chiefos .bpout i { width: 12px; height: 12px; margin-right: -14px; background: var(--c); border: 2px solid #111; border-radius: 50%; } #chiefos .bpout:hover i { transform: scale(1.3); }
+  #chiefos .bpzoom { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+  #chiefos .bpzoom button { width: 30px; height: 30px; color: #eee; background: #2c2c34; border: 1px solid #111; border-radius: 6px; cursor: pointer; }
+  #chiefos .bpmsg { position: absolute; left: 10px; bottom: 10px; color: #9be3b0; font-size: 13px; pointer-events: none; }
+  #chiefos .bpinsp { overflow-y: auto; padding: 10px 12px; background: #202026; border-left: 1px solid #111; scrollbar-width: thin; }
+  #chiefos .bpinsp h4 { margin: 8px 0 8px; } #chiefos .bpinsp label { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; font-size: 12.5px; color: #bbb; }
+  #chiefos .bpinsp input, #chiefos .bpinsp textarea, #chiefos .bpinsp select { width: 100%; font: inherit; color: #eee; background: #15151a; border: 1px solid #3a3a44; border-radius: 6px; padding: 5px 8px; }
+  #chiefos .bpinsp textarea { resize: vertical; } #chiefos .bpinsp .mono { font-family: "Ubuntu Mono", monospace; }
+  #chiefos .bptools { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; } #chiefos .bptools label { flex-direction: row; align-items: center; gap: 6px; margin: 0; } #chiefos .bptools input { width: auto; }
+  #chiefos .bpmodal { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: #000a; }
+  #chiefos .bpmbox { width: min(760px, 92%); max-height: 88%; overflow-y: auto; padding: 14px 18px; background: #2c2c2c; border: 1px solid #111; border-radius: 12px; box-shadow: 0 20px 50px #000; }
+  #chiefos .bpmbox .osacts span { flex: 1; }
+  #chiefos .bptarget { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 10px; margin: 3px 0; background: #353535; border-radius: 8px; cursor: pointer; }
+  #chiefos .bptarget small { width: 100%; padding-left: 24px; } #chiefos .bpcustom { flex: 1; min-width: 200px; }
+  #chiefos .bpissues { padding: 8px 12px; color: #ffd37a; background: #3a2f1a; border-radius: 8px; }
+  @media (max-width: 1000px) { #chiefos .bpbody { grid-template-columns: 150px 1fr; } #chiefos .bpinsp { display: none; } }
+  #chiefos .bpcanvas, #chiefos .bppal, #chiefos .bpnode { user-select: none; -webkit-user-select: none; }

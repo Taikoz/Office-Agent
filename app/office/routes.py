@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, framecheck, gitlab, history, savegame, team
+from . import blueprints, claudefiles, framecheck, gitlab, history, savegame, schedules, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
@@ -50,8 +50,45 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
     """Build the request handler bound to the scan window and ticket cache."""
 
     class Handler(BaseHTTPRequestHandler):
+        def host_ok(self) -> bool:
+            """Only 127.0.0.1 / localhost on this port: a rebinding website (evil.example → 127.0.0.1) never reaches the page,
+            its token, the terminal or the launches."""
+            port = self.server.server_port
+            return self.headers.get("Host", "") in (f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}")
+
+        def token_ok(self) -> bool:
+            return secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN)
+
+        def tool_get(self) -> bool:
+            """Token-protected reads of ChiefOS's tools (terminal output, files of .claude, schedules, dashboard). True if handled."""
+            path, q = urlparse(self.path).path, parse_qs(urlparse(self.path).query)
+            arg = lambda k, d="": q.get(k, [d])[0]
+            routes = {
+                "/api/term/list": lambda: {"available": terminal.available(), "sessions": terminal.sessions()},
+                "/api/term/read": lambda: terminal.read(arg("id"), int(arg("since", "0") or 0)),
+                "/api/claudefiles": lambda: {"files": claudefiles.list_files()},
+                "/api/claudefile": lambda: claudefiles.read(arg("path")),
+                "/api/schedules": lambda: {**schedules.load(), "agents": agents()},
+                "/api/dashboard": lambda: history.dashboard(GAME, min(90.0, max(1.0, float(arg("days", "30")) if arg("days", "30").isdigit() else 30.0))),
+            }
+            if path not in routes:
+                return False
+            if not self.token_ok():
+                self.reply(403, "application/json", b'{"error": "interdit"}')
+                return True
+            try:
+                self.reply(200, "application/json", json.dumps(routes[path](), ensure_ascii=False).encode())
+            except (ValueError, OSError) as err:
+                self.reply(400, "application/json", json.dumps({"error": str(err)}, ensure_ascii=False).encode())
+            return True
+
         def do_GET(self) -> None:
             global LAST_VIEW
+            if not self.host_ok():
+                self.reply(403, "text/plain", b"forbidden host")
+                return
+            if self.tool_get():
+                return
             if self.path.startswith("/api/viewer"):
                 self.reply(200, "application/json", json.dumps({"idle": time.time() - LAST_VIEW, "version": VERSION, "root": str(WEB.parent)}).encode())
             elif self.path.startswith("/api/state"):
@@ -139,13 +176,39 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             # Answers and launches drive agents that can push code, validations write MMX: only this page (same origin + per-run token) may post them.
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
-            if self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/blueprint/publish") or origin not in allowed or not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
+            tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/blueprint/publish", *tools)
+                    or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else 400_000 if self.path == "/api/blueprint/publish" else 500_000 if self.path == "/api/team" else 16_000
+                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else 400_000 if self.path in ("/api/claudefile", "/api/term/input") else 400_000 if self.path == "/api/blueprint/publish" else 500_000 if self.path == "/api/team" else 16_000
                 data = json.loads(self.rfile.read(min(size, limit)))
+                if self.path in tools:
+                    code, body = 200, {}
+                    try:
+                        if self.path == "/api/term/open":
+                            body = terminal.open_term(str(data.get("cwd", "")), int(data.get("rows", 30)), int(data.get("cols", 100)))
+                        elif self.path == "/api/term/input":
+                            terminal.write(str(data.get("id", "")), str(data.get("data", "")))
+                        elif self.path == "/api/term/resize":
+                            terminal.resize(str(data.get("id", "")), int(data.get("rows", 30)), int(data.get("cols", 100)))
+                        elif self.path == "/api/term/close":
+                            terminal.close(str(data.get("id", "")))
+                        elif self.path == "/api/schedules":
+                            body = schedules.act(data)
+                        elif data.get("action") == "delete":
+                            body = claudefiles.delete(str(data.get("path", "")))
+                        else:
+                            mtime = data.get("mtime")
+                            body = claudefiles.save(str(data.get("path", "")), str(data.get("content", "")), float(mtime) if mtime is not None else None, bool(data.get("force")))
+                    except FileExistsError as err:
+                        code, body = 409, {"error": str(err), "changed": True}
+                    except (ValueError, OSError) as err:
+                        code, body = 400, {"error": str(err)}
+                    self.reply(code, "application/json", json.dumps({"ok": code == 200, **body}, ensure_ascii=False).encode())
+                    return
                 if self.path == "/api/blueprint/publish":
                     code, body = blueprints.publish(data if isinstance(data, dict) else {})
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())

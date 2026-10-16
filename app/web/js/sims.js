@@ -76,7 +76,7 @@ function drawEmotion(name, x, headY, t) {
 /* autonomy: a dev picks the break-room activity that serves its most urgent need; a dev on a mission finishes it first
    (the needs wait), and goes to eat, sleep or play once back in the break room */
 const ACT_SERVES = { kitchen: ["faim", "cafe"], sofa: ["energie", "social"], read: ["energie", "fun"], chat: ["social", "energie"],
-  pingpong: ["fun", "social"], babyfoot: ["fun", "social"], arcade: ["fun"], darts: ["fun"],
+  pingpong: ["fun", "social"], babyfoot: ["fun", "social"], arcade: ["fun"], darts: ["fun"], karaoke: ["fun", "social"], boardgame: ["social", "fun"],
   eat: ["faim", "social"], cook: ["fun"], helpcook: ["social", "fun"], visit: ["social"] };  // social.js
 const NEED_LINES = { faim: "J'ai faim, je vais manger 🍕", cafe: "Il me faut un café ☕", energie: "Je suis crevé, pause canapé 💤", fun: "Allez, une partie 🎮", social: "Quelqu'un pour papoter ? 💬" };
 function urgentNeed(name) { const [need, v] = lowestNeed(mate(name)); return v < 40 ? need[0] : null; }
@@ -111,7 +111,8 @@ function stepChiefNeeds(dt) {
   const leading = chief.at === "podium" && chief.room === "office", gaming = (chief.at === "console" || chief.at === "pc") && here, sipping = chief.at === "coffee" && here;
   const act = chief.room === "lounge" && !chief.lpath.length ? chief.lspot?.act.id : null;  // break-room activity, like the team
   const lounge = { kitchen: { faim: 40, cafe: 25 }, sofa: { fatigue: -15, social: 3 }, read: { fatigue: -10, ennui: -6 }, chat: { social: 20, ennui: -4 },
-    arcade: { ennui: -20 }, darts: { ennui: -15 }, pingpong: { ennui: -15, social: 6 }, babyfoot: { ennui: -15, social: 6 } }[act] || {};
+    arcade: { ennui: -20 }, darts: { ennui: -15 }, pingpong: { ennui: -15, social: 6 }, babyfoot: { ennui: -15, social: 6 },
+    karaoke: { ennui: -18, social: 8 }, boardgame: { ennui: -12, social: 14 } }[act] || {};
   crewAdd(CHIEF_NAME, Object.fromEntries(Object.entries(lounge).map(([key, v]) => [key, v * k])));
   crewAdd(CHIEF_NAME, {
     faim: -0.7 * k, cafe: -1 * k,

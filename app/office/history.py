@@ -106,3 +106,34 @@ def search(game: Game, query: str, days: float = 7) -> list[dict[str, Any]]:
             if files or commands or meta:
                 out.append({**info, "matchFiles": files[:6], "matchCommands": commands[-4:]})
     return sorted(out, key=lambda r: -(r["last"] or 0))[:40]
+
+
+CAUSES = [("délai dépassé", ("timeout", "timed out")), ("permission", ("permission", "denied", "403", "forbidden")),
+          ("dépendance", ("not found", "no module", "enoent", "cannot find")), ("tests", ("assert", "failed", "test")), ("réseau", ("econn", "network", "unreachable"))]
+
+
+def dashboard(game: Game, days: float = 30) -> dict[str, Any]:
+    """Per day (runs, delivered, blocked, cost, time), per agent type (success rate, average cost and duration) and the
+    usual causes of the blocked runs, over `days`."""
+    per_day: dict[str, dict[str, Any]] = {}
+    per_type: dict[str, dict[str, Any]] = {}
+    causes: dict[str, int] = {}
+    for r in runs(game, days):
+        start = r["first"] if r["first"] is not None else r["last"]
+        secs = max(0.0, (r["last"] or 0) - (start or 0))
+        day = datetime.fromtimestamp(r["last"] or start or 0).strftime("%Y-%m-%d")
+        d = per_day.setdefault(day, {"day": day, "runs": 0, "done": 0, "blocked": 0, "cost": 0.0, "seconds": 0.0})
+        t = per_type.setdefault(r["type"], {"type": r["type"], "runs": 0, "done": 0, "blocked": 0, "cost": 0.0, "seconds": 0.0, "errors": 0})
+        for b in (d, t):
+            b["runs"] += 1; b["cost"] += r["cost"]; b["seconds"] += secs
+            b["done"] += r["status"] == "done"; b["blocked"] += r["status"] in ("blocked", "gone")
+        t["errors"] += r["errors"] or 0
+        if r["status"] in ("blocked", "gone"):
+            err = (r["lastError"] or "").lower()
+            cause = next((label for label, keys in CAUSES if any(k in err for k in keys)), "autre")
+            causes[cause] = causes.get(cause, 0) + 1
+    types = sorted(per_type.values(), key=lambda t: -t["runs"])
+    for t in types:
+        t.update(cost=round(t["cost"], 2), avgCost=round(t["cost"] / t["runs"], 2), avgMin=round(t["seconds"] / t["runs"] / 60, 1), rate=round(100 * t["done"] / t["runs"]))
+    return {"days": days, "perDay": [{**d, "cost": round(d["cost"], 2)} for d in sorted(per_day.values(), key=lambda d: d["day"])],
+            "perType": types, "causes": sorted(({"cause": k, "n": v} for k, v in causes.items()), key=lambda c: -c["n"])}

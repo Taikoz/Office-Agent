@@ -1,0 +1,57 @@
+  /* ChiefOS dock: pinned apps, the running one, the right-click menu (chiefos.js) */
+  #chiefos .ubrun { width: 30px; height: 1px; flex: none; background: #ffffff33; }
+  #chiefos .ubdock button.running { opacity: .85; }
+  #chiefos .ubdock button[draggable="true"] { cursor: pointer; } #chiefos .ubdock button:active { cursor: grabbing; }
+  #chiefos .ubgrid .ubpin { position: absolute; left: 24px; top: 4px; font-size: 13px; }
+  #chiefos .ubhint { margin: 0; font-size: 12px; color: #ffffffaa; text-shadow: 0 1px 3px #000; }
+  #chiefos .ubmenu { position: absolute; z-index: 5; min-width: 190px; padding: 6px; background: #353535; border: 1px solid #1e1e1e; border-radius: 12px; box-shadow: 0 10px 30px #000c; }
+  #chiefos .ubmtitle { padding: 4px 10px 6px; font-weight: 700; border-bottom: 1px solid #ffffff1a; margin-bottom: 4px; }
+  #chiefos .ubmenu button { display: block; width: 100%; padding: 6px 10px; text-align: left; color: var(--ub-text); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+  #chiefos .ubmenu button:hover { background: #ffffff1a; }
+  #chiefos .osrow .ubappic { display: inline-grid; vertical-align: middle; margin-right: 6px; }
+
+  /* ChiefOS → 🌐 Navigateur, Firefox (Photon dark) style (browser.js) */
+  #chiefos .ubwin:has(.brapp) .osapp { padding: 0; overflow: hidden; display: flex; }
+  #chiefos .brapp { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #1c1b22; }
+  #chiefos .brtabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 8px 0; background: #1c1b22; overflow-x: auto; scrollbar-width: none; }
+  #chiefos .brtab { display: flex; align-items: center; gap: 8px; width: 210px; min-width: 110px; padding: 6px 8px 6px 12px; color: #fbfbfe; background: transparent; border-radius: 8px 8px 0 0; cursor: pointer; }
+  #chiefos .brtab:hover { background: #2b2a33; } #chiefos .brtab.on { background: #42414d; box-shadow: 0 -1px 0 #ffffff14 inset; }
+  #chiefos .brtt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+  #chiefos .brtab button { width: 20px; height: 20px; padding: 0; color: #fbfbfe; background: transparent; border: 0; border-radius: 4px; cursor: pointer; }
+  #chiefos .brtab button:hover { background: #ffffff26; }
+  #chiefos .brnew { width: 30px; height: 30px; margin: 0 0 3px 4px; color: #fbfbfe; background: transparent; border: 0; border-radius: 6px; font-size: 18px; cursor: pointer; } #chiefos .brnew:hover { background: #ffffff1a; }
+  #chiefos .brbar { display: flex; align-items: center; gap: 4px; padding: 6px 8px; background: #42414d; }
+  #chiefos .brbar > button { width: 32px; height: 32px; padding: 0; color: #fbfbfe; background: transparent; border: 0; border-radius: 6px; font-size: 16px; cursor: pointer; }
+  #chiefos .brbar > button:hover:not([disabled]) { background: #ffffff1f; } #chiefos .brbar > button[disabled] { opacity: .35; }
+  #chiefos .brurl { flex: 1; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px 0 12px; background: #1c1b22; border: 1px solid transparent; border-radius: 8px; }
+  #chiefos .brurl:focus-within { border-color: #00ddff; box-shadow: 0 0 0 2px #00ddff44; }
+  #chiefos .braddr { flex: 1; min-width: 0; padding: 0 !important; color: #fbfbfe; background: transparent !important; border: 0 !important; outline: none; font: inherit; }
+  #chiefos .brurl button { width: 28px; height: 28px; padding: 0; color: #fbfbfe; background: transparent; border: 0; border-radius: 6px; font-size: 16px; cursor: pointer; }
+  #chiefos .brurl button.on { color: #fbbd23; } #chiefos .brurl button:hover:not([disabled]) { background: #ffffff1a; }
+  #chiefos .brmarks { display: flex; gap: 2px; padding: 3px 8px; overflow-x: auto; background: #42414d; border-bottom: 1px solid #0c0c0d; scrollbar-width: none; }
+  #chiefos .brmarks button { flex: none; padding: 3px 8px; font-size: 12.5px; color: #fbfbfe; background: transparent; border: 0; border-radius: 4px; cursor: pointer; white-space: nowrap; } #chiefos .brmarks button:hover { background: #ffffff1a; }
+  #chiefos .brviews { flex: 1; min-height: 0; position: relative; background: #fff; }
+  #chiefos .brview { position: absolute; inset: 0; overflow: auto; background: #2b2a33; } #chiefos .brview[hidden] { display: none; }
+  #chiefos .brview iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  #chiefos .brhome { min-height: 100%; display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 48px 20px; background: radial-gradient(80% 60% at 50% 0%, #3a2d6d 0%, #2b2a33 70%); }
+  #chiefos .brhello { font-size: 26px; font-weight: 500; }
+  #chiefos .brsearch { display: flex; align-items: center; gap: 10px; width: min(560px, 90%); padding: 0 16px; height: 48px; background: #1c1b22; border-radius: 12px; box-shadow: 0 4px 16px #0006; }
+  #chiefos .brsearch:focus-within { box-shadow: 0 0 0 2px #00ddff88, 0 4px 16px #0006; }
+  #chiefos .brq { flex: 1; padding: 0 !important; color: #fbfbfe; background: transparent !important; border: 0 !important; outline: none; font: inherit; font-size: 16px; }
+  #chiefos .brtiles { display: grid; grid-template-columns: repeat(auto-fill, 110px); justify-content: center; gap: 16px; width: min(760px, 100%); }
+  #chiefos .brtile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px; border-radius: 12px; cursor: pointer; }
+  #chiefos .brtile:hover { background: #ffffff12; } #chiefos .bric { display: grid; place-items: center; width: 64px; height: 64px; font-size: 30px; background: #42414d; border-radius: 14px; box-shadow: 0 2px 8px #0006; }
+  #chiefos .brtile small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+  #chiefos .brtile button { position: absolute; right: 8px; top: 6px; display: none; width: 20px; height: 20px; padding: 0; color: #fff; background: #0009; border: 0; border-radius: 50%; cursor: pointer; } #chiefos .brtile:hover button { display: block; }
+  #chiefos .brnote { max-width: 560px; text-align: center; font-size: 12.5px; } #chiefos .brreset { padding: 4px 12px; color: #fbfbfe; background: #42414d; border: 0; border-radius: 6px; cursor: pointer; }
+  #chiefos .brblocked, #chiefos .brloading { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; }
+  #chiefos .brblocked h3 { margin: 0; font-weight: 500; } #chiefos .brbig { font-size: 54px; } #chiefos .brsmall { font-size: 12px; word-break: break-all; }
+  #chiefos .brspin { display: inline-block; width: 12px; height: 12px; border: 2px solid #ffffff44; border-top-color: #00ddff; border-radius: 50%; animation: brspin .8s linear infinite; }
+  #chiefos .brspin.big { width: 34px; height: 34px; border-width: 3px; }
+  @keyframes brspin { to { transform: rotate(360deg); } }
+  #chiefos .brengine { padding: 2px 6px !important; color: #fbfbfe; background: #42414d !important; border: 0 !important; border-radius: 6px !important; }
+  #chiefos .bryt .brsearch { width: min(560px, 100%); } #chiefos .bryt h4 { margin: 14px 0 0; color: #bfbfc9; font-size: 12px; letter-spacing: .5px; }
+  #chiefos .brvids { display: grid; grid-template-columns: repeat(auto-fill, 150px); justify-content: center; gap: 10px; width: min(760px, 100%); }
+  #chiefos .brvids button { position: relative; padding: 0; background: #000; border: 0; border-radius: 10px; overflow: hidden; cursor: pointer; aspect-ratio: 16 / 9; }
+  #chiefos .brvids img { width: 100%; height: 100%; object-fit: cover; display: block; } #chiefos .brvids span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; color: #fff; background: #0006; opacity: 0; }
+  #chiefos .brvids button:hover span { opacity: 1; }

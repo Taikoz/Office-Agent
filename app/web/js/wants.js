@@ -18,6 +18,8 @@ function wantPool(name) {
     { kind: "act", arg: "pingpong", icon: "🏓", label: "Jouer au ping-pong", pay: 60, pts: 50 },
     { kind: "act", arg: "arcade", icon: "🕹️", label: "Battre son record à l'arcade", pay: 60, pts: 50 },
     { kind: "act", arg: "sofa", icon: "📺", label: "Regarder la télé", pay: 40, pts: 40 },
+    { kind: "act", arg: "karaoke", icon: "🎤", label: "Chanter au karaoké", pay: 70, pts: 60 },
+    { kind: "act", arg: "boardgame", icon: "🎲", label: "Faire un jeu de société", pay: 60, pts: 60 },
     { kind: "act", arg: "read", icon: "📖", label: "Lire dans le fauteuil", pay: 40, pts: 40 },
     { kind: "coffee", icon: "☕", label: "Boire un café", pay: 30, pts: 30 },
     ...friends.map(f => ({ kind: "talk", arg: f, icon: "💬", label: `Discuter avec ${f}`, pay: 80, pts: 70 })),

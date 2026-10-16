@@ -1,0 +1,87 @@
+  /* stats: overlay on the stage, the office stays in place underneath */
+  #perf { position: fixed; inset: 66px 12px 96px; z-index: 15; overflow: auto; padding: 12px 16px; background: #17161df2; border: 2px solid var(--accent); border-radius: var(--r); box-shadow: 0 14px 40px #000c; }
+  #perf[hidden] { display: none; }
+  .overlay { position: fixed; inset: 66px 12px 96px; z-index: 16; overflow: auto; padding: 12px 16px; background: #17161df2; border: 2px solid var(--accent); border-radius: var(--r); box-shadow: 0 14px 40px #000c; }
+  .overlay[hidden] { display: none; }
+  .overlay .perfhead { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+  .overlay .perfhead .x { color: var(--text); background: none; border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
+  .overlay .perfhead .x:first-of-type { margin-left: auto; }
+  .overlay .perfhead .x:hover { border-color: var(--accent); }
+  .overlay select { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); }
+  .overlay h4 { font-size: 18px; font-weight: normal; color: var(--muted); margin: 12px 0 4px; letter-spacing: 1px; }
+  .overlay ul { margin: 0; padding-left: 18px; } .overlay li { margin: 2px 0; }
+  .overlay a { color: #8ec5ff; }
+  .overlay input[type=search] { font: inherit; color: var(--text); background: var(--bg); border: 2px solid var(--line); padding: 0 8px; min-width: 280px; }
+  #help table { border-collapse: collapse; } #help td { padding: 3px 12px 3px 0; }
+  kbd { display: inline-block; min-width: 28px; text-align: center; border: 2px solid var(--line); border-bottom-width: 4px; background: var(--panel); padding: 0 6px; font: inherit; }
+  .rstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+  .rstats div { border: 2px solid var(--line); background: var(--panel); padding: 4px 8px; } .rstats b { display: block; font-weight: normal; font-size: 26px; }
+  #wall-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .wsess { border: 2px solid var(--line); background: var(--panel); padding: 6px 8px; cursor: pointer; }
+  .wsess:hover, .wsess.on { border-color: var(--accent); }
+  .wsess .t { display: flex; justify-content: space-between; gap: 6px; } .wsess .t b { font-weight: normal; font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wdesks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; }
+  .wdesk { height: 46px; background: #4a3f36; border: 2px solid #2b241e; position: relative; font-size: 15px; padding: 1px 3px; overflow: hidden; }
+  .wdesk.on { background: #5b4d40; border-color: var(--c); } .wdesk .n { color: var(--text); } .wdesk .s { position: absolute; right: 3px; top: 1px; }
+  .wdesk .a { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wsess .dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; background: var(--dim); } .wsess .dot.live { background: var(--ok); }
+  #usage { font-size: 17px; color: var(--muted); }
+  #usage .bars { display: flex; align-items: flex-end; gap: 1px; height: 26px; margin-top: 3px; }
+  #usage .bars i { flex: 1; background: var(--line); min-height: 1px; } #usage .bars i.now { background: var(--accent); }
+  #usage-ratio.up { color: var(--err); } #usage-ratio.down { color: var(--ok); }
+  .card .ci { font-size: 17px; } .ci-success { color: var(--ok); } .ci-failed { color: var(--err); } .ci-running, .ci-pending, .ci-created { color: var(--warn); } .ci-merged { color: #b48cff; }
+  .card .tools2 { display: flex; gap: 6px; margin-top: 2px; }
+  .card .tools2 button { color: var(--text); background: var(--panel); border: 1px solid var(--line); padding: 0 6px; cursor: pointer; font-size: 16px; }
+  .card .tools2 button:hover { border-color: var(--accent); }
+  .hist { border-left: 4px solid var(--c); padding: 3px 8px; margin: 6px 0; background: var(--bg); }
+  .hist .muted { font-size: 16px; }
+  #perf table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  #perf th, #perf td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  #perf th { color: var(--muted); font-weight: normal; }
+  #perf .perfhead .x { margin-left: auto; color: var(--text); background: none; border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
+  #perf .perfhead .x:hover { border-color: var(--accent); }
+  #perf .perfhead { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+  #perf select { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); }
+  #perf .stats { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin-bottom: 10px; }
+  #perf h4 { font-size: 18px; font-weight: normal; color: var(--muted); margin: 6px 0; letter-spacing: 1px; }
+  #perf-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .acard { border: 2px solid var(--line); border-top: 5px solid var(--c); padding: 6px 8px; background: var(--panel); }
+  .acard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .acard .top b { font-weight: normal; font-size: 21px; }
+  .acard .lvl { color: var(--c); }
+  .acard .sub { color: var(--muted); font-size: 16px; margin-bottom: 4px; }
+  .acard .live { color: var(--ok); }
+  .meter { display: grid; grid-template-columns: 82px 1fr 58px; gap: 6px; align-items: center; font-size: 16px; }
+  .meter span:first-child { color: var(--muted); }
+  .meter .track { height: 8px; background: #17161d; border: 1px solid var(--line); }
+  .meter .track i { display: block; height: 100%; background: var(--c); }
+  .meter span:last-child { text-align: right; }
+  .spark { display: block; width: 100%; height: 30px; margin-top: 4px; }
+  .spark rect { fill: var(--c); } .spark rect.zero { fill: var(--line); }
+  .spark rect:hover { fill: var(--text); }
+  #perf-records .stats div b { font-weight: normal; }
+  #perf details { margin-bottom: 12px; } #perf details summary { cursor: pointer; color: var(--muted); }
+  .mini { display: inline-block; height: 8px; background: var(--accent); vertical-align: middle; margin-right: 6px; }
+  #p-q .q { border: 2px solid var(--accent); padding: 8px; background: #2e2c37; }
+  #p-q .qq { margin: 0 0 6px; font-size: 20px; overflow-wrap: anywhere; }
+  #p-q p { margin: 0 0 6px; overflow-wrap: anywhere; }
+  #p-q .opts { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+  #p-q button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); padding: 4px 8px; cursor: pointer; text-align: left; }
+  #p-q button:hover:not(:disabled) { border-color: var(--accent); }
+  #p-q button:disabled { opacity: .5; cursor: default; }
+  #p-q textarea { width: 100%; font: inherit; color: var(--text); background: #17161d; border: 2px solid var(--line); padding: 4px; resize: vertical; }
+  #q-send { margin-top: 6px; }
+  #store-q { width: 100%; font: inherit; color: var(--text); background: #17161d; border: 2px solid var(--line); padding: 2px 6px; }
+  #store-list details { border-bottom: 1px solid var(--line); padding: 3px 0; }
+  #store-list summary { cursor: pointer; overflow-wrap: anywhere; }
+  #store-list summary b { font-weight: normal; color: var(--accent); }
+  #store-list details.new summary { color: var(--ok); }
+  #store-list details p { margin: 4px 0 4px 12px; overflow-wrap: anywhere; }
+  #store-list .meta { margin-left: 12px; color: var(--muted); font-size: 16px; overflow-wrap: anywhere; }
+  #store-list .pend summary b { color: var(--warn); }
+  #store-list button.ok { font: inherit; font-size: 16px; color: #17161d; background: var(--ok); border: 0; padding: 0 8px; cursor: pointer; float: right; margin-left: 6px; }
+  #store-list button.ok.confirm { background: var(--warn); }
+  #store-list button.ok:disabled { opacity: .5; cursor: default; }
+  #store-list h3 button.ok { float: none; vertical-align: middle; }
+  #store-msg { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; }
+  #store-msg.err { color: var(--err); } #store-msg.done { color: var(--ok); }

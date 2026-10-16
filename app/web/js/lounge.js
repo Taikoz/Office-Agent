@@ -22,6 +22,10 @@ const ACTS = [
     lines: ["Qui a fini le lait ?", "Double espresso, minimum.", "Il est bon ce café."] },
   { id: "darts", label: "joue aux fléchettes", spots: [{ x: 303, y: 104 }], pose: { back: true }, fx: { ennui: -3 },
     lines: ["180 !!!", "Dans le mille."] },
+  { id: "karaoke", label: "chante au karaoké", spots: [{ x: 366, y: 132 }], pose: { arms: "up" }, fx: { ennui: -4, moral: 1 },
+    lines: ["🎤 Libéréééée, délivréééée !", "🎵 I will survive !", "🎶 Encore une !", "🎤 Merci Agent Office !"] },
+  { id: "boardgame", label: "joue à un jeu de société", spots: [{ x: 252, y: 194, via: { x: 285, y: 194 } }, { x: 252, y: 218, via: { x: 285, y: 218 }, back: true }], pose: { seated: true }, fx: { ennui: -3, moral: 1 },
+    lines: ["Je prends la rue de la Paix.", "Échec et mat !", "Tu triches, là.", "À toi de jouer !", "Double six !"] },
 ];
 const SPOTS = ACTS.flatMap(a => a.spots.map(s => ({ ...s, act: a })));
 const loungers = new Map();
@@ -193,7 +197,7 @@ function hitLounge(x, y) {
   if (x >= 158 && x <= 214 && y >= 30 && y <= 70) return "kitchen";                                  // pie menu: cook, snack, fire
   if (x >= TABLE.x - 2 && x <= TABLE.x + TABLE.w + 2 && y >= TABLE.y - 2 && y <= TABLE.y + TABLE.h) return "table";
   if (chief.room === "lounge") {  // the chief is here: the furniture is for him too
-    const spotAt = [["sofa", 58, 110, 56, 16], ["arcade", 350, 34, 22, 36], ["read", 240, 28, 34, 66], ["chat", 50, 176, 70, 14]]
+    const spotAt = [["sofa", 58, 110, 56, 16], ["arcade", 350, 34, 22, 36], ["read", 240, 28, 34, 66], ["chat", 50, 176, 70, 14], ["karaoke", 346, 104, 46, 36], ["boardgame", 236, 196, 34, 14]]
       .find(([, ax, ay, w, h]) => x >= ax && x <= ax + w && y >= ay && y <= ay + h);
     if (spotAt) return `chiefact:${spotAt[0]}`;
   }
@@ -225,6 +229,8 @@ function renderLounge(t) {
   const arcading = [...loungers.values()].some(l => l.spot?.act.id === "arcade" && !l.path.length) || chief.lspot?.act.id === "arcade";
   const pinging = [...loungers.values()].filter(l => l.spot?.act.id === "pingpong" && !l.path.length).length;
   const footing = [...loungers.values()].some(l => l.spot?.act.id === "babyfoot" && !l.path.length);
+  const singing = [...loungers.values()].some(l => l.spot?.act.id === "karaoke" && !l.path.length) || (chief.lspot?.act.id === "karaoke" && !chief.lpath.length);
+  const gaming = [...loungers.values()].filter(l => l.spot?.act.id === "boardgame" && !l.path.length).length + (chief.lspot?.act.id === "boardgame" && !chief.lpath.length ? 1 : 0);
   // furniture and people, depth-sorted
   const items = [
     { y: 85, draw: () => sprite("armchair", 250, 78) },
@@ -233,6 +239,8 @@ function renderLounge(t) {
     { y: 135, draw: () => { art(`pingpong:${!pinging}`, 194, 122, 72, 28, () => pingpongArt(!pinging)); drawPingBall(t); } },
     { y: 176, draw: () => { const sh = footing ? Math.round(Math.sin(t / 160) * 2) / 2 : 0; art(`babyfoot:${sh}`, 298, 166, 48, 24, () => babyfootArt(sh)); } },
     { y: 180, draw: () => { sprite("beanbag", 50, 176); sprite("beanbag", 100, 176); } },
+    { y: 112, draw: () => { const f = singing ? Math.floor(t / 300) % 4 : 0; art(`karaoke:${f}:${singing}`, 346, 104, 46, 36, () => karaokeArt(f, singing)); if (singing && Math.floor(t / 600) % 2) text(["♪", "♫"][Math.floor(t / 1200) % 2], 356 + (Math.floor(t / 600) % 3) * 12, 106 - (t / 60) % 8, "#fbaa08", 5, "center"); } },
+    { y: 208, draw: () => { const f = gaming > 1 ? Math.floor(t / 2200) % 4 : 0; art(`boardgame:${f}`, 236, 196, 34, 14, () => boardgameArt(f)); } },
   ];
   items.push(...socialItems(t), ...roomDepthItems("lounge", t));
   items.push({ y: 70, draw: () => drawKitchenFx(t) });  // pan, flames, over the stove (build.js)
@@ -268,5 +276,6 @@ function drawLounger(l, t) {
   drawPerson(l.x, l.y, l.look, opts);
   if (act?.cup) { px(l.x + 4, l.y - 13, 2.5, 3, "#f4f2ea"); px(l.x + 4, l.y - 13, 2.5, 0.8, "#6d4a2e"); }
   if (act?.id === "read") px(l.x - 3, l.y - 9, 6, 3.5, "#ff6b6b");
+  if (act?.id === "karaoke") { px(l.x - 5, l.y - 17, 1.2, 4, "#2b2b33"); px(l.x - 5.4, l.y - 18.4, 2, 2, "#9aa0ad"); }  // the mic
   l.seated = !!opts.seated;
 }
