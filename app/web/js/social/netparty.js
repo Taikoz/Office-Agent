@@ -5,7 +5,7 @@
 
 import { hub, provide } from "../hub.js";
 import { badge, px, roomSize } from "../core/core.js";
-import { bubble, drawPerson, headroom } from "../world/scene.js";
+import { bubble, drawPerson, headroom, stepOf } from "../world/scene.js";
 import { call, net, startVisit, visitRoom } from "../world/peers.js";
 import { LD, loungeSay, loungers, pick } from "../world/lounge.js";
 import { toast } from "../sims/progress.js";
@@ -103,7 +103,7 @@ function stepFolks(t) {
     if (ours.length && Math.random() < 0.55) setTimeout(() => loungeSay(pick(ours).name, pick(REPLIES)), 1400);
   }
 }
-const folkPose = (f, t, i) => f.dir ? { frame: Math.floor(t / 180), dir: f.dir, smile: true } : { arms: Math.floor(t / 600 + i) % 3 ? "down" : "up", frame: 0, smile: f.mood >= 40, dir: [[1, 0], [0, 1], [-1, 0], [0, 1]][i % 4] };
+const folkPose = (f, t, i) => f.dir ? { step: stepOf(f, f.x, f.y), dir: f.dir, smile: true } : { arms: Math.floor(t / 600 + i) % 3 ? "down" : "up", frame: 0, smile: f.mood >= 40, dir: [[1, 0], [0, 1], [-1, 0], [0, 1]][i % 4] };
 const drink = (f, t) => { if (!f.dir) px(f.x + 4, f.y - 13, 2.5, 3, "#f4c430"); };
 export function partyItems(t, G, items) {
   if (!party.mine || !party.folks.size) return;

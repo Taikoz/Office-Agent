@@ -5,7 +5,7 @@ import { hub } from "../hub.js";
 import { CAB, CHIEF_NAME, DESKS, DOOR, H, W, fillScreen, badge, chief, clip, ctx, curSession, current, cv, drawerUntil, ents, hash, inTransit, mmx, px, selected, specialty, text, typeColor } from "../core/core.js";
 import { ART } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
-import { bubble, coffeeState, drawBoard, drawCabinet, drawDesk, drawDeskScreen, drawPerson, drawRoom, drawRoomWall, floorCanvas, hitBoardPager, headroom } from "../world/scene.js";
+import { bubble, coffeeState, drawBoard, drawCabinet, drawDesk, drawDeskScreen, drawPerson, drawRoom, drawRoomWall, floorCanvas, hitBoardPager, headroom, stepOf } from "../world/scene.js";
 import { crew, moodLine } from "../sims/crew.js";
 import { CHIEF_LOOK, chiefWalk, consolePlaying, drawConsole, drawConsoleScreen } from "../world/chief.js";
 import { drawLaser, laser } from "../world/fun.js";
@@ -43,7 +43,7 @@ class OfficeRoom extends Room {
     const gaming = chief.at === "console" && !chief.path.length, asleep = gaming && ch?.idle > 900;
     if (layer !== "over") {
       const waving = onPodium && !ch?.question && (t < chief.wave || (ch && !ch.finished && ch.idle < 20));
-      if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), smile: !asleep,
+      if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), step: walking ? stepOf(chief, chief.x, chief.y) : null, smile: !asleep,
         arms: waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length ? "up" : "down", back: gaming || (walking && chief.path[0].y < chief.y), seated: gaming,
         dir: walking ? [chief.path[0].x - chief.x, chief.path[0].y - chief.y] : null });
       if (chief.cup) { px(chief.x + 4, chief.y - 13, 2.5, 3, "#f4f2ea"); px(chief.x + 4, chief.y - 13, 2.5, 0.8, "#6d4a2e"); }
@@ -103,7 +103,7 @@ class OfficeRoom extends Room {
     }
     const paused = !!e.pauseUntil, still = paused || !e.path.length;
     if (body) {
-      drawPerson(e.x, e.y, e.look, { frame: still ? 0 : f, back: ["pick", "file", "coffee", "standup", "pair"].includes(e.pose) || (!still && e.path[0].y < e.y), dir: still ? null : [e.path[0].x - e.x, e.path[0].y - e.y],
+      drawPerson(e.x, e.y, e.look, { frame: still ? 0 : f, step: still ? null : stepOf(e, e.x, e.y), back: ["pick", "file", "coffee", "standup", "pair"].includes(e.pose) || (!still && e.path[0].y < e.y), dir: still ? null : [e.path[0].x - e.x, e.path[0].y - e.y],
         arms: e.pose === "pick" || e.pose === "file" ? "up" : "down" });
       if (e.errand && e.pose !== "file") {  // carries its papers to the MMX cabinet
         const n = Math.min(3, e.errand.items.length);
