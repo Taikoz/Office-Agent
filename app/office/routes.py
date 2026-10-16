@@ -220,8 +220,12 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 if self.path == "/api/net":  # ChiefOS → Réseau: open / close the office to the internal network, the host's own presence and chat (net.py)
                     action = str(data.get("action", "")) if isinstance(data, dict) else ""
                     try:
-                        if action in ("host", "stop", "status"):
-                            body, ok = net.start(int(data.get("port") or net.DEFAULT_PORT)) if action == "host" else net.stop() if action == "stop" else net.status(), True
+                        if action in ("host", "stop", "status", "newcode", "auto", "discover"):
+                            if action == "auto":
+                                net.save_conf(auto=data.get("on") is True)
+                            body, ok = (net.start(int(data.get("port") or net.load_conf().get("port") or net.DEFAULT_PORT)) if action == "host"
+                                        else net.start(new_code=True) if action == "newcode" else net.stop() if action == "stop"
+                                        else net.discover() if action == "discover" else net.status()), True
                         else:
                             ok, body = net.act(action, data, host=True)
                     except (ValueError, OSError) as err:

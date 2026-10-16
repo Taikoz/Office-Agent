@@ -68,7 +68,9 @@ class LoungeRoom extends Room {
     const here = [...loungers.values()].filter(l => !l.partyRoom);  // gone to the meeting room or the terrace (construct.js)
     for (const l of here) items.push({ y: l.y, draw: () => drawLounger(l, t) });
     if (chief.room === "lounge") items.push({ y: chief.ly, draw: () => drawChiefLounge(t) });
+    hub.partyItems?.(t, null, items);  // the devs of the other offices at our afterwork (social/netparty.js)
     items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
+    hub.partyOver?.(t, null);
     for (const l of here) badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");
     for (const l of here) hub.drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25), t);
     drawSocialOver(t);
@@ -114,7 +116,9 @@ class LoungeRoom extends Room {
     const here = [...loungers.values()].filter(l => !l.partyRoom), lift = (s, walking) => walking ? 0 : s?.lift || 0;
     for (const l of here) items.push({ pt: [l.x, l.y], draw: () => G.put(l.x, l.y, l.x, l.y, lift(l.spot, l.path.length), () => drawLounger(l, t), { x: l.x - 9, y: l.y - 34, w: 18, h: 37, to: { x: l.x, y: l.y - 8 } }) });
     if (chiefIn) items.push({ pt: [chief.lx, chief.ly], draw: () => G.put(chief.lx, chief.ly, chief.lx, chief.ly, lift(chief.lspot, chief.lpath.length), () => drawChiefLounge(t)) });
+    hub.partyItems?.(t, G, items);  // the devs of the other offices at our afterwork (social/netparty.js)
     G.drawSorted(items);
+    hub.partyOver?.(t, G);
     // over everything: names, moods, what is said, the social life
     for (const l of here) G.put(l.x, l.y, l.x, l.y, lift(l.spot, l.path.length), () => {
       badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");

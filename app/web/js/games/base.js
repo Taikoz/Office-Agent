@@ -35,12 +35,17 @@ export function challenge(name, skin) {
   hub.view = "game"; hub.closePanel(); loungeSay(name, "Prépare-toi à perdre !");
 }
 let duels = new SaveSlot("office-duels", { scores: {}, log: [] }).data;
+// a duel in the weekly tournament (also against another chief over the network: games/online.js)
+export function logDuel(name, won, skin) {
+  duels.log = [...(duels.log || []), { t: Date.now(), name, won, skin }].filter(x => Date.now() - x.t < 35 * 86_400_000);
+  SaveSlot.get("office-duels").save(duels);
+}
 export function endMatch() {
+  if (match?.net) return hub.netMatchEnd?.(match);  // against another chief (games/online.js)
   const m = match, won = m.ps > m.as, sc = duels.scores[m.name] || { w: 0, l: 0 };
   if (won) { sc.w++; hub.countWeekly?.("duelwin"); } else sc.l++;
   duels.scores[m.name] = sc;
-  duels.log = [...(duels.log || []), { t: Date.now(), name: m.name, won, skin: m.skin }].filter(x => Date.now() - x.t < 35 * 86_400_000);
-  SaveSlot.get("office-duels").save(duels);
+  logDuel(m.name, won, m.skin);
   crewAdd(m.name, won ? { moral: -3, ennui: -8 } : { moral: 8, ennui: -8 });
   hub.view = "lounge"; match = null;
   loungeSay(m.name, won ? `Revanche, ${CHIEF_NAME} ! 😤` : "GG chef, trop facile 😎");

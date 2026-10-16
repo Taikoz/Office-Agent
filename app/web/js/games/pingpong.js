@@ -24,8 +24,12 @@ class Pingpong extends MiniGame {
     if (m.mouseY != null) m.py += Math.max(-0.2 * dt, Math.min(0.2 * dt, m.mouseY - m.py));
     m.py = Math.max(52, Math.min(180, m.py));
     if (!m.ball) { if (t > m.serveAt) serve(Math.random() < 0.5 ? -1 : 1); return; }
-    const b = m.ball, st = mate(m.name), skill = 0.07 * (1 - st.fatigue / 250) * (0.85 + st.moral / 400);
-    if (b.vx > 0) m.ay += Math.max(-skill * dt, Math.min(skill * dt, b.y - m.ay)); else m.ay += Math.max(-0.03 * dt, Math.min(0.03 * dt, 116 - m.ay));
+    const b = m.ball;
+    if (m.net) m.ay += Math.max(-0.2 * dt, Math.min(0.2 * dt, m.net.in.py - m.ay));  // another chief's paddle (games/online.js)
+    else {
+      const st = mate(m.name), skill = 0.07 * (1 - st.fatigue / 250) * (0.85 + st.moral / 400);
+      if (b.vx > 0) m.ay += Math.max(-skill * dt, Math.min(skill * dt, b.y - m.ay)); else m.ay += Math.max(-0.03 * dt, Math.min(0.03 * dt, 116 - m.ay));
+    }
     m.ay = Math.max(52, Math.min(180, m.ay));
     b.x += b.vx * dt; b.y += b.vy * dt;
     if (b.y < 42 || b.y > 190) { b.vy = -b.vy; b.y = Math.max(42, Math.min(190, b.y)); }
@@ -48,12 +52,12 @@ class Pingpong extends MiniGame {
     const pad = (x, y, c) => px(x - 1.5, y - 11, 3, 22, c);
     pad(40, m.py, "#fbaa08"); pad(360, m.ay, m.look.shirt);
     if (m.ball) px(m.ball.x - 1.5, m.ball.y - 1.5, 3, 3, "#f7f7f7");
-    text(`${CHIEF_NAME}  ${m.ps}  —  ${m.as}  ${m.name}`, 200, 12, "#f7f7f7", 9, "center");
+    text(`${m.leftName || CHIEF_NAME}  ${m.ps}  —  ${m.as}  ${m.name}`, 200, 12, "#f7f7f7", 9, "center");  // leftName: a spectator's screen (games/online.js)
     text("PING-PONG · premier à 5", 200, 26, "#fbaa08", 4.5, "center");
     text("Souris ou ↑ / ↓ (Z/S) · Échap pour abandonner", 200, 210, "#adadad", 4.2, "center");
-    drawPerson(26, 230, CHIEF_LOOK, { tux: true, smile: true }); drawPerson(374, 230, m.look, { smile: m.as >= m.ps });
+    drawPerson(26, 230, m.leftLook || CHIEF_LOOK, { tux: true, smile: true }); drawPerson(374, 230, m.look, { smile: m.as >= m.ps });
     if (m.over) { px(110, 96, 180, 40, "#081746"); px(112, 98, 176, 36, m.ps > m.as ? "#51cf66" : "#ff6b6b");
-      text(m.ps > m.as ? "VICTOIRE !" : `${m.name.toUpperCase()} GAGNE`, 200, 102, "#081746", 10, "center"); text(`${m.ps} — ${m.as}`, 200, 120, "#081746", 6, "center"); }
+      text(m.ps > m.as ? (m.leftName ? `${m.leftName.toUpperCase()} GAGNE` : "VICTOIRE !") : `${m.name.toUpperCase()} GAGNE`, 200, 102, "#081746", 10, "center"); text(`${m.ps} — ${m.as}`, 200, 120, "#081746", 6, "center"); }
   }
 }
 new Pingpong();

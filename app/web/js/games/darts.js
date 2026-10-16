@@ -137,7 +137,7 @@ function dartsThrow(x, y, t) {
   if (m.darts.length === 3 && m.mode !== "cricket" && m.mode !== "clock" && res !== "bust") {
     const tot = m.darts.reduce((n, d) => n + d.s.v, 0);
     if (tot >= 100) m.msg = tot === 180 ? "ONE HUNDRED AND EIGHTYYY !!!" : `${tot} !`;
-    if (who === "a" && tot >= 100) loungeSay(m.name, tot === 180 ? "180 !!!" : "Pas mal, hein ?");
+    if (who === "a" && tot >= 100 && !m.net) loungeSay(m.name, tot === 180 ? "180 !!!" : "Pas mal, hein ?");
   }
   if (res === "bust" || m.darts.length === 3) m.next = t + 1600;
   else if (who === "a") m.aiAt = t + 900;
@@ -166,7 +166,13 @@ function stepDarts(dt, t) {
     if (m.turn === "a") m.aiAt = t + 1000;
     return;
   }
-  if (m.turn === "a" && t > m.aiAt) {
+  // another chief's darts (games/online.js): thrown on his page, played here in order
+  if (m.net && m.turn === "a" && !m.over) for (const [id, x, y] of m.net.in.th || []) {
+    if (id <= (m.net.thrown || 0)) continue;
+    m.net.thrown = id; dartsThrow(x, y, t);
+    if (m.next || m.over) break;
+  }
+  if (!m.net && m.turn === "a" && t > m.aiAt) {
     const [n, k] = dartsAim(m, m.a, m.p), aim = dartPoint(n, k), st = mate(m.name);
     const sig = Math.max(3, Math.min(9, 4.6 + st.fatigue / 30 - st.moral / 80));
     m.aiAt = Infinity;
@@ -204,8 +210,8 @@ function drawDart(x, y, color) {
   ctx.moveTo((x + 6.2) * S, (y - 4.9) * S); ctx.lineTo((x + 9.6) * S, (y - 9.4) * S); ctx.lineTo((x + 10.4) * S, (y - 6.6) * S);
   ctx.lineTo((x + 11.4) * S, (y - 5.6) * S); ctx.lineTo((x + 6.2) * S, (y - 4.9) * S); ctx.fill();
 }
-function renderDarts(t) {
-  const m = match, mode = DART_MODES.find(d => d.id === m.mode);
+function renderDarts(t, m = match) {
+  const mode = DART_MODES.find(d => d.id === m.mode), ME = m.leftName || CHIEF_NAME;  // leftName: a spectator's screen
   px(0, 0, W, H, "#040c26");
   text(`FLÉCHETTES${mode ? ` · ${mode.label}` : ""} · contre ${m.name}`, 200, 4, "#fbaa08", 6, "center");
   if (m.phase === "menu") {
@@ -237,7 +243,7 @@ function renderDarts(t) {
   }
   // score panel
   const X = 228, row = (who, y) => {
-    const me = m[who], cur = m.turn === who && !m.over, name = who === "p" ? CHIEF_NAME : m.name;
+    const me = m[who], cur = m.turn === who && !m.over, name = who === "p" ? ME : m.name;
     text(`${cur ? "▶ " : "  "}${name}`, X, y, cur ? "#fbaa08" : "#f7f7f7", 6);
     if (m.mode === "clock") text(me.at > 20 ? "BULL" : String(me.at), 388, y, "#f7f7f7", 8, "right");
     else if (m.mode !== "cricket") {
@@ -249,7 +255,7 @@ function renderDarts(t) {
   text(`Manche ${Math.min(m.round, DART_ROUNDS[m.mode])} / ${DART_ROUNDS[m.mode]}`, X, 22, "#adadad", 4.2);
   if (m.mode === "cricket") {
     const sym = n => ["", "/", "X", "⊗"][n];
-    text(CHIEF_NAME, 262, 32, m.turn === "p" ? "#fbaa08" : "#f7f7f7", 5, "center"); text(m.name, 356, 32, m.turn === "a" ? "#fbaa08" : "#f7f7f7", 5, "center");
+    text(ME, 262, 32, m.turn === "p" ? "#fbaa08" : "#f7f7f7", 5, "center"); text(m.name, 356, 32, m.turn === "a" ? "#fbaa08" : "#f7f7f7", 5, "center");
     CRICKET.forEach((n, i) => {
       const y = 42 + i * 11, shut = m.p.marks[n] >= 3 && m.a.marks[n] >= 3;
       text(sym(m.p.marks[n]), 262, y, "#51cf66", 7, "center"); text(sym(m.a.marks[n]), 356, y, "#51cf66", 7, "center");
@@ -275,7 +281,7 @@ function renderDarts(t) {
   if (m.over) {
     const won = m.ps > m.as;
     px(110, 96, 180, 40, "#081746"); px(112, 98, 176, 36, won ? "#51cf66" : "#ff6b6b");
-    text(won ? "VICTOIRE !" : `${m.name.toUpperCase()} GAGNE`, 200, 102, "#081746", 10, "center"); text(mode.label, 200, 120, "#081746", 6, "center");
+    text(won ? (m.leftName ? `${m.leftName.toUpperCase()} GAGNE` : "VICTOIRE !") : `${m.name.toUpperCase()} GAGNE`, 200, 102, "#081746", 10, "center"); text(mode.label, 200, 120, "#081746", 6, "center");
   }
 }
 
@@ -283,7 +289,22 @@ class Darts extends MiniGame {
   constructor() { super("darts", "Fléchettes"); }
   init() { return { phase: "menu" }; }
   step(_m, dt, t) { stepDarts(dt, t); }
-  render(_m, t) { renderDarts(t); }
+  render(m, t) { renderDarts(t, m); }
   click(_m, p, t) { dartsClick(p, t); }
 }
 new Darts();
+
+/* ---------- over the network (games/online.js) ---------- */
+export const dartsNetStart = () => dartsStart(dartPrefs.mode);  // the challenger's mode and finish rule
+export const dartsState = m => ({ mode: m.mode, out: m.out, turn: m.turn, round: m.round, p: m.p, a: m.a, msg: m.msg, why: m.why, next: m.next ? 1 : 0, ps: m.ps, as: m.as, over: !!m.over,
+  darts: m.darts.map(d => [Math.round(d.x * 10) / 10, Math.round(d.y * 10) / 10, d.s.label, d.s.v, d.who]) });
+// the screen of the other player (turned: he is "p") or of a spectator (as is)
+export function dartsView(v, m, turned) {
+  const sw = w => turned ? (w === "p" ? "a" : "p") : w;
+  const yours = "À toi : 3 fléchettes.", msg = !turned ? (v.msg === yours ? `${m.leftName} lance…` : v.msg) : v.msg === yours ? `${m.name} lance…` : v.turn === "a" && /lance…$/.test(v.msg) ? yours : v.msg;
+  return { phase: "play", mode: v.mode, out: v.out, turn: sw(v.turn), round: v.round, p: turned ? v.a : v.p, a: turned ? v.p : v.a, msg, why: v.why, next: v.next, over: v.over ? 1 : 0,
+    ps: turned ? v.as : v.ps, as: turned ? v.ps : v.as, darts: (v.darts || []).map(([x, y, label, val, who]) => ({ x, y, s: { label, v: val }, who: sw(who) })),
+    name: m.name, look: m.look, leftName: m.leftName, mouseX: m.mouseX, mouseY: m.mouseY };
+}
+// where a dart thrown by a click lands: the sight trembles, the hand too
+export function dartsAimAt(p, t) { const w = dartWobble(t); return { x: p.x + w.x + gauss() * 1.4, y: p.y + w.y + gauss() * 1.4 }; }

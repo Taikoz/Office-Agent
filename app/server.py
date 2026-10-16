@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # -I keeps the script dir off sys.path
 from office.config import CFG  # noqa: E402
-from office import schedules  # noqa: E402
+from office import net, schedules  # noqa: E402
 from office.routes import make_handler  # noqa: E402
 from office.tickets import TicketStates  # noqa: E402
 
@@ -24,6 +24,7 @@ def main() -> int:
     args = parser.parse_args()
     handler = make_handler(args.window * 60, TicketStates(not args.no_youtrack))
     schedules.start()  # scheduled agents (ChiefOS → Planification)
+    net.autostart()    # the office opened to the internal network, when asked (ChiefOS → Réseau)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     print(f"Agent Office : http://127.0.0.1:{args.port}  (démo : /?demo=1)  — Ctrl+C pour arrêter")
     try:

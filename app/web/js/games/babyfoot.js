@@ -65,16 +65,18 @@ function stepFoot(dt, t) {
   if (keysDown.has("ArrowUp") || keysDown.has("w") || keysDown.has("z")) m.py -= 0.2 * dt;
   if (keysDown.has("ArrowDown") || keysDown.has("s")) m.py += 0.2 * dt;
   m.py = Math.max(FOOT.y0, Math.min(FOOT.y1, m.py));
-  // the dev reads the ball with a delay and some error, and slides slower when tired
-  const st = mate(m.name), skill = Math.max(0.35, (1 - st.fatigue / 220) * (0.8 + st.moral / 400)), b = m.ball;
-  if (t > m.aiSeen) { m.aiSeen = t + 140 + st.fatigue * 1.5; m.aiErr = gauss() * (5 + st.fatigue / 12); }
+  // the dev reads the ball with a delay and some error, and slides slower when tired; another chief plays his rods
+  // himself (games/online.js: his line and his shots)
+  const b = m.ball, net = m.net, st = net ? null : mate(m.name), skill = net ? 1 : Math.max(0.35, (1 - st.fatigue / 220) * (0.8 + st.moral / 400));
+  if (!net && t > m.aiSeen) { m.aiSeen = t + 140 + st.fatigue * 1.5; m.aiErr = gauss() * (5 + st.fatigue / 12); }
+  if (net && net.in.kick > net.kicked) { net.kicked = net.in.kick; for (const r of m.rods) if (r.side === "a" && t > r.cd) { r.kick = t + 170; r.cd = t + 330; } }
   for (const r of m.rods) {
-    const want = r.side === "p" ? footBestOffset(r, m.py) : footBestOffset(r, (b ? footPredict(b, r.x) : FOOT.cy) + (m.aiErr || 0));
-    const speed = (r.side === "p" ? 0.5 : 0.13 + 0.12 * skill) * dt, prev = r.o;
+    const want = r.side === "p" ? footBestOffset(r, m.py) : footBestOffset(r, net ? net.in.py : (b ? footPredict(b, r.x) : FOOT.cy) + (m.aiErr || 0));
+    const speed = (r.side === "p" || net ? 0.5 : 0.13 + 0.12 * skill) * dt, prev = r.o;
     r.o += Math.max(-speed, Math.min(speed, want - r.o));
     r.v = (r.o - prev) / dt;
     // the dev shoots when the ball sits in front of one of his men
-    if (r.side === "a" && b && t > r.cd) for (let k = 0; k < r.men.length; k++) {
+    if (!net && r.side === "a" && b && t > r.cd) for (let k = 0; k < r.men.length; k++) {
       const dx = (b.x - r.x) * r.dir, dy = Math.abs(b.y - footManY(r, k));
       if (dx > 1 && dx < 9 && dy < 5 && Math.random() < 0.12 * skill * dt / 16) { r.kick = t + 170; r.cd = t + 520 + Math.random() * 400; break; }
     }
@@ -123,12 +125,12 @@ function footGoal(m, scorer, t) {
   m.ball = null; m.serveAt = t + 1500; m.serveTo = scorer === "p" ? "a" : "p";
   m.flash = { t, text: scorer === "p" ? "BUUUT !" : `BUT DE ${m.name.toUpperCase()}` };
   hub.sfx(scorer === "p" ? "pass" : "fail");
-  if (scorer === "a" && m.as < 5) loungeSay(m.name, ["Dans la lucarne !", "Gamelle !", "Trop facile 😎"][Math.floor(Math.random() * 3)]);
+  if (scorer === "a" && m.as < 5 && !m.net) loungeSay(m.name, ["Dans la lucarne !", "Gamelle !", "Trop facile 😎"][Math.floor(Math.random() * 3)]);
   if (m.ps >= 5 || m.as >= 5) m.over = t + 2600;
 }
 
-function renderFoot(t) {
-  const m = match, { x0, x1, y0, y1, cy, goal } = FOOT, white = "#f7f7f7";
+function renderFoot(t, m = match) {
+  const { x0, x1, y0, y1, cy, goal } = FOOT, white = "#f7f7f7";
   const box = (x, y, w, h) => { px(x, y, w, 0.6, white); px(x, y + h - 0.6, w, 0.6, white); px(x, y, 0.6, h, white); px(x + w - 0.6, y, 0.6, h, white); };
   px(0, 0, W, H, "#040c26");
   px(8, 32, 384, 168, "#6d4a2e"); px(10, 34, 380, 164, "#8a5d3a"); px(10, 34, 380, 1.5, "#a8774c");
@@ -160,20 +162,33 @@ function renderFoot(t) {
     ctx.fillStyle = white; ctx.beginPath(); ctx.arc(b.x * S, b.y * S, 2.1 * S, 0, 2 * Math.PI); ctx.fill();
     const a = (b.x + b.y) / 3; px(b.x + Math.cos(a) * 0.8 - 0.5, b.y + Math.sin(a) * 0.8 - 0.5, 1, 1, "#1c1c24");
   }
-  text(`${CHIEF_NAME}  ${m.ps}  —  ${m.as}  ${m.name}`, 200, 1, "#f7f7f7", 9, "center");
+  text(`${m.leftName || CHIEF_NAME}  ${m.ps}  —  ${m.as}  ${m.name}`, 200, 1, "#f7f7f7", 9, "center");
   text("BABY-FOOT · premier à 5", 200, 12.5, "#fbaa08", 4.2, "center");
   text("Souris ou ↑ / ↓ = barres · clic ou Espace = tirer · Échap = abandonner", 200, 214, "#adadad", 4, "center");
   if (m.flash && t - m.flash.t < 1300 && !m.over) text(m.flash.text, 200, 96, "#fbaa08", 14, "center");
-  drawPerson(26, 230, CHIEF_LOOK, { tux: true, smile: m.ps >= m.as }); drawPerson(374, 230, m.look, { smile: m.as >= m.ps });
+  drawPerson(26, 230, m.leftLook || CHIEF_LOOK, { tux: true, smile: m.ps >= m.as }); drawPerson(374, 230, m.look, { smile: m.as >= m.ps });
   if (m.over) { px(110, 96, 180, 40, "#081746"); px(112, 98, 176, 36, m.ps > m.as ? "#51cf66" : "#ff6b6b");
-    text(m.ps > m.as ? "VICTOIRE !" : `${m.name.toUpperCase()} GAGNE`, 200, 102, "#081746", 10, "center"); text(`${m.ps} — ${m.as}`, 200, 120, "#081746", 6, "center"); }
+    text(m.ps > m.as ? (m.leftName ? `${m.leftName.toUpperCase()} GAGNE` : "VICTOIRE !") : `${m.name.toUpperCase()} GAGNE`, 200, 102, "#081746", 10, "center"); text(`${m.ps} — ${m.as}`, 200, 120, "#081746", 6, "center"); }
 }
 
 class Babyfoot extends MiniGame {
   constructor() { super("babyfoot", "Baby-foot"); }
   init() { return footInit(); }
   step(_m, dt, t) { stepFoot(dt, t); }
-  render(_m, t) { renderFoot(t); }
+  render(m, t) { renderFoot(t, m); }
   click(_m, p, t) { footKick(t); }
 }
 new Babyfoot();
+
+/* ---------- over the network (games/online.js) ---------- */
+// what the challenger's page sends: the rods (slide, shooting), the ball, the scores, the last goal, his line
+export const footState = (m, t) => ({ rods: m.rods.map(r => [Math.round(r.o * 10) / 10, t < r.kick ? 1 : 0]), b: m.ball && [m.ball.x, m.ball.y, m.ball.vx, m.ball.vy].map(v => Math.round(v * 1000) / 1000),
+  fl: m.flash && !m.over ? [m.flash.text === "BUUUT !" ? "p" : "a", Math.round(t - m.flash.t)] : null, py: Math.round(m.py) });
+// the other player's screen (turned: he plays on the left, in yellow), or a spectator's (as the challenger plays it)
+export function footView(v, m, t, turned = true) {
+  const flip = x => turned ? 400 - x : x;
+  const rods = FOOT_RODS.map((r, i) => ({ ...r, side: turned ? (r.side === "p" ? "a" : "p") : r.side, x: flip(r.x), dir: turned ? -r.dir : r.dir, o: v.rods?.[i]?.[0] || 0, kick: v.rods?.[i]?.[1] ? t + 60 : 0 }));
+  const mine = v.fl && (v.fl[0] === "a") === turned, fl = v.fl && { t: t - v.fl[1], text: turned ? (mine ? "BUUUT !" : `BUT DE ${m.name.toUpperCase()}`) : `BUT DE ${(v.fl[0] === "p" ? m.leftName : m.name).toUpperCase()}` };
+  return { name: m.name, look: m.look, leftName: m.leftName, leftLook: m.leftLook, ps: turned ? v.as : v.ps, as: turned ? v.ps : v.as, py: turned ? m.py : v.py ?? 116, rods,
+    ball: v.b && { x: flip(v.b[0]), y: v.b[1] }, flash: fl, over: v.over ? 1 : 0 };
+}

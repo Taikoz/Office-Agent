@@ -28,15 +28,28 @@ CREW_MAX = 24_000       # bytes of an office's team as its visitors see it
 CREW_SIZE = 24          # people in it
 CREW_TTL = 6.0          # seconds: an older team is not shown any more
 PID = re.compile(r"^[0-9a-f]{8}$")
-RATE = 30               # requests per second and per address
+RATE = 60               # requests per second and per address (a duel: 20 a second, on top of the presence)
+DUEL_MAX = 2000         # bytes of one player's state in a duel
+RTC_MAX = 16_000        # bytes of one side of a video call's set-up (its offer or answer, the voice: WebRTC)
+BEACON_PORT = 8768      # UDP: an open office says so on the internal network (no code in it), the others list it
+DUEL_TTL = 30.0         # seconds without news: the duel is over
 CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
 ROOMS = {"office", "lounge", "meeting", "terrace", "gym", "library"}
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 KEY = re.compile(r"^[a-z][a-zA-Z]{0,11}$")  # a key (camelCase) or a word
 ARMS = {"down", "up", "type", "baton"}
-STATUS = {"work", "think", "blocked", "done", "walk", "coffee", "question", "rest", "meeting", "party", "sport", "read"}
+STATUS = {"work", "think", "blocked", "done", "walk", "coffee", "question", "rest", "meeting", "party", "sport", "read", "away"}  # away: gone to an afterwork elsewhere
 # what a visitor does to the office it visits: to a dev (talk, cheer, coffee, kudos, wave) or to an object (a few safe
 # switches: a lamp, a blind, the music); the host's page decides what it does with it
+EMOTES = {"wave", "dance", "clap", "laugh", "love", "five", "cheers", "think"}
+PRESENCE = {"dispo", "occupe", "reunion", "dnd", "absent"}
+GID = re.compile(r"^[0-9a-f]{8}$")
+# a duel between two chiefs (ping-pong, baby-foot): the challenge and its answers; an afterwork of all the offices
+DUEL = re.compile(r"^(?:invite:(?:pingpong|babyfoot|darts):[0-9a-f]{8}|(?:accept|decline|quit|busy):[0-9a-f]{8}|cheer:[0-9a-f]{8}:(?:clap|wow|laugh|fire|love))$")
+DUEL_INFO = re.compile(r"^[0-9a-f]{8}:(?:pingpong|babyfoot|darts):[0-9a-f]{8}$")  # gid:game:opponent, in a player's presence
+VISIO = re.compile(r"^(?:ring|accept|decline|end|busy):[0-9a-f]{8}$")
+GIFT = re.compile(r"^(?:coffee|croissants|pizza|cake|plant|flowers)$")
+PARTY = re.compile(r"^(?:start|stop|join|leave)$")
 ACT = re.compile(r"^(?:(?:talk|cheer|coffee|kudos|wave):[^\x00-\x1f:]{1,24}|use:\d{1,10}:(?:lamp|blind|music))$")
 
 
@@ -112,6 +125,9 @@ class Hub:
         self.peers: dict[str, dict[str, Any]] = {}
         self.layouts: dict[str, tuple[float, str]] = {}  # pid → (when, the layout as JSON), for whoever visits
         self.crews: dict[str, tuple[float, list[dict[str, Any]]]] = {}  # pid → (when, its team), for whoever visits
+        self.duels: dict[str, dict[str, tuple[float, str]]] = {}  # gid → pid → (when, its state as JSON)
+        self.rtcs: dict[str, dict[str, tuple[float, str]]] = {}   # call id → pid → (when, its offer or answer)
+        self.watchers: dict[str, dict[str, float]] = {}           # gid → pid of a spectator → when
         self.chat: list[dict[str, Any]] = []
         self.seq = 0
 
@@ -121,6 +137,9 @@ class Hub:
             self.chat.clear()
             self.layouts.clear()
             self.crews.clear()
+            self.duels.clear()
+            self.rtcs.clear()
+            self.watchers.clear()
 
     def prune(self) -> None:
         now = time.time()
@@ -130,13 +149,21 @@ class Hub:
             del self.peers[sid]
 
     def hello(self, data: dict[str, Any], host: bool = False) -> tuple[bool, dict[str, Any]]:
+        """A chief comes in. A page coming back (reloaded) replaces its old session (old: its sid), and the host's page
+        is only one: no ghost of the same chief for 20 s."""
         with self.lock:
             self.prune()
+            old = str(data.get("old") or "")
+            if old in self.peers:
+                del self.peers[old]
+            if host:
+                for s in [s for s, p in self.peers.items() if p["host"]]:
+                    del self.peers[s]
             if len(self.peers) >= MAX_PEERS:
                 return False, {"error": "bureau complet"}
             sid = secrets.token_urlsafe(12)
             self.peers[sid] = {"pid": secrets.token_hex(4), "name": clean_text(data.get("name"), 24) or "Chef", "look": clean_look(data.get("look")), "room": "office",
-                               "x": 280.0, "y": 120.0, "bubble": "", "seen": time.time(), "host": host, "visiting": "", "pose": {}}
+                               "x": 280.0, "y": 120.0, "bubble": "", "seen": time.time(), "host": host, "visiting": "", "pose": {}, "emote": "", "status": "dispo", "duel": ""}
             self.say_system(f"{self.peers[sid]['name']} est connecté")
             return True, {"sid": sid, "pid": self.peers[sid]["pid"]}
 
@@ -154,6 +181,11 @@ class Hub:
             p.update({"room": room if room in ROOMS else "office", "bubble": clean_text(data.get("bubble"), 80), "seen": time.time(),
                       "x": max(0.0, min(900.0, x)), "y": max(0.0, min(500.0, y)), "visiting": visiting if PID.match(visiting) else ""})
             p["pose"] = clean_pose(data.get("pose"))
+            p["emote"] = data["emote"] if data.get("emote") in EMOTES else ""
+            if data.get("status") in PRESENCE:
+                p["status"] = data["status"]
+            duel = str(data.get("duel") or "")
+            p["duel"] = duel if DUEL_INFO.match(duel) else ""
             if "look" in data:
                 p["look"] = clean_look(data.get("look"))
             return True, {}
@@ -167,10 +199,13 @@ class Hub:
             kind = str(data.get("kind") or "text")
             to = str(data.get("to") or "")
             text = clean_text(data.get("text"), 200)
-            if not p or kind not in ("text", "invite", "accept", "decline", "act") or (to and not PID.match(to)) or (kind == "text" and not text) or (kind != "text" and not to):
+            if not p or kind not in ("text", "invite", "accept", "decline", "act", "duel", "party", "visio", "gift", "guestbook") or (to and not PID.match(to)) or (kind == "text" and not text) or (kind != "text" and not to):
                 return False, {"error": "message refusé"}
             if kind == "act" and (not ACT.match(text) or p["visiting"] != to):  # only in the office we are in
                 return False, {"error": "action refusée"}
+            if (kind == "duel" and not DUEL.match(text)) or (kind == "party" and not PARTY.match(text)) or (kind == "visio" and not VISIO.match(text)) \
+                    or (kind == "gift" and not GIFT.match(text)) or (kind == "guestbook" and (not text or p["visiting"] != to)):  # a guestbook: where we are
+                return False, {"error": "message refusé"}
             p["seen"] = time.time()
             self.seq += 1
             self.chat.append({"id": self.seq, "t": time.time(), "name": p["name"], "from": p["pid"], "to": to, "kind": kind, "text": text})
@@ -196,6 +231,50 @@ class Hub:
                 out["crew"] = crew[1]
             return True, out
 
+    def crews_of(self, sid: str, want: Any) -> dict[str, list[dict[str, Any]]]:
+        """The teams of a few offices (their devs come to our afterwork)."""
+        with self.lock:
+            if sid not in self.peers or not isinstance(want, list):
+                return {}
+            now = time.time()
+            return {pid: c[1] for pid in want[:MAX_PEERS] if isinstance(pid, str) and (c := self.crews.get(pid)) and now - c[0] < CREW_TTL}
+
+    def relay(self, data: dict[str, Any], store: dict[str, dict[str, tuple[float, str]]], most: int) -> tuple[bool, dict[str, Any]]:
+        """Two pages talking through us: each one's last state in, the other one's out (a duel: the challenger's page
+        plays the match; a video call: the set-up of the voice)."""
+        with self.lock:
+            p = self.peers.get(str(data.get("sid", "")))
+            gid = str(data.get("gid", ""))
+            if not p or not GID.match(gid) or not isinstance(data.get("st"), dict):
+                return False, {"error": "relais refusé"}
+            raw = json.dumps(data["st"], ensure_ascii=False)
+            if len(raw.encode()) > most:
+                return False, {"error": "état trop gros"}
+            now = time.time()
+            for g in [g for g, d in store.items() if all(now - w > DUEL_TTL for w, _ in d.values())]:
+                del store[g]
+                self.watchers.pop(g, None)
+            d = store.setdefault(gid, {})
+            if p["pid"] not in d and len(d) >= 2:
+                return False, {"error": "complet"}
+            p["seen"] = now
+            d[p["pid"]] = (now, raw)
+            other = next(((w, st) for pid, (w, st) in d.items() if pid != p["pid"]), None)
+            watching = sum(1 for w in self.watchers.get(gid, {}).values() if now - w < 5)
+            return True, ({"st": json.loads(other[1]), "age": round(now - other[0], 3)} if other else {"st": None}) | {"watching": watching}
+
+    def watch(self, data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """A spectator of a duel: the state of one of its players (the one whose page plays the match)."""
+        with self.lock:
+            p = self.peers.get(str(data.get("sid", "")))
+            gid, pid = str(data.get("gid", "")), str(data.get("pid", ""))
+            got = self.duels.get(gid, {}).get(pid)
+            if not p or not got:
+                return False, {"error": "pas de partie"}
+            p["seen"] = time.time()
+            self.watchers.setdefault(gid, {})[p["pid"]] = time.time()
+            return True, {"st": json.loads(got[1])}
+
     def put_crew(self, data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
         """A chief's team as its visitors see it (clean_crew)."""
         with self.lock:
@@ -219,11 +298,14 @@ class Hub:
             self.layouts[p["pid"]] = (time.time(), raw)
             return True, {}
 
-    def get_layout(self, sid: str, pid: str) -> tuple[bool, dict[str, Any]]:
+    def get_layout(self, sid: str, pid: str, at: Any = None) -> tuple[bool, dict[str, Any]]:
+        """at: when the plan we have was published; the same one again: only {"same": true} (a plan is big)."""
         with self.lock:
             if sid not in self.peers:
                 return False, {"error": "session inconnue"}
             got = self.layouts.get(pid)
+            if got and isinstance(at, (int, float)) and at == got[0]:
+                return True, {"at": got[0], "same": True}
             return (True, {"at": got[0], "layout": json.loads(got[1])}) if got else (False, {"error": "pas de plan"})
 
     def leave(self, sid: str) -> None:
@@ -254,12 +336,47 @@ def status() -> dict[str, Any]:
     with HUB.lock:
         HUB.prune()
         n = len(HUB.peers)
-    return {"on": on, "ip": STATE["ip"] if on else lan_ip(), "port": STATE["port"] or DEFAULT_PORT, "code": STATE["code"] if on else "", "peers": n}
+    return {"on": on, "ip": STATE["ip"] if on else lan_ip(), "port": STATE["port"] or DEFAULT_PORT, "code": STATE["code"] if on else "", "peers": n,
+            "auto": bool(load_conf().get("auto"))}
 
 
-def start(port: int = DEFAULT_PORT) -> dict[str, Any]:
-    """Opens the office on the internal network: a new join code, the LAN server on this machine's private address."""
+def conf_file() -> Any:
+    from . import config  # read at call time (the tests move it)
+    return config.STATE_DIR / "net.json"
+
+
+def load_conf() -> dict[str, Any]:
+    """The network settings kept between two starts: the join code (the same after a restart: the others come back by
+    themselves), the port, and whether the office opens to the network when the server starts."""
+    try:
+        c = json.loads(conf_file().read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(c, dict):
+        return {}
+    code = c.get("code") if isinstance(c.get("code"), str) and re.fullmatch(f"[{CODE_CHARS}]{{6}}", c.get("code", "")) else ""
+    port = c.get("port") if isinstance(c.get("port"), int) and 1024 <= c["port"] <= 65535 else DEFAULT_PORT
+    return {"code": code, "port": port, "auto": c.get("auto") is True}
+
+
+def save_conf(**kw: Any) -> None:
+    c = load_conf() | kw
+    f = conf_file()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps(c))
+    tmp.chmod(0o600)  # the join code
+    tmp.replace(f)
+
+
+def start(port: int = DEFAULT_PORT, new_code: bool = False) -> dict[str, Any]:
+    """Opens the office on the internal network: the LAN server on this machine's private address, with the join code
+    kept from last time (a new one when asked, or the first time)."""
     if STATE["server"] is not None:
+        if not new_code:
+            return status()
+        STATE["code"] = "".join(secrets.choice(CODE_CHARS) for _ in range(6))
+        save_conf(code=STATE["code"])
         return status()
     ip = lan_ip()
     if not ip:
@@ -268,10 +385,78 @@ def start(port: int = DEFAULT_PORT) -> dict[str, Any]:
         raise ValueError("port invalide")
     server = ThreadingHTTPServer((ip, port), LanHandler)
     server.daemon_threads = True
-    STATE.update(server=server, code="".join(secrets.choice(CODE_CHARS) for _ in range(6)), ip=ip, port=port)
+    code = "" if new_code else load_conf().get("code", "")
+    code = code or "".join(secrets.choice(CODE_CHARS) for _ in range(6))
+    save_conf(code=code, port=port)
+    STATE.update(server=server, code=code, ip=ip, port=port)
     HUB.reset()
     threading.Thread(target=server.serve_forever, name="office-net", daemon=True).start()
+    threading.Thread(target=beacon, args=(server,), name="office-net-beacon", daemon=True).start()
     return status()
+
+
+def autostart() -> None:
+    """At the server's start: opens the office to the network when it was asked to (ChiefOS → Réseau)."""
+    c = load_conf()
+    if c.get("auto"):
+        try:
+            start(c["port"])
+        except (ValueError, OSError):
+            pass  # no internal network now, or the port taken: the page says so
+
+
+def beacon(server: Any) -> None:
+    """While the office is open: every 2 s, "an office is here" on the internal network (its name and port; never the
+    code), so the other chiefs see it in their list (discover)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        while STATE["server"] is server:
+            with HUB.lock:
+                name = next((p["name"] for p in HUB.peers.values() if p["host"]), "")
+            msg = json.dumps({"office": 1, "name": name, "port": STATE["port"]}).encode()
+            for to in ("255.255.255.255", STATE["ip"].rsplit(".", 1)[0] + ".255"):
+                try:
+                    s.sendto(msg, (to, BEACON_PORT))
+                except OSError:
+                    pass
+            time.sleep(2)
+
+
+FOUND: dict[str, dict[str, Any]] = {}  # "ip:port" → { ip, port, name, seen }
+LISTEN: dict[str, Any] = {"on": False}
+
+
+def listen() -> None:
+    """The offices open on the internal network (their beacons), heard from the first discover on."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if hasattr(socket, "SO_REUSEPORT"):
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        s.bind(("", BEACON_PORT))
+    except OSError:
+        LISTEN["on"] = False
+        return
+    with s:
+        while True:
+            try:
+                raw, (ip, _) = s.recvfrom(512)
+                b = json.loads(raw)
+            except (OSError, ValueError):
+                continue
+            if not isinstance(b, dict) or b.get("office") != 1 or not isinstance(b.get("port"), int) or not ipaddress.ip_address(ip).is_private:
+                continue
+            if len(FOUND) > 64:
+                FOUND.clear()
+            FOUND[f"{ip}:{b['port']}"] = {"ip": ip, "port": b["port"], "name": clean_text(b.get("name"), 24), "seen": time.time()}
+
+
+def discover() -> dict[str, Any]:
+    if not LISTEN["on"]:
+        LISTEN["on"] = True
+        threading.Thread(target=listen, name="office-net-listen", daemon=True).start()
+    now, mine = time.time(), f"{STATE['ip']}:{STATE['port']}"
+    return {"offices": [{k: v for k, v in o.items() if k != "seen"} for key, o in list(FOUND.items()) if now - o["seen"] < 8 and key != mine]}
 
 
 def stop() -> dict[str, Any]:
@@ -354,14 +539,14 @@ class LanHandler(BaseHTTPRequestHandler):
         self.reply(200 if ok else 400, body)
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path not in ("/net/hello", "/net/state", "/net/sync", "/net/chat", "/net/layout", "/net/crew", "/net/leave"):
+        if self.path not in ("/net/hello", "/net/state", "/net/sync", "/net/chat", "/net/layout", "/net/crew", "/net/duel", "/net/watch", "/net/rtc", "/net/leave"):
             self.reply(404, {"error": "inconnu"})
             return
         if not self.allowed():
             return
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if size > {"/net/layout": LAYOUT_MAX + 1000, "/net/crew": CREW_MAX}.get(self.path, BODY_MAX):
+            if size > {"/net/layout": LAYOUT_MAX + 1000, "/net/crew": CREW_MAX, "/net/rtc": RTC_MAX + 500}.get(self.path, BODY_MAX):
                 raise ValueError("trop gros")
             data = json.loads(self.rfile.read(size) or b"{}")
             if not isinstance(data, dict):
@@ -387,13 +572,22 @@ def act(action: str, data: dict[str, Any], host: bool = False) -> tuple[bool, di
         if not ok:
             return ok, body
         since = data.get("since", 0)
-        return HUB.snapshot(str(data.get("sid", "")), since if isinstance(since, int) else 0)
+        ok, body = HUB.snapshot(str(data.get("sid", "")), since if isinstance(since, int) else 0)
+        if ok and data.get("want"):  # the teams at our afterwork
+            body["crews"] = HUB.crews_of(str(data.get("sid", "")), data.get("want"))
+        return ok, body
     if action == "layout":
-        return HUB.put_layout(data) if "layout" in data else HUB.get_layout(str(data.get("sid", "")), str(data.get("pid", "")))
+        return HUB.put_layout(data) if "layout" in data else HUB.get_layout(str(data.get("sid", "")), str(data.get("pid", "")), data.get("at"))
     if action == "chat":
         return HUB.say(data)
     if action == "crew":
         return HUB.put_crew(data)
+    if action == "duel":
+        return HUB.relay(data, HUB.duels, DUEL_MAX)
+    if action == "watch":
+        return HUB.watch(data)
+    if action == "rtc":
+        return HUB.relay(data, HUB.rtcs, RTC_MAX)
     if action == "peers":
         since = data.get("since", 0)
         return HUB.snapshot(str(data.get("sid", "")), since if isinstance(since, int) else 0)
