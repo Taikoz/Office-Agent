@@ -86,7 +86,7 @@ function goCoffee(e) {
   e.path = [...fromDesk(e.desk), { x: COFFEE.x, y: LANE },
     { ...COFFEE, wait: COFFEE.cup?.wait || 4500, pose: "coffee", on: x => {
       const c = COFFEE.cup || { cafe: 45, fatigue: -12, moral: 4 };  // the machine's tier (items/catalog2.js)
-      x.cup = true; hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.crewAdd(x.who, { cafe: c.cafe, fatigue: c.fatigue, moral: c.moral, ennui: -10 });
+      x.cup = true; hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.countWeekly?.("coffee"); hub.crewAdd(x.who, { cafe: c.cafe, fatigue: c.fatigue, moral: c.moral, ennui: -10 });
       if (c.tier >= 4) hub.addMoodlet?.(x.who, "latteart", "☕", "Un café de barista", 4, 40); else if (c.tier <= 1) hub.addMoodlet?.(x.who, "badcoffee", "🤢", "Café tiède de la machine filtre", -2, 20);
     } },
     { x: COFFEE.x, y: LANE }, ...back,

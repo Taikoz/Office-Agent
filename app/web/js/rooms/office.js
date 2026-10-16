@@ -2,7 +2,7 @@
 // work with their bubbles, the cat, the dog, the incidents and happenings, the effects over everything.
 
 import { hub } from "../hub.js";
-import { CAB, CHIEF_NAME, DESKS, H, W, fillScreen, badge, chief, clip, ctx, curSession, current, cv, drawerUntil, ents, hash, inTransit, mmx, px, selected, specialty, text, typeColor } from "../core/core.js";
+import { CAB, CHIEF_NAME, DESKS, DOOR, H, W, fillScreen, badge, chief, clip, ctx, curSession, current, cv, drawerUntil, ents, hash, inTransit, mmx, px, selected, specialty, text, typeColor } from "../core/core.js";
 import { ART } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
 import { bubble, coffeeState, drawBoard, drawCabinet, drawDesk, drawDeskScreen, drawPerson, drawRoom, drawRoomWall, floorCanvas, hitBoardPager, headroom } from "../world/scene.js";
@@ -240,7 +240,7 @@ class OfficeRoom extends Room {
     const desk = hub.hitDesk(x, y);
     if (desk) return desk;
     // the chief is yours (the coffee machine, the console, the podium: objects bought, build.js); the door
-    if (x >= 490 && x <= 524 && y >= 8 && y <= 70) return "lounge";
+    if (x >= DOOR.x - 16 && x <= DOOR.x + 18 && y >= 8 && y <= 70) return "lounge";  // the door (at the right end, construct.js)
     if (chief.room === "office" && Math.abs(x - chief.x) <= 12 && y >= chief.y - 26 && y <= chief.y + 8 && current) return "chief";
     if ((x >= SHELF.x - 2 && x <= SHELF.x + SHELF.w + 2 && y >= SHELF.y - 8 && y <= SHELF.y + 4)
       || (x >= FRAME.x - 2 && x <= FRAME.x + FRAME.w + 2 && y >= FRAME.y - 2 && y <= FRAME.y + FRAME.h + 8)) return "trophies";

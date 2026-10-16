@@ -87,6 +87,7 @@ import "./items/kitchenset.js";
 import "./items/catalog2.js";
 import "./ui/pcgames.js";
 import "./social/officetalk.js";
+import "./sims/weekly.js";
 import "./items/aquarium.js";
 import "./items/jukebox.js";
 import "./items/chiefdesk.js";

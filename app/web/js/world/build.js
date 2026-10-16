@@ -220,13 +220,14 @@ export function renderBuy() {
   } else {
     const defs = CATALOG.filter(d => d.cat === buy.cat);
     grid = (buy.cat === "animaux" ? hub.petsGridHtml() : "") + (buy.cat === "construction" ? hub.constructGridHtml() : "") + defs.map(d => { const ok = d.okIn(room), st = d.styles[0];
-      return `<button class="bitem${buy.sel === d.type ? " on" : ""}" data-sel="${d.type}"${ok ? "" : ` disabled title="Pas dans cette pièce"`}>
-        <img class="bthumb" alt="" src="${thumbUrl(d, st)}"><b>${esc(d.name)}</b><span class="price">${fmtSim(d.price)}</span></button>`; }).join("")
+      const lock = hub.lockedFor?.(d);  // the office's level unlocks the dearest (sims/weekly.js)
+      return `<button class="bitem${buy.sel === d.type ? " on" : ""}${lock ? " locked" : ""}" data-sel="${d.type}"${ok ? "" : ` disabled title="Pas dans cette pièce"`}${lock ? ` title="Niveau du bureau ${hub.unlockOf(d)} requis"` : ""}>
+        <img class="bthumb" alt="" src="${thumbUrl(d, st)}"><b>${esc(d.name)}</b><span class="price">${lock ? `🔒 niv. ${hub.unlockOf(d)}` : fmtSim(d.price)}</span></button>`; }).join("")
       || `<p class="muted">Rien ici.</p>`;
     const d = buy.sel && defOf(buy.sel);
     if (d) {
-      const st = d.styles.find(s => s.id === buy.style) || d.styles[0], off = !d.okIn(room) || wallet.funds < d.price;
-      detail = `<div class="bdetail"><img class="bthumb big" alt="" src="${thumbUrl(d, st)}"><div class="bdesc"><b>${esc(d.name)} · ${esc(st.name)}</b><span class="muted">${esc(d.desc)}</span>
+      const st = d.styles.find(s => s.id === buy.style) || d.styles[0], lock = hub.lockedFor?.(d), off = !d.okIn(room) || wallet.funds < d.price || lock;
+      detail = `<div class="bdetail"><img class="bthumb big" alt="" src="${thumbUrl(d, st)}"><div class="bdesc"><b>${esc(d.name)} · ${esc(st.name)}</b><span class="muted">${esc(d.desc)}</span>${lock ? `<span class="lockmsg">🔒 Débloqué au niveau ${hub.unlockOf(d)} du bureau (tu es niveau ${hub.officeLevel()}) : réussis des défis de la semaine.</span>` : ""}
         ${d.styles.length > 1 ? `<div class="swatches">${d.styles.map(s => `<button data-style="${s.id}" class="${s.id === st.id ? "on" : ""}" title="${esc(s.name)}" style="--sw:${s.sw}"></button>`).join("")}</div>` : ""}
         <div class="bacts"><button data-place="hand"${off ? " disabled" : ""}>🖐 Placer · ${fmtSim(d.price)}</button><button data-place="auto"${off || d.kind === "top" ? " disabled" : ""}>✨ Placement auto</button></div></div></div>`;
     }
@@ -259,7 +260,7 @@ function buyPaint(cat, type, color) {
 /* ---------- where an object can go ---------- */
 // what stays (fixed): the doors and their way in
 const FIXED_WALL = {  // the doors (and the office's breaker box)
-  office: [[211, 24, 12, 16], [490, 8, 36, 62]],
+  get office() { return [[211, 24, 12, 16], [DOOR.x - 16, 8, 36, 62]]; },
   lounge: [[6, 8, 36, 62], [265, 10, 30, 58], [314, 10, 30, 58]],
   meeting: [[6, 8, 36, 62]],
   terrace: [],
@@ -322,6 +323,7 @@ function placeAt(type, style, spot, room, rot) {
   if ((furni.items || []).length >= MAX_ITEMS) { toast("MODE ACHAT", "Trop d'objets", `${MAX_ITEMS} au maximum.`); return false; }
   const d = defOf(type);
   if (d.unique && furni.items.some(i => i.type === type)) { toast("MODE ACHAT", `Un seul ${d.name.toLowerCase()}`, "Déplace celui qui est déjà là."); return false; }
+  if (hub.lockedFor?.(d)) { toast("MODE ACHAT", "Pas encore débloqué", `Niveau ${hub.unlockOf(d)} du bureau requis.`); return false; }
   if (!spend(d.price, d.name)) return false;
   const it = { uid: ++furni.seq, type, style, room, rot: d.kind === "wall" ? 0 : rot, ...spot, ...(d.light ? { on: true } : {}) };
   furni.items.push(it); saveBuild(); sfx("achievement");

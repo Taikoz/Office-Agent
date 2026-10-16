@@ -37,7 +37,7 @@ export function challenge(name, skin) {
 let duels = new SaveSlot("office-duels", { scores: {}, log: [] }).data;
 export function endMatch() {
   const m = match, won = m.ps > m.as, sc = duels.scores[m.name] || { w: 0, l: 0 };
-  if (won) sc.w++; else sc.l++;
+  if (won) { sc.w++; hub.countWeekly?.("duelwin"); } else sc.l++;
   duels.scores[m.name] = sc;
   duels.log = [...(duels.log || []), { t: Date.now(), name: m.name, won, skin: m.skin }].filter(x => Date.now() - x.t < 35 * 86_400_000);
   SaveSlot.get("office-duels").save(duels);

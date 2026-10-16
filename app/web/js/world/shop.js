@@ -66,6 +66,7 @@ let kudos = new SaveSlot("office-kudos", { day: today(), counts: {}, total: {} }
 function giveKudos(name) {
   if (kudos.day !== today()) kudos = { day: today(), counts: {}, total: kudos.total };
   const before = crushOfDay();
+  hub.countWeekly?.("kudos");
   kudos.counts[name] = (kudos.counts[name] || 0) + 1; kudos.total[name] = (kudos.total[name] || 0) + 1; SaveSlot.get("office-kudos").save(kudos);
   crewAdd(name, { moral: 5 }); loungeSay(name, "Merci pour le kudos ! ⭐"); hub.wantEvent(name, "kudos");
   const e = [...ents.values()].find(x => x.who === name && x.seated); if (e) { e.fxKind = "verify"; e.fxMsg = "⭐ Kudos !"; e.fxUntil = performance.now() + 2600; }

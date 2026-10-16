@@ -48,7 +48,8 @@ function react(a, ev) {
     commit: "commit ✓", verify: "→ To Verify ✓", boss: "BOSS VAINCU !" }[kind];
   if (!msg) return;
   e.fxKind = kind; e.fxMsg = msg; e.fxUntil = now + (kind === "boss" ? 3200 : 2600);
-  hub.colleaguesReact?.(e, kind);  // the others at their desks cheer or comfort (social/officetalk.js)
+  hub.colleaguesReact?.(e, kind);
+  hub.countWeekly?.(kind);  // the week's challenges (sims/weekly.js)  // the others at their desks cheer or comfort (social/officetalk.js)
   if (kind === "pass") rain(x, y, "#51cf66");
   else if (kind === "fail") smoke(x, y - 12);
   else if (kind === "push") planes.push({ x, y: y - 10, sx: x, sy: y - 10, t0: now });

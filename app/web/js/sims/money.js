@@ -88,6 +88,7 @@ function pay(a) {
   if (crew.ids[a.id]) crewAdd(crew.ids[a.id], { moral: 4 + s.stars * 2 });
   gainSkill(a, s.stars);
   if (crew.ids[a.id]) hub.careerMission(crew.ids[a.id]);  // careers.js
+  hub.countWeekly?.("deliver");  // weekly.js
   hub.buildDebrief(a);  // debrief.js
   if (crew.ids[a.id]) hub.wantEvent(crew.ids[a.id], "deliver");
   const e = ents.get(a.id);
