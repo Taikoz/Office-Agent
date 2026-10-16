@@ -23,7 +23,7 @@ import { isoItems, lampsOver, leftWallDecor } from "../iso/rooms.js";
 import { clockNow, dayState, drawPartyOver } from "../sims/days.js";
 import { Room } from "./base.js";
 
-class BuiltRoom extends Room {
+export class BuiltRoom extends Room {
   get open() { return hub.con.rooms.includes(this.id); }
   // the door back to the office, the bought objects
   hit(x, y) {
@@ -184,7 +184,7 @@ class MeetingRoom extends BuiltRoom {
   // in isometric view: the board, the TV and the clock on the right wall, the table and the chairs in volume
   renderIso(t, G) {
     G.back(() => {  // the back layer: the room's shell, what hangs on its walls, the rugs
-      G.shell({ wall: () => drawWall("meeting"), wallColor: hub.decor.meeting.wallColor, floor: roomFloorCanvas("meeting", H - FLOOR_Y, []) });
+      G.shell({ wall: () => drawWall("meeting"), wallColor: hub.decor.meeting.wallColor, floor: roomFloorCanvas("meeting", roomSize("meeting").h - FLOOR_Y, [], roomSize("meeting").w) });  // its size (construct.js)
       text("SALLE DE RÉUNION", 200, 3, "#fbaa08", 6, "center");
       G.onFloor(() => drawRoomItems("meeting", t, "rug"));
       G.onBackWall(() => this.wallStrip(t));  // its board, TV and clock: objects bought (build.js)

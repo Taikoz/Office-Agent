@@ -16,6 +16,7 @@ export function isoItems(room, t, G, items) {
     if (df.kind === "rug" || df.kind === "wall" || (buy.moving && (buy.moving.uid === it.uid || buy.moving.uid === it.on_))) continue;
     items.push(...df.pieces(it, t, G));
   }
+  hub.peerItems?.(room, t, G, items);  // the other chiefs on the internal network (world/peers.js)
 }
 
 // the left wall (a 2D strip as long as the room is deep, drawn by G.onLeftWall): its baseboard and the objects hung there

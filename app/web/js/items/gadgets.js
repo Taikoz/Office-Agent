@@ -74,7 +74,7 @@ new class extends Gadget {
     it.printUntil = now() + PRINT_MS; it.fig = FIGURINES[Math.floor(Math.random() * FIGURINES.length)]; say(CHIEF_NAME, "Allez, imprime-moi ça !"); sfx("commit");
   }, it => !((it.printUntil || 0) > now()), null]] });
 setInterval(() => {  // a print done: the figurine is out
-  for (const it of hub.itemsIn ? ["office", "lounge", "meeting", "terrace"].flatMap(r => hub.itemsIn(r)).filter(i => i.type === "printer3d" && i.printUntil && i.printUntil <= now()) : []) {
+  for (const it of hub.itemsIn ? ["office", "lounge", "meeting", "terrace", "gym", "library"].flatMap(r => hub.itemsIn(r)).filter(i => i.type === "printer3d" && i.printUntil && i.printUntil <= now()) : []) {
     it.printUntil = 0; saveBuild();
     toast("IMPRIMANTE 3D 🖨️", "Impression terminée", `Tu as imprimé ${it.fig || "une figurine"}.`); sfx("achievement");
     addMoodlet(CHIEF_NAME, "print3d", "🖨️", `J'ai imprimé ${it.fig || "une figurine"}`, 4, 60);

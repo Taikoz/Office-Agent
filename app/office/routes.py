@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, framecheck, gitlab, history, savegame, schedules, team, terminal
+from . import blueprints, claudefiles, framecheck, gitlab, history, net, savegame, schedules, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
@@ -177,7 +177,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/blueprint/publish", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/blueprint/publish", "/api/net", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -216,6 +216,17 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 if self.path == "/api/gitlab/config":
                     code, body = gitlab.safe(gitlab.forget if data.get("forget") else lambda: gitlab.save(str(data.get("url", "")), str(data.get("token", ""))))
                     self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/net":  # ChiefOS → Réseau: open / close the office to the internal network, the host's own presence and chat (net.py)
+                    action = str(data.get("action", "")) if isinstance(data, dict) else ""
+                    try:
+                        if action in ("host", "stop", "status"):
+                            body, ok = net.start(int(data.get("port") or net.DEFAULT_PORT)) if action == "host" else net.stop() if action == "stop" else net.status(), True
+                        else:
+                            ok, body = net.act(action, data, host=True)
+                    except (ValueError, OSError) as err:
+                        ok, body = False, {"error": str(err)}
+                    self.reply(200 if ok else 400, "application/json", json.dumps({"ok": ok, **body}, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/save":
                     ok, output = savegame.save(data)

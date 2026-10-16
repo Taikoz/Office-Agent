@@ -40,6 +40,7 @@
     <button id="emotionsbtn" title="Humeur et besoins de l'équipe, façon Sims (E)">💎<span class="lbl"> ÉMOTIONS</span></button>
     <button id="focusbtn" title="Couper les animations d'ambiance (F)">🎯<span class="lbl"> FOCUS : OFF</span></button>
     <button id="casbtn" title="Look et personnalité du chef, façon Créer un Sim">👑<span class="lbl"> CRÉER TON CHEF</span></button>
+    <button id="tutobtn" title="Les premiers pas, étape par étape">🎓<span class="lbl"> TUTORIEL</span></button>
     <button id="osbtn" title="Ton bureau : questions, MR, tickets, rapport, comptes, équipe">🖥️<span class="lbl"> BUREAU DU CHEF</span></button>
     <button id="savebtn" title="Sauvegarder la partie dans ~/.claude/agent-office/save.json (automatique toutes les 30 s)">💾<span class="lbl"> SAUVEGARDER</span></button>
     <button id="exportbtn" title="Télécharger la partie dans un fichier">📤<span class="lbl"> EXPORTER</span></button>
@@ -119,22 +120,26 @@
 <section id="setup" class="overlay" hidden>
   <div class="perfhead"><span id="setup-title">BIENVENUE AU BUREAU</span><button class="x" id="setup-close" title="Fermer (Échap)">×</button></div>
   <form id="setup-form" autocomplete="off">
-    <p class="muted" id="setup-intro">Avant d'ouvrir, crée ton équipe : chaque sous-agent lancé prendra le bureau d'un de ces devs. Tout reste sur ta machine (~/.claude/agent-office/).</p>
-    <div class="setup-grid">
-      <label>Ton prénom (le chef)<input id="setup-chief" maxlength="20" required></label>
-      <label>Nom du bureau <span class="muted">(optionnel)</span><input id="setup-office" maxlength="30" placeholder="ex. Équipe Data"></label>
-      <label>Le chat du bureau<input id="setup-cat" maxlength="20" placeholder="Brume"></label>
+    <p class="muted" id="setup-intro">Crée ton foyer : toi, le chef, et huit devs. Chaque agent Claude Code lancé prend le bureau de l'un d'eux. Tout reste sur ta machine (~/.claude/agent-office/).</p>
+    <div class="setup-cols">
+      <div class="setup-home">
+        <h4>🏢 TON BUREAU</h4>
+        <div class="sign"><div id="setup-preview" class="logo-box"><span class="muted">ton logo</span></div><b id="setup-sign">Agent Office</b></div>
+        <label>Nom du bureau <span class="muted">(optionnel)</span><input id="setup-office" maxlength="30" placeholder="ex. Équipe Data"></label>
+        <div class="setup-logo">
+          <label class="pill file">🖼️ Logo<input id="setup-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>
+          <button type="button" class="pill" id="setup-nologo">Retirer</button>
+          <span class="muted">PNG, JPEG, WebP ou SVG · 300 ko</span>
+        </div>
+        <div class="who chief"><div class="face" id="setup-chief-face"></div><label>Toi, le chef 👑<input id="setup-chief" maxlength="20" required placeholder="Ton prénom"></label></div>
+        <div class="who"><div class="face cat" id="setup-cat-face"></div><label>Le chat du bureau 🐈<input id="setup-cat" maxlength="20" placeholder="Brume"></label></div>
+      </div>
+      <div class="setup-crew">
+        <h4>👥 TON ÉQUIPE <span class="muted">un dev par bureau</span><button type="button" class="pill" id="setup-dice" title="Tirer tous les prénoms au sort">🎲 Toute l'équipe au hasard</button></h4>
+        <div class="setup-team" id="setup-team"></div>
+      </div>
     </div>
-    <h4>L'ÉQUIPE <span class="muted">(un dev par bureau)</span> <button type="button" class="x" id="setup-dice" title="Tirer des prénoms au sort">🎲 au hasard</button></h4>
-    <div class="setup-grid" id="setup-team"></div>
-    <h4>LOGO <span class="muted">(optionnel : enseigne au mur, en-tête, onglet · PNG, JPEG, WebP ou SVG, 300 ko max)</span></h4>
-    <div class="setup-logo">
-      <div id="setup-preview" class="logo-box"><span class="muted">pas de logo</span></div>
-      <label class="x file">Choisir une image<input id="setup-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>
-      <button type="button" class="x" id="setup-nologo">Retirer</button>
-    </div>
-    <p id="setup-msg" class="muted" role="status"></p>
-    <button type="submit" class="go" id="setup-go">C'EST PARTI ▶</button>
+    <div class="setup-foot"><p id="setup-msg" class="muted" role="status"></p><button type="submit" class="go" id="setup-go">C'EST PARTI ▶</button></div>
   </form>
 </section>
 <section id="help" class="overlay" hidden>
