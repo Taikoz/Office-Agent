@@ -221,12 +221,19 @@ export const headroom = (k = 9) => isoDrawing() ? k : 0;
 export function bubble(x, y, msg, color = "#f4f2ea", fg = "#1c1c24") {
   if (!msg) return;
   font(4.6);
-  const w = Math.min(ctx.measureText(msg).width / S + 4, 132);
-  const bx = Math.max(2, Math.min(W - w - 2, x - w / 2));
-  px(bx, y - 9, w, 8, color); px(bx - 0.6, y - 8.4, w + 1.2, 6.8, color);
+  // a long line goes on two, cut at the space nearest the middle
+  let lines = [msg];
+  if (ctx.measureText(msg).width / S > 110) {
+    const mid = msg.length / 2, cuts = [...msg.matchAll(/ /g)].map(m => m.index);
+    const cut = cuts.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid))[0];
+    if (cut) lines = [msg.slice(0, cut), msg.slice(cut + 1)];
+  }
+  const w = Math.min(Math.max(...lines.map(l => ctx.measureText(l).width / S)) + 4, 132), h = 8 + (lines.length - 1) * 6;
+  const bx = Math.max(2, Math.min(W - w - 2, x - w / 2)), top = y - 1 - h;
+  px(bx, top, w, h, color); px(bx - 0.6, top + 0.6, w + 1.2, h - 1.2, color);
   px(x - 1, y - 1, 2, 1.5, color);
-  ctx.save(); ctx.beginPath(); ctx.rect(bx * S, (y - 9) * S, (w - 1) * S, 8 * S); ctx.clip();
-  text(msg, bx + 2, y - 8.7, fg, 4.6); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.rect(bx * S, top * S, (w - 1) * S, h * S); ctx.clip();
+  lines.forEach((l, i) => text(l, bx + 2, top + 0.3 + i * 6, fg, 4.6)); ctx.restore();
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)

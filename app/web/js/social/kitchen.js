@@ -50,7 +50,7 @@ export function recipeLock(rc, lvl) { return rc.lvl > lvl ? `niv. ${rc.lvl}` : c
 export const shopItems = () => RECIPES.map(rc => [`shop:${rc.id}`, rc.icon, `Courses ${rc.label.toLowerCase()} · ${fmtSim(basketCost(rc))}`, canAfford(basketCost(rc)) ? "" : "pas assez de §"]);
 export function shopFor(rc) {
   if (!buyBasket(rc)) return hub.say(CHIEF_NAME, "Pas assez d'argent pour les courses…");
-  const fr = hub.itemsIn("lounge").find(it => it.type === "fridge"); if (fr) fr.openUntil = performance.now() + 2200;
+  const fr = hub.itemsIn("lounge").find(it => hub.defOf(it.type).cook === "fridge"); if (fr) fr.openUntil = performance.now() + 2200;
   hub.say(CHIEF_NAME, `🛒 Courses rangées : ${Object.keys(NEEDS_OF[rc.id]).map(k => INGREDIENTS[k][0]).join(" ")}`, 2600); sfx("commit");
 }
 const STAGES = [[0.3, "🔪 prépare"], [0.85, "🔥 cuisine"], [1, "🍽️ dresse"]];

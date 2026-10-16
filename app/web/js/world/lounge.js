@@ -5,6 +5,7 @@ import { CHIEF_NAME, H, TEAM, chief, curSession, ents, hash, selected, specialty
 import { drawPerson } from "./scene.js";
 import { lookFor } from "../agents/entities.js";
 import { crew, crewAdd, mate, moodWord } from "../sims/crew.js";
+import { converse } from "../social/dialogue.js";
 import { ACTS } from "../activities/base.js";
 
 /* ---------- break room ---------- */
@@ -94,12 +95,17 @@ function stepLounge(dt, t) {
   while (chatQueue.length && t >= chatQueue[0].at) { const c = chatQueue.shift(); loungeSay(c.name, c.text, t); }
   if (t > nextChat) {
     nextChat = t + 5000 + Math.random() * 5000;
-    const idle = [...loungers.values()].filter(l => !l.called && !l.busy && !l.path.length && t > l.sayUntil);
+    const idle = [...loungers.values()].filter(l => !l.called && !l.busy && !l.path.length && t > l.sayUntil && t > (l.talkUntil || 0));
     if (idle.length) {
       const a = idle[Math.floor(Math.random() * idle.length)];
       const b = idle.filter(x => x !== a).sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y))[0];
-      loungeSay(a.name, chatLine(a, b), t);
-      if (b) { chatQueue.push({ name: b.name, text: replyLine(b, a), at: t + 2600 }); if (Math.hypot(a.x - b.x, a.y - b.y) < 60) hub.relAdd(a.name, b.name, 1); }
+      // a little conversation (social/dialogue.js): the lines go back and forth, a few seconds apart
+      const talk = converse(a, b, chatContext(a));
+      talk.forEach(([name, text], i) => i ? chatQueue.push({ name, text, at: t + i * 2900 }) : loungeSay(name, text, t));
+      chatQueue.sort((p, q) => p.at - q.at);
+      const end = t + talk.length * 2900;
+      a.talkUntil = end; if (b) { b.talkUntil = end; if (Math.hypot(a.x - b.x, a.y - b.y) < 60) hub.relAdd(a.name, b.name, talk.length > 2 ? 2 : 1); }
+      nextChat = Math.max(nextChat, t + 3000 + talk.length * 1500);
     }
   }
 }
@@ -119,35 +125,20 @@ function officeNews() {
   else if (chief.at === "coffee") news.push(`${CHIEF_NAME} est parti se faire un café.`);
   return news;
 }
-function chatLine(a, b) {
-  const m = mate(a.name), opts = [];
-  if (a.spot?.act.lines) opts.push(pick(a.spot.act.lines));
-  if (m.fatigue >= 70) opts.push("Je suis lessivé…");
-  if (!hub.devHasDesk(a.name)) opts.push("On m'a vendu mon bureau… 😠", "Je bosse sur un carton maintenant.");
-  if (m.ennui >= 70) opts.push("On s'ennuie, appelez-nous !");
-  if (m.cafe <= 25) opts.push("Il me faut un café, vite.");
-  if (m.moral >= 80) opts.push("Quelle équipe, franchement !");
-  const news = officeNews(); if (news.length) opts.push(pick(news));
-  if (a.lastDuel === "lost") opts.push(`J'ai perdu contre ${CHIEF_NAME}… je veux ma revanche.`);
-  if (a.lastDuel === "won") opts.push(`J'ai battu ${CHIEF_NAME}, vous auriez vu ça !`);
-  const crush = hub.crushOfDay(); if (crush && crush !== a.name) opts.push(`Bravo ${crush} pour le coup de cœur du jour !`);
-  if (hub.Incident.get("coffee").on) opts.push("La machine du bureau est en panne, heureusement qu'on a celle-ci.");
-  if (b && hub.rel(a.name, b.name) >= 70) opts.push(pick([`${b.name}, t'es vraiment le meilleur.`, `On se fait un resto ce soir, ${b.name} ?`]));
-  if (b && hub.rel(a.name, b.name) < -20) opts.push(pick([`Tiens, ${b.name}… 🙄`, `${b.name}, rends-moi mon mug.`]));
-  if (hub.dish?.portions) opts.push(`Il reste ${hub.dish.recipe.label.toLowerCase()}, merci ${hub.dish.cook} !`);
-  if (b) opts.push(pick([`${b.name}, revanche au baby ?`, `${b.name}, tu bosses sur quoi ?`, `${b.name}, t'as vu Brume ce matin ?`, `${b.name}, on se fait un café ?`]));
-  opts.push(pick(["Qui a cassé la pipeline ?", "Vivement vendredi.", "J'ai rêvé en Python cette nuit.", "Brume a encore dormi sur mon clavier.", "Le tableau est plein aujourd'hui."]));
-  return pick(opts);
-}
-function replyLine(b) {
-  const m = mate(b.name);
-  return pick([...(m.fatigue >= 70 ? ["Moi aussi, je suis cuit."] : []), ...(m.moral >= 80 ? ["Carrément !"] : []), ...(m.moral <= 30 ? ["Bof…"] : []),
-    "Grave.", "Pas faux.", "Ha ha !", "Je t'avoue…", "Chut, je me concentre.", "Ça marche.", "Clairement."]);
+// what the office gives to talk about (social/dialogue.js converse)
+function chatContext(a) {
+  return { news: officeNews(), noDesk: !hub.devHasDesk(a.name), duel: a.lastDuel || null, crush: hub.crushOfDay(), coffeeBroken: hub.Incident.get("coffee").on,
+    dish: hub.dish?.portions ? hub.dish.recipe.label.toLowerCase() : null, cook: hub.dish?.cook || null };
 }
 function moodAnswer(name) {
   const m = mate(name), w = moodWord(m);
-  return m.fatigue >= 70 ? "Honnêtement ? Je suis crevé." : m.faim <= 25 ? "J'ai faim, je file à la cuisine." : m.social <= 25 ? "Content que tu viennes me parler !" : m.cafe <= 25 ? "Ça irait mieux avec un café…" : m.ennui >= 70 ? "Je m'ennuie, donne-moi un ticket !"
-    : m.moral >= 80 ? "Au top, prêt à livrer !" : `Ça va, ${w === "ça va" ? "tranquille" : w}.`;
+  return pick(m.fatigue >= 70 ? ["Honnêtement ? Je suis crevé.", "J'ai besoin d'une sieste, chef.", "Je tiens debout grâce au café."]
+    : m.faim <= 25 ? ["J'ai faim, je file à la cuisine.", "On mange quand ?", "Mon ventre gargouille, chef."]
+    : m.social <= 25 ? ["Content que tu viennes me parler !", "Ça fait du bien de discuter.", "Je me sentais un peu seul."]
+    : m.cafe <= 25 ? ["Ça irait mieux avec un café…", "Un café et je suis à toi.", "Mon niveau de caféine est critique."]
+    : m.ennui >= 70 ? ["Je m'ennuie, donne-moi un ticket !", "Il se passe rien, chef…", "J'ai fini de compter les dalles du plafond."]
+    : m.moral >= 80 ? ["Au top, prêt à livrer !", "Jamais été aussi motivé.", "Super journée, merci chef !"]
+    : [`Ça va, ${w === "ça va" ? "tranquille" : w}.`, "Ça va, et toi chef ?", "Tranquille, ça avance.", "Pas mal, pas mal."]);
 }
 
 // interactions from the side panel
