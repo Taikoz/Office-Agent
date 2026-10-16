@@ -297,7 +297,27 @@ python3 -I ~/.claude/agent-office/office.py stop     # arrête le serveur
 
 ```
 cd app && python3 -I -m unittest discover -s tests   # tests
-# front : web/index.html, web/css/*.css (un fichier par zone, chargés dans l'ordre), web/js/*.js (scripts classiques, main.js en dernier)
+# front : web/index.html, web/css/*.css (un fichier par zone, chargés dans l'ordre), web/js/ en modules ES :
+#   index.js importe tous les modules dans l'ordre où ils construisent le bureau (main.js en dernier) ; chaque module
+#   importe ce qu'il utilise des modules chargés avant lui. Ce qu'il utilise d'un module chargé après lui (toujours
+#   dans une fonction) et les variables qu'il modifie dans un autre module passent par hub (js/hub.js) : le module
+#   propriétaire les fournit avec provide({ … }) en fin de fichier — la liste des dépendances qui restent à inverser.
+# web/js/ : index.js (point d'entrée), main.js (démarrage), hub.js ; les systèmes par domaine :
+#   core/ (état, /api/state, démo, premier lancement, notifications), agents/ (le vrai travail : devs au bureau,
+#   lancement, questions, tickets, budgets, rapport, chronologie, écran du dev, MMX, stats), sims/ (jauges, besoins,
+#   humeurs, envies, compétences, carrières, journée, argent, XP), social/ (relations, cuisine, gens, interactions,
+#   autonomie), world/ (pièces, décor, mode achat et construction, chef, chat, animaux, saisons, boutique),
+#   ui/ (HUD, raccourcis, panneau et clics, menu circulaire, file d'actions, ChiefOS, client GitLab) ;
+# un dossier par famille d'éléments, chacun avec sa classe de base dans base.js et une sous-classe par élément :
+#   svg/          SvgArt (StaticArt, Sprite, Figure) : les dessins, enregistrés dans ART / SPRITES. Ex. : ART.arcade.draw(x, y, { frame, playing })
+#   apps/         OsApp : les applications de ChiefOS (render, mount, badge, live, click/input/change)
+#   items/        Item (Appliance) : les objets du mode achat (CATALOG : état du dessin, menu, actions, dessin autour)
+#   activities/   Activity : les activités de la salle de repos (ACTS : emplacements, pose, besoins, chef, envie, dessin)
+#   incidents/    Incident : les incidents du bureau à régler d'un clic (panne, flaque, croissants, plante)
+#   happenings/   Happening : les événements de la journée (coupure de courant, visite client, pizzas)
+#   rooms/        Room : les pièces (bureau, salle de repos, réunion, terrasse, écran de mini-jeu) : dessin, clic, sol
+#   games/        MiniGame : les mini-jeux (ping-pong, baby-foot, fléchettes) et le tournoi
+#   save/         SaveSlot (Flag) : l'état gardé dans le navigateur (version, migrations) et le fichier de sauvegarde
 claude plugin validate .                             # validation du plugin
 ```
 

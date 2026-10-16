@@ -1,5 +1,12 @@
-"use strict";
 // Boot: first layout, polling loops and the animation loop. Loaded last.
+
+import { hub } from "./hub.js";
+import { resize } from "./core/core.js";
+import { render, step } from "./agents/entities.js";
+import { poll } from "./core/data.js";
+import { pollMmx } from "./agents/mmx.js";
+import { pollGame } from "./sims/progress.js";
+import { perfFlag, togglePerf } from "./agents/perf.js";
 
 let last = performance.now();
 let loopErrors = 0;
@@ -11,10 +18,8 @@ function loop(t) {
 }
 
 resize();
-let perfPref = "";
-try { perfPref = localStorage.getItem("office-perf") || ""; } catch (_) { /* storage blocked */ }
-poll().then(() => { if (perfPref) togglePerf(true); }); setInterval(poll, 2000);
+poll().then(() => { if (perfFlag.on) togglePerf(true); }); setInterval(poll, 2000);
 pollMmx(); setInterval(pollMmx, 3000);
 pollGame(); setInterval(pollGame, 8000);
-booted = true;
+hub.booted = true;
 requestAnimationFrame(loop);
