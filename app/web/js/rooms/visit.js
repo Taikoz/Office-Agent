@@ -6,16 +6,17 @@
 // rooms, its team (who does what, who works best), and back home.
 
 import { hub } from "../hub.js";
-import { CHIEF_NAME, ROOM, badge, px } from "../core/core.js";
+import { CHIEF_NAME, ROOM, badge, px, text } from "../core/core.js";
+import { ART } from "../svg/base.js";
 import { esc } from "../core/data.js";
 import { bubble, drawPerson, headroom } from "../world/scene.js";
 import { CHIEF_LOOK } from "../world/chief.js";
 import { chiefHat } from "../world/chiefedit.js";
-import { DECOR_DEFAULT, decor, drawWall, roomFloorCanvas } from "../world/decor.js";
+import { DECOR_DEFAULT, decor, doorSprite, drawWall, roomFloorCanvas } from "../world/decor.js";
 import { drawRoomItems, furni, itemRect } from "../world/build.js";
 import { spotsOf } from "../world/place.js";
 import { isoItems, lampsOver, leftWallDecor } from "../iso/rooms.js";
-import { drawPeer, endVisit, liftOf, net, netPose, personBox, sendAct, smoothed, visitRoom } from "../world/peers.js";
+import { drawPeer, emotePose, endVisit, liftOf, net, netPose, personBox, sendAct, smoothed, visitRoom } from "../world/peers.js";
 import { Room } from "./base.js";
 
 const ROOM_FR = { office: "Bureau", lounge: "Repos", meeting: "Réunion", terrace: "Terrasse", gym: "Sport", library: "Bibliothèque" };
@@ -33,8 +34,40 @@ function cleanItems(list, room) {
     style: typeof it.style === "string" ? it.style.slice(0, 20) : null, ...(it.side === "left" || it.side === "back" ? { side: it.side } : {}),
     ...(it.on_ != null ? { on_: clamp(it.on_, 0, 1e9, 0) } : {}), on: !!it.on, closed: !!it.closed, off: !!it.off }));
 }
+// the doors of the visited room, where its owner's page has them (rooms/office.js, rooms/lounge.js, rooms/built.js): the
+// office's to the break room at its right end, the break room's back to the office and to the meeting room and the
+// terrace (when built), the other rooms' back to the office; a click walks there and goes through
+const LOUNGE_DOORS = [{ to: "meeting", x: 269, label: "🤝 RÉUNION" }, { to: "terrace", x: 318, label: "🌿 TERRASSE" }];
+function doorsOf(v) {
+  const has = r => v.layout.rooms.includes(r), out = [];
+  if (v.room === "office") { if (has("lounge")) out.push({ to: "lounge", x: ROOM.visit.w - 68, w: 30, kind: "plate", label: "☕ REPOS" }); }
+  else if (v.room !== "terrace") out.push({ to: "office", x: 8, w: 30, kind: "back", label: "← BUREAU" });
+  if (v.room === "lounge") for (const d of LOUNGE_DOORS) if (has(d.to)) out.push({ ...d, w: 24, kind: "room" });
+  return out;
+}
+function drawDoors(v) {
+  for (const d of doorsOf(v)) {
+    if (d.kind === "room") { ART.roomdoor.draw(d.x, 19, { room: d.to, built: true }); px(d.x - 2, 12, 28, 6, "#f7f7f7"); text(d.label, d.x + 12, 12.6, "#081746", 3.6, "center"); continue; }
+    doorSprite("visit").draw(d.x, 20);
+    if (d.kind === "plate") { px(d.x + 1, 10, 28, 8, "#f7f7f7"); text(d.label, d.x + 15, 10.6, "#081746", 4, "center"); }
+    else text(d.label, d.x + 15, 14, "#51cf66", 4, "center");
+  }
+}
+// where we come out in the next room: by the door back to the room we left
+function entryOf(from, to, layout) {
+  const w = clamp(layout.sizes?.[to]?.[0], 400, 840, 560);
+  if (to === "office") return { x: w - 54, y: 80 };
+  if (to === "lounge") { const d = LOUNGE_DOORS.find(x => x.to === from); return { x: d ? d.x + 12 : 23, y: 80 }; }
+  return to === "terrace" ? { x: 50, y: 110 } : { x: 23, y: 80 };
+}
+function goThrough(d) {
+  const v = net.visit; if (!v) return;
+  card.close();
+  walkTo(d.x + d.w / 2, 76, () => { const from = v.room; visitRoom(d.to, entryOf(from, d.to, v.layout)); });
+}
+
 const MOOD = m => m >= 75 ? "😄" : m >= 50 ? "🙂" : m >= 25 ? "😐" : "😟";
-const here = v => (v.crew || []).filter(m => m.room === v.room);
+const here = v => (v.crew || []).filter(m => m.room === v.room && m.st !== "away");  // away: at an afterwork elsewhere
 const score = m => (m.sk || []).reduce((s, k) => s + k[1], 0) * 10 + (m.kudos || 0);
 
 class VisitView extends Room {
@@ -44,8 +77,10 @@ class VisitView extends Room {
     const v = net.visit; if (!v) return;
     const s = v.layout.sizes?.[v.room] || [];
     Object.assign(ROOM.visit, { w: clamp(s[0], 400, 840, 560), h: clamp(s[1], 232, 420, 300) });
-    decor.visit = cleanDecor(v.layout.decor?.[v.room], v.room);
-    if (v.cleanFor !== v.layout || v.cleanRoom !== v.room) { v.items = cleanItems(v.layout.items, v.room); v.cleanFor = v.layout; v.cleanRoom = v.room; applyLocal(v); }
+    if (v.cleanFor !== v.layout || v.cleanRoom !== v.room) {  // cleaned once per plan and room, not every frame
+      v.items = cleanItems(v.layout.items, v.room); v.decor = cleanDecor(v.layout.decor?.[v.room], v.room); v.cleanFor = v.layout; v.cleanRoom = v.room; applyLocal(v);
+    }
+    decor.visit = v.decor;
     const mine = furni.items;
     furni.items = v.items;
     try { super.frame(t); } finally { furni.items = mine; }
@@ -53,7 +88,7 @@ class VisitView extends Room {
   renderIso(t, G) {
     const v = net.visit, R = ROOM.visit, dt = Math.min(60, t - (this.last || t)); this.last = t;
     // our avatar walks to where we clicked, then does what was asked there (sit, play, a coffee…)
-    const dx = v.tx - v.x, dy = v.ty - v.y, dist = Math.hypot(dx, dy), sp = 0.06 * dt;
+    const dx = v.tx - v.x, dy = v.ty - v.y, dist = Math.hypot(dx, dy), sp = 0.085 * dt;
     if (dist > sp) { v.x += dx / dist * sp; v.y += dy / dist * sp; v.dir = [dx, dy]; }
     else { v.x = v.tx; v.y = v.ty; if (v.dir) { v.dir = null; const fn = v.onArrive; v.onArrive = null; fn?.(t); } }
     if (v.pose?.until && t > v.pose.until) v.pose = null;
@@ -61,7 +96,7 @@ class VisitView extends Room {
     G.back(() => {
       G.shell(outdoors ? { floor: roomFloorCanvas("visit", R.h - 70, [], R.w), walls: false } : { wall: () => drawWall("visit"), wallColor: decor.visit.wallColor, floor: roomFloorCanvas("visit", R.h - 70, [], R.w) });
       G.onFloor(() => drawRoomItems("visit", t, "rug"));
-      if (!outdoors) { G.onBackWall(() => drawRoomItems("visit", t, "wall")); G.onLeftWall(() => leftWallDecor("visit", t)); }
+      if (!outdoors) { G.onBackWall(() => { drawDoors(v); drawRoomItems("visit", t, "wall"); }); G.onLeftWall(() => leftWallDecor("visit", t)); }
     });
     const items = [], over = [];
     isoItems("visit", t, G, items);
@@ -70,8 +105,9 @@ class VisitView extends Room {
       const s = smoothed(`c:${v.pid}:${m.n}`, m, t), z = liftOf(m, s, t), sel = v.sel === m.n;
       items.push({ pt: [s.x, s.y], draw: () => G.put(s.x, s.y, s.x, s.y, z, () => drawPerson(s.x, s.y, { ...m.look }, netPose(m, s, t, { smile: m.mood >= 50 })), personBox(s.x, s.y)) });
       over.push(() => G.put(s.x, s.y, s.x, s.y, z, () => {
-        badge(s.x, s.y + (m.pose?.seated ? -3 : 2), m.n, sel ? "#fbaa08" : m.c || "#4090d7");
-        if (m.b) bubble(s.x, s.y - (m.pose?.seated ? 22 : 24) - headroom(), m.b, "#f7f7f7", "#081746");
+        const seated = !!s.pose?.seated;
+        badge(s.x, s.y + (seated ? -3 : 2), m.n, sel ? "#fbaa08" : m.c || "#4090d7");
+        if (m.b) bubble(s.x, s.y - (seated ? 22 : 24) - headroom(), m.b, "#f7f7f7", "#081746");
       }));
     }
     // its owner (at home) and its other visitors, in this room; then us
@@ -83,8 +119,9 @@ class VisitView extends Room {
     }
     const walking = !!v.dir, pose = !walking && v.pose ? v.pose : {}, z = pose.z || 0;
     items.push({ pt: [v.x, v.y], draw: () => G.put(v.x, v.y, v.x, v.y, z, () => {
-      drawPerson(v.x, v.y, CHIEF_LOOK, { tux: true, smile: true, hat: chiefHat(), dir: walking ? v.dir : pose.dir, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down",
-        frame: walking ? Math.floor(t / 180) : pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0 });
+      const em = !walking && net.emote && t < net.emote.until ? net.emote.key : "";
+      drawPerson(v.x, v.y, CHIEF_LOOK, emotePose(em, t, { tux: true, smile: true, hat: chiefHat(), dir: walking ? v.dir : pose.dir, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down",
+        frame: walking ? Math.floor(t / 180) : pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0 }));
       if (pose.cup) { px(v.x + 4, v.y - 13, 2.5, 3, "#f4f2ea"); px(v.x + 4, v.y - 13, 2.5, 0.8, "#6d4a2e"); }
     }) });
     G.drawSorted(items);
@@ -99,6 +136,8 @@ class VisitView extends Room {
   click(p) {
     const v = net.visit; if (!v || !(p.x > -900)) return true;
     const t = performance.now();
+    const door = p.y < 72 && doorsOf(v).find(d => p.x >= d.x - 2 && p.x <= d.x + d.w + 2 && p.y >= 8);
+    if (door) { goThrough(door); return true; }
     const m = here(v).map(m => ({ m, s: smoothed(`c:${v.pid}:${m.n}`, m, t) })).sort((a, b) => b.s.y - a.s.y)
       .find(({ s }) => Math.abs(p.x - s.x) <= 8 && p.y >= s.y - 26 && p.y <= s.y + 4);
     if (m) { v.sel = m.m.n; card.mate(m.m); return true; }
@@ -224,10 +263,11 @@ setInterval(() => {
   if (v && card.kind === "mate") { const m = (v.crew || []).find(x => x.n === card.target); if (m) card.mate(m); }
   if (key === barKey) return;
   barKey = key;
-  if (v) bar.innerHTML = `<b>🚪 Chez ${esc(v.name)}</b>${v.layout.rooms.filter(r => ROOM_FR[r]).map(r => `<button data-vroom="${r}" class="${r === v.room ? "on" : ""}">${ROOM_FR[r]}${(v.crew || []).some(m => m.room === r) ? ` <small>${(v.crew || []).filter(m => m.room === r).length}</small>` : ""}</button>`).join("")}<button data-vteam>👥 Équipe</button><button data-vhome class="home">🏠 Rentrer à mon bureau</button>`;
+  if (v) bar.innerHTML = `<b>🚪 Chez ${esc(v.name)}</b>${v.layout.rooms.filter(r => ROOM_FR[r]).map(r => `<button data-vroom="${r}" class="${r === v.room ? "on" : ""}">${ROOM_FR[r]}${(v.crew || []).some(m => m.room === r) ? ` <small>${(v.crew || []).filter(m => m.room === r).length}</small>` : ""}</button>`).join("")}<button data-vteam>👥 Équipe</button><button data-vbook>📖 Livre d'or</button><button data-vhome class="home">🏠 Rentrer à mon bureau</button>`;
 }, 500);
 bar.addEventListener("click", ev => {
-  const r = ev.target.closest("[data-vroom]"); if (r) { card.close(); return visitRoom(r.dataset.vroom); }
+  const r = ev.target.closest("[data-vroom]"); if (r) { card.close(); const v = net.visit; return visitRoom(r.dataset.vroom, v && entryOf(v.room, r.dataset.vroom, v.layout)); }
   if (ev.target.closest("[data-vteam]")) return card.kind === "team" ? card.close() : card.team();
+  if (ev.target.closest("[data-vbook]")) return hub.openPhone?.("book");  // sign its guestbook (social/gifts.js)
   if (ev.target.closest("[data-vhome]")) endVisit();
 });

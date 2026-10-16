@@ -16,10 +16,23 @@ import { OFFICE_SPOTS } from "./place.js";
 import { applyAct, crewSnapshot } from "./share.js";
 
 export const net = { mode: "", addr: "", code: "", sid: "", pid: "", peers: [], chat: [], since: 0, error: "", status: null, said: new Map(), quiet: false, visit: null,
-  convs: new Map(), open: "", ringing: null };  // convs: "all" or a chief's pid → { msgs, unread } — in memory only, never saved
+  convs: new Map(), open: "", ringing: null, presence: "dispo", emote: null };  // convs: "all" or a chief's pid → { msgs, unread } — in memory only, never saved
+// what a chief does for a moment (the phone's Emotes) and how available he is (its Statut); "dnd" declines calls
+export const EMOTE_INFO = { wave: ["👋", "Saluer"], dance: ["💃", "Danser"], clap: ["👏", "Applaudir"], laugh: ["😂", "Rire"], love: ["❤️", "Cœur"], five: ["🙌", "High five"], cheers: ["🍻", "Santé"], think: ["🤔", "Réfléchir"] };
+export const PRESENCE_INFO = { dispo: ["🟢", "Disponible"], occupe: ["🟠", "Occupé"], reunion: ["📅", "En réunion"], dnd: ["⛔", "Ne pas déranger"], absent: ["💤", "Absent"] };
+try { const p = localStorage.getItem("office-net-presence"); if (PRESENCE_INFO[p]) net.presence = p; } catch (_) { /* storage blocked */ }
+export function setPresence(p) { if (!PRESENCE_INFO[p]) return; net.presence = p; try { localStorage.setItem("office-net-presence", p); } catch (_) { /* storage blocked */ } }
+// an emote: shown at once over our chief (at home or visiting), sent with our position for 4 s
+export function emote(key) {
+  const e = EMOTE_INFO[key]; if (!e) return;
+  const t = performance.now();
+  net.emote = { key, until: t + 4000 };
+  if (net.visit) Object.assign(net.visit, { bubble: `${e[0]} ${e[1]}`, until: t + 4000 });  // its body language: rooms/visit.js
+  else { chief.bubble = `${e[0]}`; chief.until = t + 4000; chief.gesture = { pose: { arms: "up" }, until: t + 4000 }; }
+}
 const demo = () => typeof DEMO !== "undefined" && DEMO;
 // one request: to our own server as the host, to the host's network server as a guest
-async function call(action, body = {}) {
+export async function call(action, body = {}) {
   if (net.mode === "host") {
     const r = await fetch("/api/net", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify({ action, ...body }) });
     const out = await r.json(); if (!out.ok) throw new Error(out.error || `HTTP ${r.status}`); return out;
@@ -42,7 +55,7 @@ function chiefPose() {
 }
 function where() {
   const v = net.visit;
-  if (v) return { room: v.room, x: v.x, y: v.y, visiting: v.pid, pose: v.dir ? { walk: true, dir: v.dir.map(Math.round) } : v.pose || {} };
+  if (v) return { room: v.room, x: v.x, y: v.y, visiting: v.pid, pose: v.dir ? { walk: true, dir: v.dir.map(Math.round) } : v.pose ? { seated: v.pose.seated, arms: v.pose.arms, back: v.pose.back, dir: v.pose.dir, z: v.pose.z } : {} };
   if (chief.room === "lounge") return { room: "lounge", x: chief.lx, y: chief.ly, visiting: "", pose: chiefPose() };
   return { room: chief.room || "office", x: chief.x, y: chief.y, visiting: "", pose: chiefPose() };
 }
@@ -59,24 +72,51 @@ export async function join(addr, code) {
   if (demo()) throw new Error("pas en mode démo");
   if (!/^(\d{1,3}\.){3}\d{1,3}(:\d{2,5})?$/.test(addr)) throw new Error("adresse attendue : 192.168.1.20:8766");
   Object.assign(net, { mode: "guest", addr: addr.includes(":") ? addr : `${addr}:8766`, code: code.trim().toUpperCase() });
-  try { localStorage.setItem("office-net-last", JSON.stringify({ addr: net.addr })); } catch (_) { /* storage blocked */ }
   await join0();
+  remember({ addr: net.addr, code: net.code, auto: true });  // the page comes back by itself after a reload
+}
+// the last office joined (its address and code, per address too): rejoined by itself while "auto"
+export function lastJoin() { try { return JSON.parse(localStorage.getItem("office-net-last") || "{}") || {}; } catch (_) { return {}; } }
+export function codeFor(addr) { try { return JSON.parse(localStorage.getItem("office-net-codes") || "{}")[addr] || ""; } catch (_) { return ""; } }
+function remember(last) {
+  try {
+    localStorage.setItem("office-net-last", JSON.stringify(last));
+    if (last.addr && last.code) { const all = JSON.parse(localStorage.getItem("office-net-codes") || "{}"); all[last.addr] = last.code; localStorage.setItem("office-net-codes", JSON.stringify(all)); }
+  } catch (_) { /* storage blocked */ }
 }
 async function join0() {
   try {
-    const out = await call("hello", me());
+    let old = ""; try { old = sessionStorage.getItem("office-net-sid") || ""; } catch (_) { /* storage blocked */ }
+    const out = await call("hello", { ...me(), old });  // this page's session before a reload: replaced
+    try { sessionStorage.setItem("office-net-sid", out.sid); } catch (_) { /* storage blocked */ }
     Object.assign(net, { sid: out.sid, pid: out.pid, since: 0, chat: [], peers: [], error: "", quiet: true, layoutSig: "", lookSent: true, ringing: null });  // the history comes without notifications
     net.convs.clear();
   } catch (err) { const m = net.mode; Object.assign(net, { mode: "", sid: "" }); throw new Error(m === "guest" ? `connexion refusée : ${err.message}` : err.message); }
 }
 export async function leave() {
   endVisit(false);
+  if (net.mode === "guest") remember({ ...lastJoin(), auto: false });  // left on purpose: not back by itself
   try { if (net.sid) await call("leave", { sid: net.sid }); } catch (_) { /* gone already */ }
   if (net.mode === "host") await fetch("/api/net", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify({ action: "stop" }) }).catch(() => {});
   Object.assign(net, { mode: "", sid: "", pid: "", peers: [], status: null, error: "", ringing: null });
   net.convs.clear(); net.chat = [];  // the conversations go with the connection: nothing is kept
   if (view === "visit") setView("office");
 }
+// at the page's start: our office still open (the server kept it, or opens it by itself): we are its host again; else
+// the office we were in, joined again (every 10 s until it answers, while we did not leave it)
+async function resume() {
+  if (demo() || net.sid) return;
+  try {
+    const r = await fetch("/api/net", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify({ action: "status" }) });
+    const st = await r.json();
+    if (st.ok && st.on) { net.status = st; net.mode = "host"; return await join0(); }
+  } catch (_) { /* the server answers later */ }
+  const last = lastJoin();
+  if (!last.auto || !last.addr || !last.code || net.sid) return;
+  try { await join(last.addr, last.code); toast("RÉSEAU 🌐", "Reconnecté", `au bureau ${last.addr}`); }
+  catch (_) { if (net.mode === "guest") Object.assign(net, { mode: "" }); setTimeout(resume, 10000); }
+}
+setTimeout(resume, 1500);
 export async function sendChat(text, to = "") {
   if (!net.sid || !text.trim()) return;
   await call("chat", { sid: net.sid, text: text.trim(), to });
@@ -92,6 +132,11 @@ function received(m, t) {
   const mineMsg = m.from === net.pid, other = mineMsg ? m.to : m.from;
   if (m.kind === "system") { conv("all").msgs.push(m); if (!net.quiet) toast("RÉSEAU 🌐", m.text, ""); return; }
   if (m.kind === "act") { if (!net.quiet && !mineMsg && m.to === net.pid) applyAct(m, t); return; }  // a visitor here (world/share.js)
+  if (["duel", "party", "visio", "gift", "guestbook"].includes(m.kind)) {  // games/online.js, social/netparty.js, world/visio.js, social/gifts.js
+    const on = { duel: hub.onDuelMsg, party: hub.onPartyMsg, visio: hub.onVisioMsg, gift: hub.onGiftMsg, guestbook: hub.onGuestbookMsg }[m.kind];
+    if (!net.quiet && !mineMsg && m.to === net.pid && Date.now() / 1000 - m.t < 60) on?.(m, t);
+    return;
+  }
   if (m.kind === "text") {
     const c = conv(m.to ? other : "all"); c.msgs.push(m); c.msgs.splice(0, c.msgs.length - 100);
     if (net.quiet || mineMsg) return;
@@ -102,7 +147,10 @@ function received(m, t) {
   }
   // a call: someone invites us to their office; and the answers to ours
   if (net.quiet || mineMsg || m.to !== net.pid) return;
-  if (m.kind === "invite" && Date.now() / 1000 - m.t < 60) { net.ringing = { from: m.from, name: m.name, at: t }; hub.phoneRing?.(); }
+  if (m.kind === "invite" && Date.now() / 1000 - m.t < 60) {
+    if (net.presence === "dnd") { call("chat", { sid: net.sid, kind: "decline", to: m.from }).catch(() => {}); return toast("📱 TÉLÉPHONE", `${m.name} a appelé`, "Refusé : tu es en « ne pas déranger »."); }
+    net.ringing = { kind: "call", from: m.from, name: m.name, at: t }; hub.phoneRing?.();
+  }
   else if (m.kind === "accept") toast("📱 TÉLÉPHONE", `${m.name} accepte`, "Il arrive dans ton bureau.");
   else if (m.kind === "decline") toast("📱 TÉLÉPHONE", `${m.name} ne peut pas venir`, "Il a refusé l'invitation.");
 }
@@ -112,6 +160,9 @@ export async function invite(pid) { await call("chat", { sid: net.sid, kind: "in
 export async function answerCall(yes) {
   const r = net.ringing; if (!r) return;
   net.ringing = null;
+  if (r.kind === "duel") return hub.answerDuel?.(r, yes);    // games/online.js
+  if (r.kind === "party") return hub.answerParty?.(r, yes);  // social/netparty.js
+  if (r.kind === "visio") return hub.answerVisio?.(r, yes);  // world/visio.js
   await call("chat", { sid: net.sid, kind: yes ? "accept" : "decline", to: r.from });
   if (yes) await startVisit(r.from);
 }
@@ -136,7 +187,7 @@ export async function startVisit(pid) {
   const out = await call("layout", { sid: net.sid, pid });
   const layout = out.layout || {}, rooms = Array.isArray(layout.rooms) ? layout.rooms : ["office"];
   const first = rooms.includes(p.room) && !p.visiting ? p.room : "office";
-  net.visit = { pid, name: p.name, layout: { ...layout, rooms }, room: first, x: 50, y: 110, tx: 50, ty: 110, bubble: "", until: 0, fetched: performance.now() };
+  net.visit = { pid, name: p.name, layout: { ...layout, rooms }, layoutAt: out.at, room: first, x: 50, y: 110, tx: 50, ty: 110, bubble: "", until: 0, fetched: performance.now() };
   setView("visit");
 }
 export function endVisit(home = true) {
@@ -144,61 +195,110 @@ export function endVisit(home = true) {
   net.visit = null;
   if (home && view === "visit") setView("office");
 }
-export const visitRoom = room => { if (net.visit?.layout.rooms.includes(room)) Object.assign(net.visit, { room, x: 50, y: 110, tx: 50, ty: 110 }); };
+export function visitRoom(room, at = null) {  // at: where we come in (by its door, rooms/visit.js)
+  const { x, y } = at || { x: 50, y: 110 };
+  if (net.visit?.layout.rooms.includes(room)) Object.assign(net.visit, { room, x, y, tx: x, ty: y, dir: null, pose: null, onArrive: null });
+}
 
-/* ---------- four times a second: where we are, who is there, what was said ---------- */
-let busy = false, lastLayout = 0, lastCrew = 0;
+/* ---------- several times a second: where we are, who is there, what was said ---------- */
+// the pace follows what happens: 5 a second while someone moves (us or another), 3 while visiting or visited (a team
+// lives there), else under 2; one request at a time
+let busy = false, lastLayout = 0, lastCrew = 0, lastSent = 0, lastWhere = "", stirAt = 0;
+const peerSig = new Map();  // pid → its last position: who moved
+function pace(t, w) {
+  const sig = `${w.room}|${Math.round(w.x)}|${Math.round(w.y)}|${JSON.stringify(w.pose)}|${net.emote && t < net.emote.until ? net.emote.key : ""}|${net.presence}`;
+  if (sig !== lastWhere) { lastWhere = sig; stirAt = t; }
+  if (t - stirAt < 1500) return 200;
+  return net.visit || net.peers.some(p => p.visiting === net.pid) ? 330 : 600;
+}
 setInterval(async () => {
   if (!net.sid || busy) return;
-  if (net.visit && view !== "visit") endVisit(false);  // another room picked on the bar: back home
-  busy = true;
+  if (net.visit && view !== "visit" && view !== "game") endVisit(false);  // another room picked on the bar: back home (a duel keeps the visit)
+  const t = performance.now(), w = where();
+  if (t - lastSent < pace(t, w)) return;
+  busy = true; lastSent = t;
   try {
-    const t = performance.now(), v = net.visit;
+    const v = net.visit;
     const say = v ? (t < v.until ? v.bubble : "") : (t < (chief.until || 0) ? chief.bubble : "");
     const lookAgain = t - (net.lookAt || 0) > 10000;  // the look now and then (it may change), not every time
     if (lookAgain) net.lookAt = t;
-    const out = await call("sync", { sid: net.sid, ...where(), bubble: say, since: net.since, ...(lookAgain ? { look: me().look } : {}) });
+    const want = hub.partyWant?.() || [], em = net.emote && t < net.emote.until ? net.emote.key : "";
+    const out = await call("sync", { sid: net.sid, ...w, bubble: say, since: net.since, emote: em, status: net.presence, duel: hub.duelInfo?.() || "", ...(want.length ? { want } : {}), ...(lookAgain ? { look: me().look } : {}) });
+    if (out.crews) hub.partyCrews?.(out.crews);
+    const now = performance.now();
     net.peers = out.peers || []; net.error = "";
-    for (const m of out.chat || []) { net.since = Math.max(net.since, m.id); net.chat.push(m); received(m, t); }
+    for (const p of net.peers) { const k = `${p.room}|${Math.round(p.x)}|${Math.round(p.y)}`; if (peerSig.get(p.pid) !== k) { peerSig.set(p.pid, k); stirAt = now; } }
+    for (const m of out.chat || []) { net.since = Math.max(net.since, m.id); net.chat.push(m); received(m, now); }
     net.chat = net.chat.slice(-80); net.quiet = false;
     if (net.mode === "host") net.status = { ...net.status, peers: net.peers.length + 1 };
-    if (t - lastLayout > 3000) { lastLayout = t; publishLayout().catch(() => {}); }
-    // our team, for those who visit us (twice a second, only while someone is here)
-    if (net.peers.some(p => p.visiting === net.pid) && t - lastCrew > 450) { lastCrew = t; call("crew", { sid: net.sid, crew: crewSnapshot(t) }).catch(() => {}); }
-    if (v && net.visit === v) { v.crew = out.crew || []; v.crewAt = t; }
-    if (v && net.visit === v) {  // the office we visit: still there, its layout refreshed now and then
+    if (now - lastLayout > 3000) { lastLayout = now; publishLayout().catch(() => {}); }
+    // our team, for those who visit us (3 times a second, only while someone is here)
+    if ((net.peers.some(p => p.visiting === net.pid) || hub.partyAway?.()) && now - lastCrew > 300) { lastCrew = now; call("crew", { sid: net.sid, crew: crewSnapshot(now) }).catch(() => {}); }
+    if (v && net.visit === v) {  // the office we visit: its team; still there; its plan again only when it changed
+      v.crew = out.crew || [];
       if (!net.peers.some(p => p.pid === v.pid)) { toast("RÉSEAU 🌐", `${v.name} s'est déconnecté`, "Retour à ton bureau."); endVisit(); }
-      else if (t - v.fetched > 8000) { v.fetched = t; call("layout", { sid: net.sid, pid: v.pid }).then(o => { if (net.visit === v && o.layout) v.layout = { ...o.layout, rooms: Array.isArray(o.layout.rooms) ? o.layout.rooms : v.layout.rooms }; }).catch(() => {}); }
+      else if (now - v.fetched > 5000) {
+        v.fetched = now;
+        call("layout", { sid: net.sid, pid: v.pid, at: v.layoutAt }).then(o => {
+          if (net.visit !== v || o.same || !o.layout) return;
+          v.layoutAt = o.at; v.layout = { ...o.layout, rooms: Array.isArray(o.layout.rooms) ? o.layout.rooms : v.layout.rooms };
+        }).catch(() => {});
+      }
     }
   } catch (err) {
     net.error = err.message;
     if (/session inconnue/.test(err.message)) { try { await join0(); } catch (_) { /* the host closed */ } }
   } finally { busy = false; }
-}, 250);
+}, 50);
 
-/* ---------- the others (chiefs and, in the office we visit, its team), smoothed between two updates ---------- */
-// a walk shows when they move: turned where they go, legs going; standing still, the pose they sent
-const shown = new Map();  // key → { x, y, t, room, moving, dir }
+/* ---------- the others (chiefs and, in the office we visit, its team), between two updates ---------- */
+// what comes from the network is shown a little late (about one update and a half), going smoothly from one received
+// position to the next, like an online game: no jerk at each update, no stop between two. The pose goes with the
+// position it came with (one sits when one reaches the chair, not before).
+const shown = new Map();  // key → { buf: [{ t, x, y, pose }], src, last, gap, x, y, room, moving, dir, pose }
 export function smoothed(key, p, t) {
   let s = shown.get(key);
-  if (!s || s.room !== p.room || Math.hypot(p.x - s.x, p.y - s.y) > 90) { s = { x: p.x, y: p.y, t, room: p.room, moving: 0, dir: null }; shown.set(key, s); return s; }
-  const k = Math.min(1, (t - s.t) / 140), dx = (p.x - s.x) * k, dy = (p.y - s.y) * k;
-  s.x += dx; s.y += dy; s.t = t;
-  if (Math.hypot(p.x - s.x, p.y - s.y) > 0.6) { s.moving = t; s.dir = [p.x - s.x, p.y - s.y]; }
+  const far = s && Math.hypot(p.x - s.buf.at(-1).x, p.y - s.buf.at(-1).y) > 120;
+  if (!s || s.room !== p.room || far) {  // new, another room, or a jump (a door): there at once
+    s = { buf: [{ t, x: p.x, y: p.y, pose: p.pose }], src: p, last: t, gap: 300, x: p.x, y: p.y, room: p.room, moving: 0, dir: null, pose: p.pose };
+    shown.set(key, s); return s;
+  }
+  if (s.src !== p) {  // an update came (each one is a new object)
+    s.src = p; s.gap = s.gap * 0.8 + Math.min(1500, t - s.last) * 0.2; s.last = t;
+    s.buf.push({ t, x: p.x, y: p.y, pose: p.pose });
+    if (s.buf.length > 12) s.buf.shift();
+  }
+  const rt = t - Math.max(120, Math.min(700, s.gap * 1.5)), b = s.buf;
+  let i = b.length - 1;
+  while (i > 0 && b[i - 1].t > rt) i--;
+  const A = b[Math.max(0, i - 1)], B = b[i];
+  const k = B.t > A.t ? Math.max(0, Math.min(1, (rt - A.t) / (B.t - A.t))) : 1;
+  s.x = A.x + (B.x - A.x) * k; s.y = A.y + (B.y - A.y) * k;
+  const dx = B.x - A.x, dy = B.y - A.y;
+  if (k < 1 && Math.hypot(dx, dy) > 0.8) { s.moving = t; s.dir = [dx, dy]; }
+  s.pose = k >= 1 || !s.moving || t - s.moving > 150 ? B.pose : A.pose;
   return s;
 }
 // the drawPerson options of someone shown from the network: walking (moving now, or said so) or its pose
 export function netPose(p, s, t, extra = {}) {
-  const pose = p.pose || {}, walking = t - s.moving < 220 || (pose.walk && t - s.moving < 600);
+  const pose = s.pose || p.pose || {}, walking = t - s.moving < 120;
   if (walking) { const d = s.dir || pose.dir; return { ...extra, frame: Math.floor(t / 180), dir: d, back: !!d && d[1] < 0 && Math.abs(d[1]) >= Math.abs(d[0]) }; }
   return { ...extra, frame: pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", dir: pose.dir || (pose.seated ? null : s.dir) };  // still: turned where it went
 }
-export const liftOf = (p, s, t) => t - s.moving < 220 ? 0 : p.pose?.z || 0;
+export const liftOf = (p, s, t) => t - s.moving < 120 ? 0 : (s.pose || p.pose)?.z || 0;
+// an emote's body language: arms up and down, a little jump for a dance
+export function emotePose(key, t, o) {
+  if (!key) return o;
+  const f = Math.floor(t / 220) % 2;
+  if (key === "dance") return { ...o, arms: f ? "up" : "down", frame: Math.floor(t / 150), dir: [[1, 0], [0, 1], [-1, 0], [0, -1]][Math.floor(t / 300) % 4], seated: false };
+  if (key === "clap" || key === "wave" || key === "laugh") return { ...o, arms: f ? "up" : "down" };
+  return { ...o, arms: "up" };
+}
 export function drawPeer(p, t, x, y, s) {
-  const said = net.said.get(p.name), text = said && t < said.until ? said.text : p.bubble;
-  drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, netPose(p, s, t, { tux: true, smile: true, hat: p.look?.hat }));
-  badge(x, y + (p.pose?.seated ? -3 : 2), `🌐 ${p.name}`, p.host ? "#fbaa08" : "#3bc4ff");
-  if (text) bubble(x, y - 24 - headroom(), text.slice(0, 80), "#d5eeff", "#081746");
+  const said = net.said.get(p.name), em = EMOTE_INFO[p.emote], text = em ? `${em[0]} ${em[1]}` : said && t < said.until ? said.text : p.bubble;
+  drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, emotePose(p.emote, t, netPose(p, s, t, { tux: true, smile: true, hat: p.look?.hat })));
+  badge(x, y + ((s.pose || p.pose)?.seated ? -3 : 2), `${PRESENCE_INFO[p.status]?.[0] || "🌐"} ${p.name}`, p.host ? "#fbaa08" : "#3bc4ff");
+  if (text) bubble(x, y - 24 - headroom(), text.slice(0, 80), em ? "#fff3c4" : "#d5eeff", "#081746");
 }
 export const personBox = (x, y) => ({ x: x - 9, y: y - 34, w: 18, h: 37, to: { x, y: y - 8 } });
 // at home: only who visits us, in the room they are in (iso/rooms.js isoItems)

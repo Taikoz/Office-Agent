@@ -52,6 +52,7 @@ function officeDev(e, t) {
 // in the break room, or gone to another room (the gym, the library, a meeting, the terrace)
 function lounger(l, t) {
   const c = common(l.name, t), base = { n: l.name, look: lookTraits(l.look), tag: "", c: "#4090d7", ...c, b: c.reply || (t < l.sayUntil ? l.say : "") };
+  if (l.netAway) return { ...base, room: "lounge", x: l.x, y: l.y, st: "away", what: "à l'afterwork commun", pose: {} };  // social/netparty.js
   if (!l.partyRoom) {
     const pose = loungerPose(l, t), walking = l.path.length > 0, act = !walking && l.spot?.act;
     return { ...base, room: "lounge", x: l.x, y: l.y, st: walking ? "walk" : "rest", what: `salle de repos · ${walking ? "se déplace" : act?.label || "se pose"}`,
@@ -80,6 +81,7 @@ export function crewSnapshot(t) {
     const m = officeDev(e, t); out.push(m); seen.add(m.n);
   }
   for (const l of loungers.values()) if (!seen.has(l.name)) { const m = lounger(l, t); if (m) out.push(m); }
+  out.push(...(hub.partyCrew?.(t) || []));  // the guests of our afterwork (social/netparty.js)
   return out.slice(0, 24);
 }
 

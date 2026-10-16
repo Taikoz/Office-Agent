@@ -347,6 +347,18 @@ function autoPlace(type, style) {
   }
   toast("MODE ACHAT", "Pas de place libre", `${d.name} : place-le à la main ou fais de la place.`);
 }
+// an object given by another chief (social/gifts.js): free, put on the first free spot from the middle of the room
+export function giftPlace(type, room) {
+  const R = roomSize(room), d = defOf(type); if (!d || d.kind === "wall") return false;
+  for (let ring = 0; ring < 60; ring++) for (let k = -ring; k <= ring; k++) for (const [dx, dy] of [[k, -ring], [k, ring], [-ring, k], [ring, k]]) {
+    const sp = placement(type, { x: R.w / 2 + dx * 8, y: 70 + (R.h - 70) / 2 + dy * 8 }, room, 0);
+    if (!sp) continue;
+    const it = { uid: ++furni.seq, type, style: d.styles?.[0]?.id || null, room, rot: 0, ...sp };
+    furni.items.push(it); saveBuild(); dustAt(it); sfx("achievement");
+    return true;
+  }
+  return false;
+}
 const dust = [];
 export function dustAt(it) { const r = itemRect(it), wall = defOf(it.type).kind === "wall"; for (let i = 0; i < 12; i++) dust.push({ x: r.x + Math.random() * r.w, y: wall ? 76 : r.y + r.h - Math.random() * 4, born: performance.now(), vx: (Math.random() - 0.5) * 0.02 }); }
 

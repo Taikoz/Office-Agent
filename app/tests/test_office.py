@@ -614,6 +614,7 @@ class NetVisitTests(unittest.TestCase):
         self.assertTrue(net.act("layout", {"sid": a["sid"], "layout": {"rooms": ["office"], "items": []}})[0])
         ok, got = net.act("layout", {"sid": b["sid"], "pid": a["pid"]})
         self.assertEqual(got["layout"]["rooms"], ["office"])
+        self.assertEqual(net.act("layout", {"sid": b["sid"], "pid": a["pid"], "at": got["at"]})[1], {"at": got["at"], "same": True})  # unchanged: not sent again
         self.assertFalse(net.act("layout", {"sid": a["sid"], "layout": {"x": "y" * (net.LAYOUT_MAX + 1)}})[0])
         self.assertFalse(net.act("layout", {"sid": "nobody", "pid": a["pid"]})[0])
 
@@ -667,3 +668,86 @@ class NetCrewTests(unittest.TestCase):
         self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "act", "to": b["pid"], "text": "cheer:Bob"})[0])  # A is not visiting B
         acts = [m["text"] for m in net.HUB.snapshot(a["sid"], 0)[1]["chat"] if m["kind"] == "act"]
         self.assertEqual(acts, ["cheer:Alice", "use:42:lamp"])
+
+
+class NetDuelPartyTests(unittest.TestCase):
+    def setUp(self) -> None:
+        net.HUB.reset()
+
+    def test_duel_relay_presence_and_party(self) -> None:
+        _, a = net.HUB.hello({"name": "A"}, host=True)
+        _, b = net.HUB.hello({"name": "B"})
+        _, c = net.HUB.hello({"name": "C"})
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "kind": "duel", "to": b["pid"], "text": "invite:pingpong:0a1b2c3d"})[0])
+        self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "duel", "to": b["pid"], "text": "invite:poker:0a1b2c3d"})[0])
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "kind": "party", "text": "start", "to": b["pid"]})[0])
+        self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "party", "text": "rave", "to": b["pid"]})[0])
+        # the relay: each one gets the other's last state; a third player is refused
+        self.assertEqual(net.act("duel", {"sid": a["sid"], "gid": "0a1b2c3d", "st": {"ball": [1, 2]}})[1], {"st": None, "watching": 0})
+        ok, got = net.act("duel", {"sid": b["sid"], "gid": "0a1b2c3d", "st": {"py": 100}})
+        self.assertEqual(got["st"], {"ball": [1, 2]})
+        self.assertEqual(net.act("duel", {"sid": a["sid"], "gid": "0a1b2c3d", "st": {"ball": [3, 4]}})[1]["st"], {"py": 100})
+        self.assertFalse(net.act("duel", {"sid": c["sid"], "gid": "0a1b2c3d", "st": {}})[0])
+        self.assertFalse(net.act("duel", {"sid": a["sid"], "gid": "nope", "st": {}})[0])
+        self.assertFalse(net.act("duel", {"sid": a["sid"], "gid": "0a1b2c3d", "st": {"x": "y" * net.DUEL_MAX}})[0])
+        # emote and presence: known words only
+        net.act("state", {"sid": b["sid"], "room": "office", "x": 1, "y": 1, "emote": "dance", "status": "dnd"})
+        peer = next(p for p in net.HUB.snapshot(a["sid"], 0)[1]["peers"] if p["pid"] == b["pid"])
+        self.assertEqual((peer["emote"], peer["status"]), ("dance", "dnd"))
+        net.act("state", {"sid": b["sid"], "room": "office", "x": 1, "y": 1, "emote": "<b>", "status": "hacker"})
+        peer = next(p for p in net.HUB.snapshot(a["sid"], 0)[1]["peers"] if p["pid"] == b["pid"])
+        self.assertEqual((peer["emote"], peer["status"]), ("", "dnd"))
+        # the teams of the afterwork come with the sync, when asked
+        net.act("crew", {"sid": b["sid"], "crew": [{"n": "Zoé", "room": "lounge", "x": 1, "y": 1}]})
+        ok, body = net.act("sync", {"sid": a["sid"], "room": "lounge", "x": 1, "y": 1, "want": [b["pid"], c["pid"]]})
+        self.assertEqual(list(body["crews"]), [b["pid"]])
+
+
+class NetMoreTests(unittest.TestCase):
+    def setUp(self) -> None:
+        net.HUB.reset()
+
+    def test_spectators_calls_gifts_guestbook(self) -> None:
+        _, a = net.HUB.hello({"name": "A"}, host=True)
+        _, b = net.HUB.hello({"name": "B"})
+        _, c = net.HUB.hello({"name": "C"})
+        net.act("duel", {"sid": a["sid"], "gid": "0a1b2c3d", "st": {"ps": 2}})
+        self.assertEqual(net.act("watch", {"sid": c["sid"], "gid": "0a1b2c3d", "pid": a["pid"]})[1], {"st": {"ps": 2}})
+        self.assertEqual(net.act("duel", {"sid": a["sid"], "gid": "0a1b2c3d", "st": {"ps": 3}})[1]["watching"], 1)
+        self.assertFalse(net.act("watch", {"sid": c["sid"], "gid": "ffffffff", "pid": a["pid"]})[0])
+        net.act("state", {"sid": a["sid"], "room": "lounge", "x": 1, "y": 1, "duel": f"0a1b2c3d:darts:{b['pid']}"})
+        self.assertEqual(next(p for p in net.HUB.snapshot(c["sid"], 0)[1]["peers"] if p["pid"] == a["pid"])["duel"], f"0a1b2c3d:darts:{b['pid']}")
+        # the voice's set-up goes through a bigger relay; the call and gift words are checked
+        sdp = {"sdp": "v=0" + "x" * 5000}
+        self.assertTrue(net.act("rtc", {"sid": a["sid"], "gid": "11112222", "st": sdp})[0])
+        self.assertEqual(net.act("rtc", {"sid": b["sid"], "gid": "11112222", "st": {"sdp": "answer"}})[1]["st"], sdp)
+        self.assertFalse(net.act("duel", {"sid": a["sid"], "gid": "33334444", "st": sdp})[0])  # too big for a duel
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "kind": "visio", "to": b["pid"], "text": "ring:11112222"})[0])
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "kind": "gift", "to": b["pid"], "text": "croissants"})[0])
+        self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "gift", "to": b["pid"], "text": "money:1000"})[0])
+        self.assertTrue(net.act("chat", {"sid": a["sid"], "kind": "duel", "to": b["pid"], "text": "cheer:0a1b2c3d:fire"})[0])
+        # a guestbook: only in the office we visit
+        self.assertFalse(net.act("chat", {"sid": c["sid"], "kind": "guestbook", "to": a["pid"], "text": "Super bureau !"})[0])
+        net.act("state", {"sid": c["sid"], "room": "office", "x": 1, "y": 1, "visiting": a["pid"]})
+        self.assertTrue(net.act("chat", {"sid": c["sid"], "kind": "guestbook", "to": a["pid"], "text": "Super bureau !"})[0])
+
+    def test_join_code_kept_between_starts(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(config, "STATE_DIR", Path(d)):
+            self.assertEqual(net.load_conf(), {})
+            net.save_conf(code="ABCDEF", port=8770)
+            net.save_conf(auto=True)
+            self.assertEqual(net.load_conf(), {"code": "ABCDEF", "port": 8770, "auto": True})
+            (Path(d) / "net.json").write_text('{"code": "<bad>", "port": 1}')
+            self.assertEqual(net.load_conf(), {"code": "", "port": net.DEFAULT_PORT, "auto": False})
+
+
+class NetRejoinTests(unittest.TestCase):
+    def test_a_page_coming_back_replaces_its_session(self) -> None:
+        net.HUB.reset()
+        _, h1 = net.HUB.hello({"name": "H"}, host=True)
+        _, g1 = net.HUB.hello({"name": "G"})
+        _, g2 = net.HUB.hello({"name": "G", "old": g1["sid"]})
+        _, h2 = net.HUB.hello({"name": "H"}, host=True)
+        self.assertEqual(sorted(p["name"] for p in net.HUB.peers.values()), ["G", "H"])
+        self.assertNotIn(g1["sid"], net.HUB.peers)
+        self.assertNotIn(h1["sid"], net.HUB.peers)
