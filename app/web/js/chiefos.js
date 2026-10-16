@@ -30,10 +30,10 @@ function chiefToDesk() {
 /* ---------- ChiefOS ---------- */
 const osBox = document.getElementById("chiefos");
 let osApp = "questions", osReport = null;
-const OS_APPS = [["questions", "📬", "Questions"], ["alerts", "🚨", "Alertes"], ["planning", "📅", "Planning"], ["mr", "🔀", "Merge requests"], ["tickets", "🎫", "Tickets"],
-  ["debriefs", "🧾", "Débriefs"], ["report", "📋", "Rapport du jour"], ["week", "🗓️", "Semaine"], ["costs", "💸", "Coûts"], ["money", "💰", "Comptes"], ["team", "👥", "Équipe"], ["meteo", "🌦️", "Météo"]];
+const OS_APPS = [["questions", "📬", "Questions"], ["alerts", "🚨", "Alertes"], ["gitlab", "🦊", "GitLab"], ["browser", "🌐", "Navigateur"], ["blueprint", "🧩", "Blueprints"], ["planning", "📅", "Planning"], ["mr", "🔀", "Merge requests"], ["pipes", "🔴", "Pipelines"], ["tickets", "🎫", "Tickets"],
+  ["debriefs", "🧾", "Débriefs"], ["report", "📋", "Rapport du jour"], ["week", "🗓️", "Semaine"], ["costs", "💸", "Coûts"], ["money", "💰", "Comptes"], ["team", "👥", "Équipe"], ["meteo", "🌦️", "Météo"], ["settings", "⚙️", "Réglages"]];
 // apps of other modules (alerts.js, planning.js, debrief.js, weekly.js, seasons.js)
-const OS_RENDER = { alerts: () => alertsAppHtml(), planning: () => planAppHtml(), debriefs: () => debriefsAppHtml(), week: () => weekAppHtml(), costs: () => costsAppHtml(), meteo: () => meteoAppHtml() };
+const OS_RENDER = { alerts: () => alertsAppHtml(), planning: () => planAppHtml(), debriefs: () => debriefsAppHtml(), week: () => weekAppHtml(), costs: () => costsAppHtml(), meteo: () => meteoAppHtml(), pipes: () => pipesAppHtml(), settings: () => settingsAppHtml(), gitlab: () => gitlabAppHtml(), browser: () => browserAppHtml(), blueprint: () => blueprintAppHtml() };  // + gitlabapp.js, glview.js  // + gitlabapp.js
 function openChiefOs(app) { if (app) osApp = app; osOverview = false; osBox.hidden = false; renderChiefOs(); }
 function closeChiefOs() { osBox.hidden = true; if (chief.at === "chiefos") chief.at = "free"; }
 function osAppHtml() {
@@ -44,10 +44,11 @@ function osAppHtml() {
     return qs.length ? qs.map(q => `<div class="osrow"><b>❓ ${esc(q.from || "un agent")}</b><span>${esc(clip(q.question, 140))}</span><button data-os-q="${esc(q.id)}">Répondre</button></div>`).join("")
       : `<p class="muted">Aucune question en attente. 👌</p>`;
   }
-  if (osApp === "mr") {
+  if (osApp === "mr") {  // the agents' MRs of the session, then GitLab: to review, mine, assigned (gitlabapp.js)
     const mrs = agents.filter(a => a.game?.mr);
-    return mrs.length ? mrs.map(a => `<div class="osrow"><b>${esc(name(a))}${a.ticket ? ` · ${ticketLink(a.ticket)}` : ""}</b><span><a href="${esc(a.game.mr)}" target="_blank" rel="noopener">${mrLabel(a.game.mr)} ↗</a>${pipeTag(a.game.mr)}</span><span class="muted">${esc(clip(a.description, 60))}</span></div>`).join("")
-      : `<p class="muted">Pas de merge request ouverte par les agents de la session.</p>`;
+    return `<h4>AGENTS DE LA SESSION (${mrs.length})</h4>` + (mrs.length ? mrs.map(a => `<div class="osrow"><b>${esc(name(a))}${a.ticket ? ` · ${ticketLink(a.ticket)}` : ""}</b><span><a href="${esc(a.game.mr)}" target="_blank" rel="noopener">${mrLabel(a.game.mr)} ↗</a>${pipeTag(a.game.mr)}</span><span class="muted">${esc(clip(a.description, 60))}</span></div>`).join("")
+      : `<p class="muted">Pas de merge request ouverte par les agents de la session.</p>`)
+      + `<h4>GITLAB</h4><div class="osrow"><b>🦊 Tes merge requests</b><span class="muted">à relire, les miennes, assignées ; le détail de chaque MR (discussions, CI, fichiers)</span><button data-os-app="gitlab">Ouvrir 🦊 GitLab</button></div>`;
   }
   if (osApp === "tickets") {
     const mine = [...new Set(agents.map(a => a.ticket).filter(Boolean))], back = (data.backlog || []).filter(b => !mine.includes(b.id));
@@ -74,26 +75,58 @@ function osAppHtml() {
 }
 // Ubuntu look (GNOME, Yaru): top bar with Activités and the clock, the dock on the left, the app in a window;
 // Activités (or ⋮⋮⋮ in the dock) shows the grid of applications with a search field
-const APP_TINT = { questions: "#e95420", alerts: "#c7162b", planning: "#0e8420", mr: "#fc6d26", tickets: "#7764d8", debriefs: "#77216f",
-  report: "#2c7ae0", week: "#19b6ee", costs: "#f99b11", money: "#38b44a", team: "#a3417d", meteo: "#3fa9f5" };
+const APP_TINT = { questions: "#e95420", alerts: "#c7162b", planning: "#0e8420", gitlab: "#fc6d26", browser: "#0060df", blueprint: "#2c7ae0", mr: "#6e49cb", tickets: "#7764d8", debriefs: "#77216f",
+  report: "#2c7ae0", week: "#19b6ee", costs: "#f99b11", money: "#38b44a", team: "#a3417d", meteo: "#3fa9f5", pipes: "#e01b24", settings: "#77767b" };
 let osOverview = false, osFilter = "";
 function osBadge(id) { const n = id === "questions" ? data.questions?.length : id === "alerts" ? smartAlerts.size : 0; return n ? `<b class="osbadge">${n}</b>` : ""; }
+/* ---------- the dock: the main apps only, pinned and ordered by the user (right click, drag and drop, Réglages) ---------- */
+const DOCK_DEFAULT = ["questions", "alerts", "gitlab", "browser", "blueprint", "planning", "report", "team", "settings"];
+let dockBook = store("office-dock", { apps: DOCK_DEFAULT });
+const dockApps = () => dockBook.apps.filter(id => OS_APPS.some(a => a[0] === id));
+const appOf = id => OS_APPS.find(a => a[0] === id);
+function saveDock(apps) { dockBook.apps = [...new Set(apps)]; save("office-dock", dockBook); renderChiefOs(); }
+const pinApp = id => saveDock([...dockApps(), id]);
+const unpinApp = id => saveDock(dockApps().filter(x => x !== id));
+function moveApp(id, delta) { const a = dockApps(), i = a.indexOf(id), j = Math.max(0, Math.min(a.length - 1, i + delta)); if (i < 0 || i === j) return; a.splice(i, 1); a.splice(j, 0, id); saveDock(a); }
+let osMenu = null;  // the open context menu: { id, x, y, from }
+function dockIcon(id, extra = "") {
+  const [, ic, l] = appOf(id);
+  return `<button data-os-app="${id}" data-dock="${id}" draggable="true" class="${osApp === id && !osOverview ? "on" : ""}${extra}" title="${esc(l)}" style="--tint:${APP_TINT[id] || "#77216f"}"><span class="ic">${ic}</span>${osBadge(id)}</button>`;
+}
+function menuHtml() {
+  if (!osMenu) return "";
+  const { id } = osMenu, pinned = dockApps().includes(id), i = dockApps().indexOf(id), [, ic, l] = appOf(id);
+  const items = [["open", "Ouvrir"], pinned ? ["unpin", "Retirer du dock"] : ["pin", "Épingler au dock"], ...(pinned && i > 0 ? [["up", "Monter"]] : []), ...(pinned && i < dockApps().length - 1 ? [["down", "Descendre"]] : [])];
+  return `<div class="ubmenu" style="left:${osMenu.x}px;top:${osMenu.y}px"><div class="ubmtitle">${ic} ${esc(l)}</div>${items.map(([a, t]) => `<button data-menu="${a}" data-id="${id}">${t}</button>`).join("")}</div>`;
+}
+function dockSettingsHtml() {
+  const pinned = dockApps(), others = OS_APPS.map(a => a[0]).filter(id => !pinned.includes(id));
+  const row = (id, isPinned, i) => { const [, ic, l] = appOf(id); return `<div class="osrow"><b><span class="ubappic" style="--tint:${APP_TINT[id] || "#77216f"}">${ic}</span> ${esc(l)}</b><span class="muted">${isPinned ? `position ${i + 1}` : "dans Activités"}</span>
+    <span class="osacts">${isPinned ? `<button data-dockset="up" data-id="${id}"${i === 0 ? " disabled" : ""} title="Monter">↑</button><button data-dockset="down" data-id="${id}"${i === pinned.length - 1 ? " disabled" : ""} title="Descendre">↓</button><button data-dockset="unpin" data-id="${id}">Retirer</button>` : `<button data-dockset="pin" data-id="${id}">📌 Épingler</button>`}</span></div>`; };
+  return `<h4>DOCK</h4><p class="muted">Les applications du dock, dans l'ordre. Aussi : clic droit sur une icône (dock ou Activités), ou glisser-déposer dans le dock.</p>
+    ${pinned.map((id, i) => row(id, true, i)).join("")}<h4>AUTRES APPLICATIONS</h4>${others.map(id => row(id, false)).join("") || `<p class="muted">Toutes sont dans le dock.</p>`}
+    <div class="osacts"><button data-dockset="reset">↺ Dock par défaut</button></div>`;
+}
 function renderChiefOs() {
   if (osBox.hidden) return;
   const now = clockNow(), [, icon, label] = OS_APPS.find(a => a[0] === osApp) || OS_APPS[0];
   const day = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }), time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  const dock = OS_APPS.map(([id, ic, l]) => `<button data-os-app="${id}" class="${osApp === id && !osOverview ? "on" : ""}" title="${esc(l)}" style="--tint:${APP_TINT[id] || "#77216f"}"><span class="ic">${ic}</span>${osBadge(id)}</button>`).join("");
+  const pinned = dockApps(), running = !osOverview && !pinned.includes(osApp) ? osApp : null;  // the open app shows up while it runs, like Ubuntu
+  const dock = pinned.map(id => dockIcon(id)).join("") + (running ? `<span class="ubrun"></span>${dockIcon(running, " running")}` : "");
   const apps = OS_APPS.filter(([, , l]) => !osFilter || l.toLowerCase().includes(osFilter.toLowerCase()));
   const body = osOverview
     ? `<div class="ubover"><input class="ubsearch" placeholder="Rechercher une application…" value="${esc(osFilter)}" aria-label="Rechercher une application">
-        <div class="ubgrid">${apps.map(([id, ic, l]) => `<button data-os-app="${id}" style="--tint:${APP_TINT[id] || "#77216f"}"><span class="ic">${ic}</span>${osBadge(id)}<small>${esc(l)}</small></button>`).join("") || `<p>Aucune application.</p>`}</div></div>`
+        <div class="ubgrid">${apps.map(([id, ic, l]) => `<button data-os-app="${id}" data-dock="${id}" style="--tint:${APP_TINT[id] || "#77216f"}"><span class="ic">${ic}</span>${osBadge(id)}${pinned.includes(id) ? '<span class="ubpin" title="Dans le dock">📌</span>' : ""}<small>${esc(l)}</small></button>`).join("") || `<p>Aucune application.</p>`}</div>
+        <p class="ubhint">Clic droit sur une application : l'épingler au dock ou l'en retirer.</p></div>`
     : `<section class="ubwin"><div class="ubhead"><span class="ubappic" style="--tint:${APP_TINT[osApp] || "#77216f"}">${icon}</span><b>${esc(label)}</b>
         <span class="ubctl"><button data-os="overview" title="Réduire">–</button><button data-os="max" title="Agrandir">▢</button><button class="x" data-os="close" title="Fermer (Échap)">×</button></span></div>
         <div class="osapp">${osAppHtml()}</div></section>`;
   osBox.innerHTML = `<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">Activités</button><span class="ubtitle">${icon} ${esc(label)}</span>
       <span class="ubclock">${esc(day)}  ${time}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
-    <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}</div>`;
+    <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}</div>${menuHtml()}`;
   if (osOverview) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  else if (osApp === "browser") mountBrowser();
+  else if (osApp === "blueprint") mountBlueprint();  // the editor's canvas (blueprint.js)  // its pages live outside the HTML string (browser.js)
 }
 osBox.addEventListener("input", ev => { if (ev.target.classList.contains("ubsearch")) { osFilter = ev.target.value; renderChiefOs(); } });
 osBox.addEventListener("keydown", ev => { if (ev.target.classList.contains("ubsearch") && ev.key === "Enter") { const first = osBox.querySelector(".ubgrid [data-os-app]"); if (first) first.click(); } });
@@ -109,4 +142,39 @@ osBox.addEventListener("click", ev => {
 addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden) { ev.stopImmediatePropagation(); closeChiefOs(); } }, true);
 document.getElementById("osbtn").onclick = () => chiefToDesk();
 // live apps refresh every 3 s; forms and long pages stay still
-setInterval(() => { if (!osBox.hidden && !osOverview && !["report", "planning", "meteo", "debriefs", "week", "costs"].includes(osApp)) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
+setInterval(() => { if (!osBox.hidden && !osOverview && !["report", "planning", "meteo", "debriefs", "week", "costs", "settings", "pipes", "gitlab", "browser", "blueprint"].includes(osApp)) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
+
+// right click on an app (dock or Activités): its menu; a click elsewhere closes it
+osBox.addEventListener("contextmenu", ev => {
+  const b = ev.target.closest("[data-dock]"); if (!b) return;
+  ev.preventDefault();
+  const r = osBox.getBoundingClientRect();
+  const br = b.getBoundingClientRect(), inDock = !!b.closest(".ubdock");  // beside the dock icon, under the pointer in Activités
+  osMenu = { id: b.dataset.dock, x: Math.min((inDock ? br.right + 8 : ev.clientX) - r.left, r.width - 200), y: Math.min((inDock ? br.top : ev.clientY) - r.top, r.height - 170) };
+  renderChiefOs();
+});
+osBox.addEventListener("click", ev => {
+  const m = ev.target.closest("[data-menu]"), d = ev.target.closest("[data-dockset]");
+  if (m) {
+    ev.stopImmediatePropagation(); const id = m.dataset.id; osMenu = null;
+    if (m.dataset.menu === "open") { osApp = id; osOverview = false; osFilter = ""; return renderChiefOs(); }
+    return m.dataset.menu === "pin" ? pinApp(id) : m.dataset.menu === "unpin" ? unpinApp(id) : moveApp(id, m.dataset.menu === "up" ? -1 : 1);
+  }
+  if (d) {
+    const id = d.dataset.id, a = d.dataset.dockset;
+    if (a === "reset") return saveDock(DOCK_DEFAULT);
+    return a === "pin" ? pinApp(id) : a === "unpin" ? unpinApp(id) : moveApp(id, a === "up" ? -1 : 1);
+  }
+  if (osMenu && !ev.target.closest(".ubmenu")) { osMenu = null; renderChiefOs(); }
+}, true);
+// drag and drop in the dock to reorder; dropped from Activités onto the dock: pinned there
+let dragApp = null;
+osBox.addEventListener("dragstart", ev => { const b = ev.target.closest("[data-dock]"); if (b) { dragApp = b.dataset.dock; ev.dataTransfer.effectAllowed = "move"; } });
+osBox.addEventListener("dragover", ev => { if (dragApp && ev.target.closest(".ubdock")) ev.preventDefault(); });
+osBox.addEventListener("drop", ev => {
+  if (!dragApp || !ev.target.closest(".ubdock")) return;
+  ev.preventDefault();
+  const over = ev.target.closest("[data-dock]")?.dataset.dock, a = dockApps().filter(x => x !== dragApp), i = over && over !== dragApp ? a.indexOf(over) : a.length;
+  a.splice(i < 0 ? a.length : i, 0, dragApp); dragApp = null; saveDock(a);
+});
+osBox.addEventListener("dragend", () => { dragApp = null; });

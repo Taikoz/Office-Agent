@@ -33,17 +33,17 @@ def clean_env(env: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in env.items() if k not in SESSION_MARKERS and not k.startswith(SESSION_PREFIXES)}
 
 
-def terminal(cmd: list[str]) -> list[str] | None:
-    """argv opening `cmd` in a new graphical terminal, or None when there is none."""
+def terminal(cmd: list[str], cwd: Path = LAUNCH_DIR) -> list[str] | None:
+    """argv opening `cmd` in a new graphical terminal (in `cwd`), or None when there is none."""
     if sys.platform == "darwin":  # shell-quoted, then escaped as an AppleScript string
-        line = f"cd {shlex.quote(str(LAUNCH_DIR))} && {shlex.join(cmd)}".replace("\\", "\\\\").replace('"', '\\"')
+        line = f"cd {shlex.quote(str(cwd))} && {shlex.join(cmd)}".replace("\\", "\\\\").replace('"', '\\"')
         return ["osascript", "-e", f'tell application "Terminal" to do script "{line}"']
     if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
         return None
     if term := shutil.which("gnome-terminal"):
-        return [term, f"--working-directory={LAUNCH_DIR}", "--", *cmd]
+        return [term, f"--working-directory={cwd}", "--", *cmd]
     if term := shutil.which("konsole"):
-        return [term, "--workdir", str(LAUNCH_DIR), "-e", *cmd]
+        return [term, "--workdir", str(cwd), "-e", *cmd]
     for name in ("x-terminal-emulator", "xterm"):
         if term := shutil.which(name):
             return [term, "-e", *cmd]
@@ -77,3 +77,25 @@ def launch_windows(claude: str, agent: str, prompt: str) -> tuple[bool, str]:
     subprocess.Popen([exe, "--agent", agent, prompt], cwd=LAUNCH_DIR, env=clean_env(dict(os.environ)),
                      creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0x10))
     return True, f"{agent} lancé dans une nouvelle console"
+
+
+def launch_claude_in(cwd: Path, prompt: str) -> tuple[bool, str]:
+    """Open a terminal running a plain interactive `claude` in `cwd` with `prompt` (blueprints: Claude writes the skill
+    or agent where it belongs); argv only, no shell, every permission still asked to the user."""
+    prompt = prompt.strip()
+    if not prompt or len(prompt) > PROMPT_MAX:
+        return False, "consigne vide ou trop longue"
+    if not cwd.is_dir():
+        return False, "dossier introuvable"
+    claude = shutil.which("claude") or str(Path.home() / ".local" / "bin" / "claude")
+    if sys.platform == "win32":
+        exe = claude if claude.lower().endswith(".exe") else shutil.which("claude.exe") or ""
+        if not exe:
+            return False, "claude.exe introuvable (installation npm ?)"
+        subprocess.Popen([exe, prompt], cwd=cwd, env=clean_env(dict(os.environ)), creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0x10))
+        return True, f"Claude ouvert dans {cwd}"
+    argv = terminal([claude, prompt], cwd)
+    if argv is None:
+        return False, "pas de terminal graphique disponible"
+    subprocess.Popen(argv, cwd=cwd, env=clean_env(dict(os.environ)), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return True, f"Claude ouvert dans un nouveau terminal ({cwd})"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import time
@@ -12,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, config, game, history, launcher, pricing, questions, routes, savegame, team, transcripts  # noqa: E402
+from office import billing, blueprints, config, framecheck, game, gitlab, history, launcher, pricing, questions, routes, savegame, team, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -260,3 +261,114 @@ class VersionTests(unittest.TestCase):
     def test_plugin_version_is_read(self) -> None:
         self.assertNotEqual(config.plugin_version(), "0")
         self.assertEqual(config.plugin_version(Path(tempfile.mkdtemp())), "0")
+
+
+class TokenTests(unittest.TestCase):
+    def test_token_survives_a_restart(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        with mock.patch.object(config, "STATE_DIR", tmp):
+            first = config.load_token()
+            self.assertEqual(config.load_token(), first)
+            self.assertGreaterEqual(len(first), 24)
+            if os.name != "nt":
+                self.assertEqual((tmp / "token").stat().st_mode & 0o777, 0o600)
+
+
+class GitLabTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self.patches = [mock.patch.object(gitlab, "STATE_DIR", self.tmp), mock.patch.object(gitlab, "CONF_FILE", self.tmp / "gitlab.json")]
+        for p in self.patches:
+            p.start()
+        gitlab._cache.clear()
+
+    def tearDown(self) -> None:
+        for p in self.patches:
+            p.stop()
+
+    def test_url_is_normalized_and_checked(self) -> None:
+        self.assertEqual(gitlab.normalize_url("gitlab.example.com/"), "https://gitlab.example.com")
+        self.assertEqual(gitlab.normalize_url("https://git.corp.io/gitlab/api/v4"), "https://git.corp.io/gitlab")
+        self.assertEqual(gitlab.normalize_url("http://localhost:8080"), "http://localhost:8080")
+        for bad in ("", "ftp://x", "http://gitlab.example.com"):
+            with self.assertRaises(gitlab.GitLabError):
+                gitlab.normalize_url(bad)
+
+    def test_token_saved_privately_and_never_shown(self) -> None:
+        with mock.patch.object(gitlab, "api", lambda conf, path, *a, **k: {"username": "taikoz"}):
+            st = gitlab.save("https://gitlab.com", "glpat-secret")
+            self.assertEqual(st, {"configured": True, "url": "https://gitlab.com", "user": "taikoz"})
+            self.assertNotIn("glpat-secret", json.dumps(gitlab.status()))
+            if os.name != "nt":
+                self.assertEqual((self.tmp / "gitlab.json").stat().st_mode & 0o777, 0o600)
+            gitlab.save("https://gitlab.com", "")  # an empty token keeps the saved one
+            self.assertEqual(gitlab.load()["token"], "glpat-secret")
+        with mock.patch.object(gitlab, "api", lambda *a, **k: (_ for _ in ()).throw(gitlab.GitLabError("jeton refusé"))):
+            self.assertEqual(gitlab.safe(lambda: gitlab.save("https://gitlab.com", "bad"))[0], 502)
+        self.assertEqual(gitlab.load()["token"], "glpat-secret")  # a refused token does not replace the good one
+        gitlab.forget()
+        self.assertFalse(gitlab.status()["configured"])
+
+    def test_log_tail_strips_colors_and_sections(self) -> None:
+        log = "section_start:1:build\r\x1b[0K\x1b[32;1mok\x1b[0;m\nline 2\rline 2 final\n" + "\n".join(f"l{i}" for i in range(100))
+        out = gitlab.tail(log, 3)
+        self.assertEqual(out, "l97\nl98\nl99")
+        self.assertIn("line 2 final", gitlab.tail(log, 200))
+        self.assertNotIn("\x1b", gitlab.tail(log, 200))
+
+
+class GitLabDetailTests(unittest.TestCase):
+    def test_mr_detail_shapes_threads_jobs_and_files(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        answers = {
+            "/projects/7/merge_requests/42": {"title": "Remises", "state": "opened", "source_branch": "f", "target_branch": "main", "author": {"username": "a", "name": "A"}, "has_conflicts": False},
+            "/projects/7/merge_requests/42/approvals": {"approvals_required": 1, "approvals_left": 0, "approved_by": [{"user": {"username": "b", "name": "B"}}]},
+            "/projects/7/merge_requests/42/discussions": [{"id": "d1", "notes": [{"author": {"username": "b"}, "body": "Nom ?", "resolvable": True, "resolved": False, "position": {"new_path": "cart.py", "new_line": 12}}]},
+                                                          {"id": "d2", "notes": [{"author": {"username": "a"}, "body": "a ajouté 1 commit", "system": True}]}],
+            "/projects/7/merge_requests/42/pipelines": [{"id": 9, "status": "failed", "web_url": "u"}],
+            "/projects/7/merge_requests/42/diffs": [{"new_path": "cart.py", "diff": "@@ -1 +1,2 @@\n-a\n+b\n+c\n"}],
+            "/projects/7/pipelines/9/jobs": [{"id": 5, "name": "pytest", "stage": "test", "status": "failed"}],
+        }
+        with mock.patch.object(gitlab, "load", lambda: {"url": "https://g", "token": "t"}), mock.patch.object(gitlab, "api", lambda conf, path, *a, **k: answers[path]):
+            gitlab._cache.clear()
+            d = gitlab.mr_detail(7, 42)
+        self.assertEqual((d["approvals"]["left"], d["approvals"]["by"][0]["username"]), (0, "b"))
+        self.assertEqual([(t["file"], t["line"], t["resolved"], t["system"]) for t in d["threads"]], [("cart.py", 12, False, False), ("", None, False, True)])
+        self.assertEqual((d["pipeline"]["status"], d["jobs"][0]["name"]), ("failed", "pytest"))
+        self.assertEqual((d["files"][0]["adds"], d["files"][0]["dels"]), (2, 1))
+
+
+class FrameCheckTests(unittest.TestCase):
+    def test_verdict_reads_xfo_and_frame_ancestors(self) -> None:
+        from email.message import Message
+        def h(**kw: str) -> Message:
+            m = Message()
+            for k, v in kw.items():
+                m[k.replace("_", "-")] = v
+            return m
+        self.assertEqual(framecheck.verdict(h())[0], True)
+        self.assertEqual(framecheck.verdict(h(X_Frame_Options="SAMEORIGIN"))[0], False)
+        self.assertEqual(framecheck.verdict(h(Content_Security_Policy="default-src 'self'; frame-ancestors 'self'"))[0], False)
+        self.assertEqual(framecheck.verdict(h(Content_Security_Policy="frame-ancestors *"))[0], True)
+        self.assertEqual(framecheck.check("file:///etc/passwd")["embeddable"], False)
+
+
+class BlueprintTests(unittest.TestCase):
+    def test_destination_is_checked_and_publish_writes(self) -> None:
+        home = Path(tempfile.mkdtemp())
+        repo = home / "repos" / "app"
+        repo.mkdir(parents=True)
+        with mock.patch.object(Path, "home", lambda: home):
+            self.assertEqual(blueprints.destination(str(repo), "skill", "deploy-check"), repo.resolve() / ".claude" / "skills" / "deploy-check" / "SKILL.md")
+            self.assertEqual(blueprints.destination(str(home), "agent", "reviewer"), home.resolve() / ".claude" / "agents" / "reviewer.md")
+            for bad in (("/etc", "skill", "x"), (str(repo), "skill", "../evil"), (str(repo), "skill", "Bad Name"), (str(repo), "macro", "x")):
+                with self.assertRaises(ValueError):
+                    blueprints.destination(*bad)
+            body = {"kind": "skill", "name": "deploy-check", "target": str(repo), "content": "---\nname: deploy-check\n---\n", "mode": "write"}
+            self.assertEqual(blueprints.publish(body)[0], 200)
+            self.assertEqual(blueprints.publish(body)[0], 409)  # exists: not overwritten
+            self.assertEqual(blueprints.publish({**body, "overwrite": True})[0], 200)
+            with mock.patch.object(blueprints, "launch_claude_in", lambda cwd, prompt: (True, f"ok {cwd}")), mock.patch.object(blueprints, "DRAFTS", home / "drafts"):
+                code, out = blueprints.publish({**body, "mode": "claude", "blueprint": {"nodes": []}})
+            self.assertEqual(code, 200)
+            self.assertTrue(Path(out["draft"]).exists())
