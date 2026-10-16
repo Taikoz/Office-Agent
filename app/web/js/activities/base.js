@@ -9,13 +9,18 @@ import { chief } from "../core/core.js";
 export const ACTS = [];
 export class Activity {
   // id; label: what a dev there does ("joue au ping-pong"); icon and task: the chief's action bar ("Ping-pong");
-  // spots [{ x, y, via?, back? }]; pose (drawPerson options); fx: per tick on the team (crew.js); serves: the needs it
+  // pose (drawPerson options); fx: per tick on the team (crew.js); serves: the needs it
   // fills, most first (sims.js); needs: per minute on a dev's needs; social: it raises the social need; sport: the
-  // "sportif" trait enjoys it more (moods.js); chief: { fx per minute, line said when he goes }; area: [x, y, w, h]
-  // clicked by the chief in the break room; duel: [x, y, w, h] clicked to challenge a dev (duel.js); lines: chat;
+  // "sportif" trait enjoys it more (moods.js); chief: { fx per minute, line said when he goes }; duel: a game you
+  // can challenge a dev to (duel.js); lines: chat;
   // want: { label, pay, pts } (wants.js)
   constructor(def) { Object.assign(this, { pose: {}, fx: {}, serves: [], lines: [], chief: { fx: {}, line: "" } }, def); ACTS.push(this); }
   static get(id) { return ACTS.find(a => a.id === id); }
+  // its spots: those of the objects bought for it in the break room (items/*.js act, world/place.js spotsOf)
+  get spots() {
+    if (!hub.itemsIn) return [];
+    return hub.itemsIn("lounge").filter(it => hub.defOf(it.type).act === this.id).flatMap(it => hub.spotsOf(it).map(s => ({ ...s, back: !!s.face && s.face[1] < 0 })));
+  }
   // who is here now: the devs settled on a spot (not walking), and the chief
   devs() { return [...hub.loungers.values()].filter(l => l.spot?.act === this && !l.path.length); }
   chiefHere() { return chief.room === "lounge" && chief.lspot?.act === this && !chief.lpath.length; }

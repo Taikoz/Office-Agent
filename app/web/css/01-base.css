@@ -51,6 +51,12 @@
   #timeline .ax { fill: var(--dim); font-size: 14px; } #timeline .nm { fill: var(--muted); font-size: 15px; } #timeline .mk { font-size: 15px; cursor: default; }
   #timeline .row { cursor: pointer; } #timeline .row:hover .nm { fill: var(--text); }
   canvas.laser { cursor: none !important; }
+  /* the isometric view's layers under the scene's canvas (iso/pixi.js): back (floor, walls), world (PixiJS) */
+  .isolayer { position: absolute; pointer-events: none; }
+  #c-back { background: #0e1022; }
+  #c-world { background: transparent !important; }
+  body.iso-layers #c { position: relative; z-index: 1; background: transparent; }
+  canvas.panning { cursor: grabbing !important; }
   canvas { display: block; flex: none; image-rendering: pixelated; background: #000; }
   /* side column: agents on a mission, daily quests, status */
   /* missions: a panel that folds away on the right */

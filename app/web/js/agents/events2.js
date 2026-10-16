@@ -2,7 +2,8 @@
 // findings), cake on a level up, the team plant (MRs of the week), and whacking the test boss (cosmetic).
 
 import { hub, provide } from "../hub.js";
-import { LANE, chief, clip, ctx, current, cv, ents, fromDesk, px, text, toDesk } from "../core/core.js";
+import { anchored } from "../iso/engine.js";
+import { LANE, chief, clip, ctx, current, cv, ents, fillScreen, fromDesk, px, text, toDesk } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART } from "../svg/base.js";
 import { bubble } from "../world/scene.js";
@@ -60,7 +61,7 @@ export function drawAlarm(t) {
   if (!alarm || t > alarm.until) { alarm = null; return; }
   const on = Math.floor(t / 250) % 2 === 0;
   px(337, 2, 8, 4, "#5a1010"); px(338, 0, 6, 3, on ? "#ff3b3b" : "#7a1a1a");
-  if (on) { ctx.fillStyle = "rgba(255, 40, 40, 0.10)"; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (on) fillScreen("rgba(255, 40, 40, 0.10)");
 }
 
 /* cake when a specialty levels up: the seated devs gather around it */
@@ -93,7 +94,7 @@ export function drawCake(t) {
 /* team plant: grows with the MRs of the week, wilts when nothing shipped for 2 days */
 function drawTeamPlant(t) {
   const n = Math.min(10, game?.week?.mr || 0), last = game?.week?.lastMr, dry = !last || Date.now() / 1000 - last > 2 * 86_400;
-  const x = 12, base = 214, f = Math.floor(t / 900) % 2;
+  const x = 12, base = 290, f = Math.floor(t / 900) % 2;
   ART.teamplant.draw(x - 10, base - 30, { n, dry, frame: f });
   text(dry ? `MR 7 j : ${n} · à arroser` : `MR 7 j : ${n}`, x + 9, base + 2, dry ? "#d6a77f" : "#a5e6b0", 3.6);
 }
@@ -121,9 +122,9 @@ export function drawFloaters(t) {
   for (let i = floaters.length - 1; i >= 0; i--) {
     const f = floaters[i], k = (t - f.t0) / 900;
     if (k > 1) { floaters.splice(i, 1); continue; }
-    ctx.globalAlpha = 1 - k; text(f.text, f.x, f.y - k * 8, "#ffd43b", 4.6, "center"); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 1 - k; anchored(f.x, f.y + 10, () => text(f.text, f.x, f.y - k * 8, "#ffd43b", 4.6, "center")); ctx.globalAlpha = 1;
   }
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get alarm() { return alarm; }, get cake() { return cake; }, set cake(v) { cake = v; }, get checkAlerts() { return checkAlerts; }, get drawTeamPlant() { return drawTeamPlant; }, get renderUsage() { return renderUsage; }, get startCake() { return startCake; }, get weather() { return weather; }, set weather(v) { weather = v; }, get whackBoss() { return whackBoss; } });
+provide({ get CAKE() { return CAKE; }, get alarm() { return alarm; }, get cake() { return cake; }, set cake(v) { cake = v; }, get checkAlerts() { return checkAlerts; }, get drawTeamPlant() { return drawTeamPlant; }, get renderUsage() { return renderUsage; }, get startCake() { return startCake; }, get weather() { return weather; }, set weather(v) { weather = v; }, get whackBoss() { return whackBoss; } });

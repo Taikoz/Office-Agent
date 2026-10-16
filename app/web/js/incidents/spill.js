@@ -9,7 +9,7 @@ class Spill extends Incident {
   constructor() { super("spill"); this.at = null; }
   start(t) {
     super.start(t);
-    const y = [LANE, 150, 212][Math.floor(Math.random() * 3)], x = 60 + Math.random() * 260;
+    const y = [LANE, 168, 254][Math.floor(Math.random() * 3)], x = 60 + Math.random() * 420;
     this.at = { x, y };
     hub.cat.mode = "walk"; hub.cat.path = hub.catPath(x + 8, y); hub.cat.next = { mode: "sit" }; hub.cat.say = "Oups."; hub.cat.sayUntil = t + 6000;
     hub.toast("OUPS", `${CAT_NAME} a renversé un café`, "Clique sur la flaque pour nettoyer.");

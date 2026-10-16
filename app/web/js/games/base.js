@@ -21,6 +21,13 @@ export class MiniGame {
 
 export let match = null;  // the match being played: { name, skin (the game's id), ps, as (scores), over, look, …its own state }
 // the chief challenges a dev in the break room
+// a challenge on a game bought (items/furniture.js): whoever plays at it, else someone free in the break room
+export function duelAt(it, act) {
+  const here = [...loungers.values()].filter(l => !l.called && !l.path.length);
+  const opp = here.find(l => l.spot?.uid === it.uid) || here.find(l => l.spot?.act?.id === act.id) || here[Math.floor(Math.random() * here.length)];
+  if (!opp) return hub.toast("SALLE DE REPOS", "Personne pour jouer", "Tout le monde est au bureau.");
+  challenge(opp.name, act.id);
+}
 export function challenge(name, skin) {
   if (!loungers.has(name)) return;
   const game = MiniGame.get(skin) || MiniGame.get("pingpong");
@@ -51,8 +58,10 @@ function tournament(offsetWeeks = 0) {
   return Object.entries(pts).sort((a, b) => b[1] - a[1]);
 }
 const champion = () => tournament(1)[0]?.[0] || null;
-export function drawTournament(t) {
-  const x = 44, y = 10, w = 50, h = 48, rank = tournament(0);
+// the tournament's slate bought (build.js), where it hangs (offscreen: none)
+export const TOURNEY = { x: -999, y: -999 };
+export function drawTournament(t, at = TOURNEY) {
+  const { x, y } = at, w = 50, h = 48, rank = tournament(0);
   ART.slate.draw(x - 1, y - 1, { w, h });
   text("🏆 TOURNOI", x + w / 2, y + 1.5, "#fbaa08", 4.4, "center");
   text("cette semaine", x + w / 2, y + 7, "#adadad", 3.4, "center");
@@ -66,4 +75,4 @@ export function drawTournament(t) {
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get challenge() { return challenge; }, get champion() { return champion; }, get duels() { return duels; }, get match() { return match; }, set match(v) { match = v; } });
+provide({ get challenge() { return challenge; }, get duelAt() { return duelAt; }, get champion() { return champion; }, get duels() { return duels; }, get match() { return match; }, set match(v) { match = v; } });

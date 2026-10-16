@@ -13,7 +13,7 @@ class PingpongActivity extends Activity {
     } }];
   }
 }
-new PingpongActivity({ id: "pingpong", label: "joue au ping-pong", icon: "🏓", task: "Ping-pong", spots: [{ x: 188, y: 140 }, { x: 272, y: 140 }],
+new PingpongActivity({ id: "pingpong", label: "joue au ping-pong", icon: "🏓", task: "Ping-pong",
   pose: { arms: "type" }, fx: { ennui: -4, fatigue: 1, moral: 1 }, serves: ["fun", "social"], social: true, sport: true,
-  chief: { fx: { ennui: -15, social: 6 }, line: "Échauffement 🏓" }, duel: [194, 124, 72, 28],
+  chief: { fx: { ennui: -15, social: 6 }, line: "Échauffement 🏓" }, duel: true,
   lines: ["Smash !", "Let, on la rejoue.", "11-9, je mène !"], want: { label: "Jouer au ping-pong", pay: 60, pts: 50 } });

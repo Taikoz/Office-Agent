@@ -10,7 +10,7 @@ class BabyfootActivity extends Activity {
   }
   dress(l, opts) { return l.spot.y > 180 ? { ...opts, back: true } : opts; }  // the far side
 }
-new BabyfootActivity({ id: "babyfoot", label: "joue au baby-foot", icon: "⚽", task: "Baby-foot", spots: [{ x: 322, y: 162 }, { x: 322, y: 202, via: { x: 290, y: 202 } }],
+new BabyfootActivity({ id: "babyfoot", label: "joue au baby-foot", icon: "⚽", task: "Baby-foot",
   pose: { arms: "type" }, fx: { ennui: -4, moral: 1 }, serves: ["fun", "social"], social: true, sport: true,
-  chief: { fx: { ennui: -15, social: 6 }, line: "Baby ! ⚽" }, duel: [298, 166, 48, 24],
+  chief: { fx: { ennui: -15, social: 6 }, line: "Baby ! ⚽" }, duel: true,
   lines: ["Pas de pissette !", "Gamelle !", "Demi, on change ?"], want: { label: "Jouer au baby-foot", pay: 60, pts: 50 } });

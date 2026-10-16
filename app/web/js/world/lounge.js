@@ -1,7 +1,7 @@
 // Break room: activities, chats, mate panel.
 
 import { hub, provide } from "../hub.js";
-import { CHIEF_NAME, H, TEAM, chief, curSession, ents, hash, selected, specialty, typeColor } from "../core/core.js";
+import { CHIEF_NAME, H, TEAM, chief, curSession, ents, hash, selected, specialty, typeColor, roomSize } from "../core/core.js";
 import { drawPerson } from "./scene.js";
 import { lookFor } from "../agents/entities.js";
 import { crew, crewAdd, mate, moodWord } from "../sims/crew.js";
@@ -11,20 +11,39 @@ import { ACTS } from "../activities/base.js";
 // every team member not called by an agent waits here: activities, chats between them, and you can talk to them
 export const LD = { x: 23, y: 72 };                     // door back to the office, in the break room
 export const LOUNGE_CORRIDOR = 100;
-// every spot of every activity (js/activities/), with its activity
-const SPOTS = ACTS.flatMap(a => a.spots.map(s => ({ ...s, act: a })));
+// every spot of every activity (js/activities/: on the objects bought), with its activity
+const SPOTS = () => ACTS.flatMap(a => a.spots.map(s => ({ ...s, act: a })));
 export const loungers = new Map();
 export let view = "office", loungeReady = false, nextChat = 0;
 const chatQueue = [];
 
 // break room floor (decor.js: carpet tiles by default, a round rug in the middle), drawn once per scale and setting
-export function loungeFloorCanvas() { return hub.roomFloorCanvas("lounge", H - 70, [[130, 44, 140, 52]]); }
+export function loungeFloorCanvas() { const R = roomSize("lounge"); return hub.roomFloorCanvas("lounge", R.h - 70, [[130, 44, 140, 52]], R.w); }
 
-function spotFree(sp) { return ![...loungers.values()].some(l => l.spot === sp && !l.called); }
+function spotFree(sp) { return ![...loungers.values()].some(l => l.spot?.key === sp.key && !l.called) && chief.lspot?.key !== sp.key; }
 // the activity that serves the most urgent need (sims.js); otherwise a random free one
+// standing somewhere and chatting, when nothing bought is free (an empty break room)
+const STAND = { id: "stand", label: "discute debout", icon: "💬", task: "Discute", pose: {}, fx: { ennui: -0.3 }, serves: ["social"], lines: [], chief: { fx: {}, line: "" } };
+function standSpot() {
+  const R = roomSize("lounge");
+  for (let k = 0; k < 20; k++) {
+    const x = 40 + Math.random() * (R.w - 80), y = 100 + Math.random() * (R.h - 130);
+    if (hub.isFree("lounge", x, y)) return { x, y, key: `stand:${Math.round(x)}:${Math.round(y)}`, act: STAND, face: [Math.random() < 0.5 ? 1 : -1, 0] };
+  }
+  return { x: 80, y: 120, key: "stand:80:120", act: STAND };
+}
+// after the buy mode: who stood on a spot gone (an object sold or moved) picks another one
+export function revalidateSpots() {
+  const keys = new Set(SPOTS().map(s => s.key));
+  for (const l of loungers.values()) {
+    if (l.spot && !l.spot.key?.startsWith("stand:") && !keys.has(l.spot.key)) { l.spot = null; l.next = 0; l.busy = false; }
+    else if (l.spot?.key?.startsWith("stand:") && keys.size && !l.busy) l.next = 0;  // something new to use: they go
+  }
+  if (chief.lspot && !chief.lspot.key?.startsWith("stand:") && !keys.has(chief.lspot.key)) chief.lspot = null;
+}
 export function pickSpot(name) {
-  const free = SPOTS.filter(spotFree);
-  if (!free.length) return null;
+  const free = SPOTS().filter(spotFree);
+  if (!free.length) return standSpot();
   const [need, v] = hub.lowestNeed(mate(name));
   const pref = v < 60 && free.filter(s => (hub.ACT_SERVES[s.act.id] || [])[0] === need[0] || (v < 40 && (hub.ACT_SERVES[s.act.id] || []).includes(need[0])));
   const pool = pref?.length ? pref : free;
@@ -35,15 +54,7 @@ function mateIntent(name, l, e) {
   const need = hub.urgentNeed(name);
   return need ? `Besoin le plus urgent : ${hub.NEEDS.find(n => n[0] === need)[1].toLowerCase()} — il s'en occupe tout seul.` : "Tout va bien : il se détend en attendant une mission.";
 }
-function loungeRoute(l, sp) {
-  const pts = [];
-  if (l.spot?.via) pts.push({ ...l.spot.via });
-  pts.push({ x: pts.length ? pts[0].x : l.x, y: LOUNGE_CORRIDOR });
-  pts.push({ x: sp.via ? sp.via.x : sp.x, y: LOUNGE_CORRIDOR });
-  if (sp.via) pts.push({ ...sp.via });
-  pts.push({ x: sp.x, y: sp.y });
-  return pts;
-}
+function loungeRoute(_l, sp) { return [{ x: sp.x, y: sp.y }]; }  // around the furniture as they walk (world/route.js)
 export function sendTo(l, sp, t) {
   if (!sp) return;
   l.path = loungeRoute(l, sp); l.spot = sp; l.next = t + 40000 + Math.random() * 50000;
@@ -72,6 +83,7 @@ function stepLounge(dt, t) {
   loungeReady = true;
   for (const [name, l] of loungers) {
     if (l.path.length) {
+      hub.routeAhead(l.path, l.x, l.y, "lounge");  // around the furniture (world/route.js)
       const tgt = l.path[0], dx = tgt.x - l.x, dy = tgt.y - l.y, dist = Math.hypot(dx, dy), sp = 0.04 * dt;
       if (dist > sp) { l.x += dx / dist * sp; l.y += dy / dist * sp; }
       else { l.x = tgt.x; l.y = tgt.y; l.path.shift(); }
@@ -177,7 +189,7 @@ export function setView(v) {
 
 export function drawLounger(l, t) {
   const walking = l.path.length > 0, act = !walking && l.spot?.act, f = Math.floor(t / (walking ? 180 : 260));
-  let opts = { frame: walking ? f : 0, back: walking && l.path[0].y < l.y, smile: mate(l.name).moral >= 50 };
+  let opts = { frame: walking ? f : 0, back: walking && l.path[0].y < l.y, smile: mate(l.name).moral >= 50, dir: walking ? [l.path[0].x - l.x, l.path[0].y - l.y] : l.spot?.face };
   if (act) {
     opts = { ...opts, ...act.pose, frame: act.pose.arms === "type" ? f : 0 };
     if (act.dress) opts = act.dress(l, opts, t);  // an Activity (js/activities/); cooking, eating… are plain objects (social.js)
@@ -190,4 +202,4 @@ export function drawLounger(l, t) {
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get LD() { return LD; }, get LOUNGE_CORRIDOR() { return LOUNGE_CORRIDOR; }, get loungers() { return loungers; }, get setView() { return setView; }, get spotFree() { return spotFree; }, get stepLounge() { return stepLounge; }, get view() { return view; }, set view(v) { view = v; } });
+provide({ get revalidateSpots() { return revalidateSpots; }, get LD() { return LD; }, get LOUNGE_CORRIDOR() { return LOUNGE_CORRIDOR; }, get loungers() { return loungers; }, get setView() { return setView; }, get spotFree() { return spotFree; }, get stepLounge() { return stepLounge; }, get view() { return view; }, set view(v) { view = v; } });

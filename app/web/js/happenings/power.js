@@ -29,9 +29,10 @@ class PowerCut extends Happening {
     else toast("COURANT RÉTABLI", "Le gardien a réarmé le disjoncteur", "");
   }
   // the breaker box (blinking during a cut), the darkness, black screens
-  draw(t) {
+  // part: "fuse" for the breaker box alone (the isometric view darkens the room itself)
+  draw(t, part = "all") {
     const F = PowerCut.FUSE;
-    if (this.on) {
+    if (this.on && part === "all") {
       ctx.fillStyle = "rgba(4, 4, 14, .55)"; ctx.fillRect(0, 0, cv.width, cv.height);
       for (const d of DESKS) if (hasDesk(DESKS.indexOf(d))) px(d.x - 8, d.y - 12, 16, 10, "#08080c");
     }

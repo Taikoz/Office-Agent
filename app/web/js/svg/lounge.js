@@ -45,7 +45,7 @@ ART.pingpong = new PingpongArt();
 
 // baby-foot seen from above: wooden cabinet, striped field, goal boxes, 8 rods in the real order
 // (red: goalkeeper, defence, midfield, attack; blue the mirror), men sliding when played; handles on each team's side
-const FOOT_LINEUP = [["#d64545", 1], ["#d64545", 2], ["#2f6ad6", 3], ["#d64545", 5], ["#2f6ad6", 5], ["#d64545", 3], ["#2f6ad6", 2], ["#2f6ad6", 1]];
+export const FOOT_LINEUP = [["#d64545", 1], ["#d64545", 2], ["#2f6ad6", 3], ["#d64545", 5], ["#2f6ad6", 5], ["#d64545", 3], ["#2f6ad6", 2], ["#2f6ad6", 1]];
 
 class BabyfootArt extends SvgArt {
   constructor() { super("babyfoot", 48, 24); }

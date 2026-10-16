@@ -14,7 +14,7 @@ class SofaActivity extends Activity {
   }
   furniture() { return [{ y: 121, draw: () => SPRITES.sofa.draw(58, 110) }]; }
 }
-new SofaActivity({ id: "sofa", label: "regarde la télé", icon: "📺", task: "Regarde la télé", spots: [{ x: 72, y: 116 }, { x: 86, y: 116 }, { x: 100, y: 116 }],
+new SofaActivity({ id: "sofa", label: "regarde la télé", icon: "📺", task: "Regarde la télé",
   pose: { seated: true, back: true }, fx: { fatigue: -3, ennui: -1 }, serves: ["energie", "social"], social: true,
-  chief: { fx: { fatigue: -15, social: 3 }, line: "Pause canapé 💤" }, area: [58, 110, 56, 16],
+  chief: { fx: { fatigue: -15, social: 3 }, line: "Pause canapé 💤" },
   lines: ["Ce film est nul.", "Mets la suite !", "Chut, c'est le meilleur passage."], want: { label: "Regarder la télé", pay: 40, pts: 40 } });

@@ -119,6 +119,8 @@ function chiefOrder(where) {
   const t = performance.now();
   if (where !== "podium" && chiefBusyNow()) { chief.bubble = "Pas maintenant, l'équipe a besoin de moi !"; chief.until = t + 3000; return; }
   if (chief.room === "lounge") return chiefToOffice(where);  // from the break room: back through the door first
+  if (where === "coffee" && !COFFEE.ok) { chief.bubble = "Il faudrait acheter une machine à café…"; chief.until = t + 3000; return; }
+  if (where === "console" && !hub.OFFICE_SPOTS.console) { chief.bubble = "Pas de console ici : elle s'achète."; chief.until = t + 3000; return; }
   if (where === "coffee") {
     if (Incident.get("coffee").on) { chief.bubble = "La machine est en panne…"; chief.until = t + 3000; return; }
     chiefGo("coffee", c => { c.coffeeUntil = performance.now() + 6000; smoke(COFFEE.x, 56, "#d5eeff"); });

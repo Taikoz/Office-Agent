@@ -1,7 +1,8 @@
 // Office room, desks, board and people drawing.
 
-import { hub } from "../hub.js";
-import { CAB, DESKS, H, S, STATE_COLORS, W, chief, clip, ctx, data, drawerUntil, ents, font, hash, inTransit, mmx, px, text, typeColor } from "../core/core.js";
+import { hub, provide } from "../hub.js";
+import { CAB, DESKS, H, S, STATE_COLORS, W, chief, roomSize, clip, ctx, data, drawerUntil, ents, font, hash, inTransit, mmx, px, raw, text, typeColor } from "../core/core.js";
+import { isoDrawing } from "../iso/engine.js";
 import { ART, shade } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
 import { lookTraits } from "../svg/figures.js";
@@ -11,34 +12,41 @@ import { drawSky } from "../svg/sky.js";
 /* ---------- scene ---------- */
 // the floor (decor.js: parquet, tiles, carpet… and a rug under each row of desks), drawn once per scale and setting
 export const FLOOR_Y = 70;
-function floorCanvas(room = "office") {
-  const rows = [...new Set(DESKS.map(d => d.y))], x0 = Math.min(...DESKS.map(d => d.x)) - 30, x1 = Math.max(...DESKS.map(d => d.x)) + 30;
-  return hub.roomFloorCanvas(room, H - FLOOR_Y, rows.map(dy => [x0, dy - 4 - FLOOR_Y, x1 - x0, 36]));
+export function floorCanvas(room = "office") {
+  const rows = [...new Set(DESKS.map(d => d.y))], x0 = Math.min(...DESKS.map(d => d.x)) - 30, x1 = Math.max(...DESKS.map(d => d.x)) + 30, R = roomSize(room);
+  return hub.roomFloorCanvas(room, R.h - FLOOR_Y, rows.map(dy => [x0, dy - 4 - FLOOR_Y, x1 - x0, 36]), R.w);
 }
 
 export function drawRoom(t, room = "office") {
   const mine = room === "office";
   hub.drawWall(room);
-  const wc = hub.decor[room].wallColor;
-  if (hub.decor[room].wall !== "boiserie") { px(0, 44, W, 0.8, shade(wc, 0.87)); px(0, 44.8, W, 0.5, shade(wc, 1.35)); }  // chair rail on the wall
   ctx.drawImage(floorCanvas(room), 0, Math.round(FLOOR_Y * S));
-  px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828"); px(0, 69.4, W, 0.6, "#1a130e");  // baseboard
-  // window: sky following the real hour and the weather of today's tests (svg/sky.js drawSky)
-  drawSky(234, 12, t);
-  hub.drawWindow(room, 228, 4); ART.glints.draw(228, 4);
-  if (mine) { hub.drawShelf(t); hub.drawEmployee(t); }
-  // door
-  hub.doorSprite(room).draw(352, 20);
-  px(353, 10, 28, 8, "#f7f7f7"); text(mine ? `☕ REPOS ${hub.loungers.size}` : "← MON BUREAU", 367, 10.6, "#081746", 4, "center");
+  drawRoomWall(t, room);
   // plants
-  SPRITES.plant.draw(298, 52);
+  SPRITES.plant.draw(438, 52);
   if (mine) hub.drawTeamPlant(t);
   // espresso machine: brews while a dev or the chief takes a coffee
-  const brewing = mine && ([...ents.values()].some(e => e.pose === "coffee") || (chief.at === "coffee" && !chief.path.length && chief.coffeeUntil > 0));
-  const frame = brewing ? Math.floor(t / 600) % 4 : 0;
-  ART.coffeemachine.draw(316, 44, { frame, brewing });
-  if (mine) SPRITES.sign.draw(314, 26);
+  const { frame, brewing } = coffeeState(t, mine);
+  ART.coffeemachine.draw(456, 44, { frame, brewing });
+  if (mine) SPRITES.sign.draw(454, 26);
   if (!hub.focusMode) hub.drawSeason(t);
+}
+// what hangs on the wall: chair rail, baseboard, the window and its sky, the trophies and the employee of the week,
+// the door (also painted on the right wall of the isometric view)
+export function drawRoomWall(t, room = "office", iso = false) {
+  const mine = room === "office", wc = hub.decor[room].wallColor;
+  if (hub.decor[room].wall !== "boiserie") { px(0, 44, W, 0.8, shade(wc, 0.87)); px(0, 44.8, W, 0.5, shade(wc, 1.35)); }  // chair rail on the wall
+  px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828"); px(0, 69.4, W, 0.6, "#1a130e");  // baseboard
+  // window: sky following the real hour and the weather of today's tests (svg/sky.js drawSky)
+  if (!iso) { drawSky(374, 12, t); hub.drawWindow(room, 368, 4); ART.glints.draw(368, 4); }  // in isometric view, windows are bought (build.js)
+  if (mine && !iso) { hub.drawShelf(t); hub.drawEmployee(t); }  // in isometric view: objects bought (build.js)
+  // door
+  hub.doorSprite(room).draw(492, 20);
+  px(493, 10, 28, 8, "#f7f7f7"); text(mine ? `☕ REPOS ${hub.loungers.size}` : "← MON BUREAU", 507, 10.6, "#081746", 4, "center");
+}
+export function coffeeState(t, mine = true) {
+  const brewing = mine && ([...ents.values()].some(e => e.pose === "coffee") || (chief.at === "coffee" && !chief.path.length && chief.coffeeUntil > 0));
+  return { brewing, frame: brewing ? Math.floor(t / 600) % 4 : 0 };
 }
 
 export let boardCards = [];  // card rectangles of the last frame, for dragging a ticket onto a free desk
@@ -53,9 +61,17 @@ export function hitBoardPager(x, y) {
   const b = boardPagers.find(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
   return b ? `boardpg:${b.st}:${x < b.x + b.w / 2 ? -1 : 1}` : null;
 }
-export function drawBoard(session) {
-  const x0 = 10, y0 = 4, w = 196, h = 58;
-  boardCards = []; boardPagers = [];
+// the ticket board bought (build.js): where its top-left corner is on the wall (offscreen: none)
+export const BOARD_AT = { x: -999, y: -999 };
+// at: where to draw it (a ghost in the buy mode: live false, its cards are not clickable)
+export function drawBoard(session, at = BOARD_AT, live = true) {
+  if (live) { boardCards = []; boardPagers = []; }
+  if (at.x < -100) return;
+  const x0 = at.x + 3, y0 = at.y + 3, w = 196, h = 58;
+  if (!live) { const keep = [boardCards, boardPagers]; drawBoard.ghost = true; try { return drawBoardAt(session, x0, y0, w, h); } finally { drawBoard.ghost = false; boardCards = keep[0]; boardPagers = keep[1]; } }
+  drawBoardAt(session, x0, y0, w, h);
+}
+function drawBoardAt(session, x0, y0, w, h) {
   ART.board.draw(x0 - 3, y0 - 3, { w, h });
   const cw = w / BOARD_COLS.length;
   // a card stays in TO DO until its dev comes to the board and takes it
@@ -119,6 +135,20 @@ export function drawCabinet(t, hover) {
 export function drawPerson(x, y, look, opts = {}) {
   const hat = look === hub.CHIEF_LOOK ? hub.chiefHat() : look.team ? hub.shop.hat : "";
   const o = { frame: (opts.frame || 0) % 2, back: !!opts.back, seated: !!opts.seated, arms: opts.arms || "down", tux: !!opts.tux, smile: !!opts.smile, hat };
+  // the isometric view: in volume, turned toward where they go or look (opts.dir: a 2D direction; else facing us, or
+  // the wall when seen from behind), a quarter turn at a time (svg/iso.js IsoAvatar)
+  if (isoDrawing() && !opts.flat) {  // (flat: a portrait on the wall stays a picture)
+    const d = opts.dir;
+    let rot = o.back ? 2 : 0;
+    if (d && (d[0] || d[1])) rot = Math.abs(d[0]) > Math.abs(d[1]) ? (d[0] > 0 ? 1 : 3) : (d[1] > 0 ? 0 : 2);
+    if (!ART.isoavatar.draw(x, y, { look: lookTraits(look), rot, frame: o.frame, seated: o.seated, arms: o.arms, tux: o.tux, smile: o.smile, hat: o.hat })) return drawPersonPx(x, y, look, opts);
+    if (o.arms === "baton") {  // the baton in the raised hand
+      const [hx, hy] = [[4.9, 0], [0, -4.9], [-4.9, 0], [0, 4.9]][rot], top = (o.seated ? 4 : 8) + 16 + (o.frame ? 2 : 0), hp = { x: x + (hx - hy) * 0.6, y: y + (hx + hy) * 0.3 - top };
+      raw.drawn = true; ctx.strokeStyle = "#f4f2ea"; ctx.lineWidth = Math.max(1, S * 0.6); ctx.beginPath();
+      ctx.moveTo(hp.x * S, hp.y * S); ctx.lineTo((hp.x + 4) * S, (hp.y - 5) * S); ctx.stroke();
+    }
+    return;
+  }
   if (!ART.person.draw(x, y, { look: lookTraits(look), ...o })) return drawPersonPx(x, y, look, opts);  // svg/figures.js
   if (o.arms === "baton") {
     const lift = o.frame ? -3 : 0, ty = y - 12;
@@ -164,9 +194,15 @@ export function drawDesk(d, ent, t) {
   const st = hub.deskStyle(DESKS.indexOf(d));
   if (!st) return hub.drawNoDesk(d, ent, t);
   const wood = st.wood || hub.decor.office.wood;
+  drawDeskScreen(d, ent, t);
+  hub.monitorSprite(st.screen).draw(d.x - 10, d.y - 14);
+  hub.woodSprite("desk", wood).draw(d.x - 18, d.y - 3);
+  if (st.rgb) for (let i = 0; i < 12; i++) px(d.x - 17 + i * 2.8, d.y + 15.2, 2.8, 0.8, `hsl(${(i * 30 + t / 8) % 360} 90% 60%)`);  // gamer LED strip
+}
+// the screen of a desk's computer (16 × 10 at d.x - 8, d.y - 12): the dev's work, red on a failure, ✓ when delivered
+export function drawDeskScreen(d, ent, t) {
   const col = ent ? typeColor(ent.agent.type) : "#555";
-  const on = ent && ent.seated;
-  if (on) {
+  if (ent && ent.seated) {
     const st = ent.agent.status;
     const red = ent.fxKind === "fail" && t < ent.fxUntil;
     const scr = red ? (Math.floor(t / 150) % 2 ? "#a3263a" : "#5a1f2a") : st === "blocked" ? "#5a1f2a" : st === "done" ? "#1f4a33" : "#13233a";
@@ -178,11 +214,10 @@ export function drawDesk(d, ent, t) {
     } else if (st === "done") text("✓", d.x, d.y - 12.5, "#51cf66", 9, "center");
     else if (st === "blocked") text("!", d.x, d.y - 12.5, "#ff6b6b", 9, "center");
   } else px(d.x - 8, d.y - 12, 16, 10, "#222230");
-  hub.monitorSprite(st.screen).draw(d.x - 10, d.y - 14);
-  hub.woodSprite("desk", wood).draw(d.x - 18, d.y - 3);
-  if (st.rgb) for (let i = 0; i < 12; i++) px(d.x - 17 + i * 2.8, d.y + 15.2, 2.8, 0.8, `hsl(${(i * 30 + t / 8) % 360} 90% 60%)`);  // gamer LED strip
 }
 
+// how much higher a bubble or a mood goes over someone's head: the people in volume are taller (iso/engine.js)
+export const headroom = (k = 9) => isoDrawing() ? k : 0;
 export function bubble(x, y, msg, color = "#f4f2ea", fg = "#1c1c24") {
   if (!msg) return;
   font(4.6);
@@ -193,3 +228,6 @@ export function bubble(x, y, msg, color = "#f4f2ea", fg = "#1c1c24") {
   ctx.save(); ctx.beginPath(); ctx.rect(bx * S, (y - 9) * S, (w - 1) * S, 8 * S); ctx.clip();
   text(msg, bx + 2, y - 8.7, fg, 4.6); ctx.restore();
 }
+
+// used by modules loaded before this one, or written by another module (js/hub.js)
+provide({ get BOARD_AT() { return BOARD_AT; }, get drawBoard() { return drawBoard; } });

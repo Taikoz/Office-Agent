@@ -5,6 +5,7 @@ import { hub, provide } from "../hub.js";
 import { CHIEF_NAME, chief, px } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART } from "../svg/base.js";
+import { anchored } from "../iso/engine.js";
 import { crewAdd, mate } from "../sims/crew.js";
 import { loungers, pick, sendTo } from "../world/lounge.js";
 import { sfx, toast } from "../sims/progress.js";
@@ -12,9 +13,11 @@ import { canAfford, fmtSim, spend } from "../sims/money.js";
 import { cookLevel, cookXp, saveSocial, social } from "./relations.js";
 
 /* ---------- break-room places: stove, helper spot, dining table ---------- */
-export const STOVE = { x: 212, y: 84 }, HELPER = { x: 190, y: 84 }, PAN = { x: 205, y: 46 };  // the kitchen sprite sits at 158,30
+export const STOVE = { x: 212, y: 84 }, HELPER = { x: 190, y: 84 }, PAN = { x: 205, y: 46 };  // follow the stove bought (build.js); PAN.fx, fy, z: its top in the room
+// drawn on the stove's top, in the isometric view (the pan, the flames, the fire's warning)
+export const panAt = fn => hub.ISO?.drawing && PAN.fx != null ? hub.ISO.put(PAN.x + 5, PAN.y + 5.6, PAN.fx, PAN.fy, PAN.z, fn) : fn();
 export const TABLE = { x: 162, y: 175, w: 48, h: 15 };
-const SEATS = [{ x: 174, y: 172 }, { x: 198, y: 172, via: { x: 184, y: 172 } }, { x: 174, y: 204, via: { x: 150, y: 204 }, back: true }, { x: 198, y: 204, via: { x: 150, y: 204 }, back: true }];
+export const SEATS = [{ x: 174, y: 172 }, { x: 198, y: 172, via: { x: 184, y: 172 } }, { x: 174, y: 204, via: { x: 150, y: 204 }, back: true }, { x: 198, y: 204, via: { x: 150, y: 204 }, back: true }];
 const COOK_ACT = { id: "cook", label: "cuisine", pose: { back: true, arms: "type" }, fx: { ennui: -2 } };
 export const HELP_ACT = { id: "helpcook", label: "aide en cuisine", pose: { back: true, arms: "type" }, fx: { ennui: -2, moral: 0.5 } };
 const EAT_ACT = { id: "eat", label: "mange à table", pose: { seated: true }, fx: { moral: 1 } };
@@ -214,22 +217,23 @@ export function drawSteam(t) {
   for (const s of steam) {
     const k = (t - s.born) / s.life; if (k < 0) continue;
     const size = (s.big ? 2.6 : 1.4) + k * (s.big ? 3 : 1.6), c = s.dark ? `rgba(40,36,48,${0.75 * (1 - k)})` : `rgba(245,245,255,${0.6 * (1 - k)})`;
-    px(s.x + Math.sin(k * 6 + s.x) * 1.5 - size / 2, s.y - k * (s.big ? 26 : 14) - size / 2, size, size, c);
+    panAt(() => px(s.x + Math.sin(k * 6 + s.x) * 1.5 - size / 2, s.y - k * (s.big ? 26 : 14) - size / 2, size, size, c));  // over the pan
   }
 }
 // furniture of the depth-sorted list: the table (with the dish and the plates) and its stools
 export function socialItems(t) {
   const items = SEATS.map(s => ({ y: s.y - (s.back ? -1 : 1), draw: () => ART.stool.draw(s.x - 4, s.y - (s.back ? 4 : 5)) }));
-  items.push({ y: TABLE.y + 8, draw: () => {
-    ART.table.draw(TABLE.x, TABLE.y, { w: TABLE.w, h: TABLE.h });
-    if (dish) ART.dish.draw(TABLE.x + TABLE.w / 2 - 7, TABLE.y + 1, { food: dish.recipe.food, top: dish.recipe.top, burnt: dish.burnt, n: dish.portions, max: dish.recipe.portions });
-    for (const [, e] of eaters) {
-      if (!e.sat) continue;
-      const k = Math.max(0, 1 - (t - e.start) / EAT_MS), q = Math.ceil(k * 3) / 3;
-      ART.plate.draw(e.seat.x - 3.5, e.seat.back ? TABLE.y + TABLE.h - 9 : TABLE.y + 1.5, { food: e.recipe.food, top: e.recipe.top, burnt: e.burnt, k: q });
-    }
-  } });
+  items.push({ y: TABLE.y + 8, draw: () => { ART.table.draw(TABLE.x, TABLE.y, { w: TABLE.w, h: TABLE.h }); drawTableTop(t); } });
   return items;
+}
+// what is on the dining table: the dish, the plates of the people eating (also on the isometric table, rooms/lounge.js)
+export function drawTableTop(t) {
+  if (dish) ART.dish.draw(TABLE.x + TABLE.w / 2 - 7, TABLE.y + 1, { food: dish.recipe.food, top: dish.recipe.top, burnt: dish.burnt, n: dish.portions, max: dish.recipe.portions });
+  for (const [, e] of eaters) {
+    if (!e.sat) continue;
+    const k = Math.max(0, 1 - (t - e.start) / EAT_MS), q = Math.ceil(k * 3) / 3;
+    ART.plate.draw(e.seat.x - 3.5, e.seat.back ? TABLE.y + TABLE.h - 9 : TABLE.y + 1.5, { food: e.recipe.food, top: e.recipe.top, burnt: e.burnt, k: q });
+  }
 }
 // a fork going to the mouth for the people eating (drawn after them)
 export function drawFork(x, y, seat, t, start) {

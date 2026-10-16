@@ -3,11 +3,20 @@
 import { hub, provide } from "../hub.js";
 
 export const W = 400, H = 232;
-export const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+// the size of each room's floor in the scene's units: x from 0 to w, y from the wall's foot (70) to h; the screen
+// shows W × H of it at a time, the isometric view's camera moves over the rest (iso/engine.js)
+export const ROOM = { office: { w: 560, h: 300 }, lounge: { w: 560, h: 300 }, terrace: { w: 600, h: 320 }, meeting: { w: 400, h: 232 } };
+export const roomSize = id => ROOM[id] || ROOM.meeting;
+export const cv = document.getElementById("c");
+// where the drawing goes: the scene's canvas, or another one for a while (withCtx: the isometric view paints its back
+// layer and captures its pieces on other canvases, iso/pixi.js); raw.drawn: px() or text() painted something
+export let ctx = cv.getContext("2d");
+export const raw = { drawn: false };
+export function withCtx(g, fn) { const was = ctx; ctx = g; try { return fn(); } finally { ctx = was; } }
 export let booted = false;  // set by main.js once every script is loaded: input before that is ignored
 export let S = 3, data = { sessions: [], tickets: {}, questions: [] }, current = "*", firstLoad = true;
 export const ents = new Map();
-export const chief = { bubble: "", wave: 0, lastAction: "", x: 222, y: 86, at: "podium", path: [], freeSince: 0, until: 0, coffeeUntil: 0, cup: false };
+export const chief = { bubble: "", wave: 0, lastAction: "", x: 282, y: 86, at: "podium", path: [], freeSince: 0, until: 0, coffeeUntil: 0, cup: false };
 export let selected = null, detailTimer = null, build = null;
 
 /* every session in one office: the pseudo-session ALL merges their agents (ids "<session>|<agent>"),
@@ -78,17 +87,17 @@ export const CAT_NAME = OFFICE_CFG.cat || "Brume";
 export const SKINS = ["#f1c7a3", "#d9a47c", "#a8714f", "#7a4b32", "#f5d6bf"];
 export const HAIRS = ["#2b1d14", "#5b3a20", "#c9a24b", "#8c2f1e", "#1c1c24", "#d8d8d8"];
 export const DESKS = [];
-for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) DESKS.push({ x: 62 + i * 88, y: 122 + r * 62 });
-export const DOOR = { x: 366, y: 66 };                          // door to the break room (devs come from there and go back there)
-export const LANE = 98;                                   // walkway between the podium and the first row of desks
-export const QSPOTS = [{ x: 198, y: 101 }, { x: 246, y: 101 }, { x: 186, y: 106 }, { x: 258, y: 106 }];  // queue at the tech lead
-export const CAB = { x: 374, y: 146, w: 22, h: 44 };          // MMX filing cabinet, right of the desks
-export const STAND = { x: 366, y: 194 };                        // where a dev stands to file a paper
-export const COFFEE = { x: 325, y: 76 };                        // in front of the coffee machine
+for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) DESKS.push({ x: 100 + i * 120, y: 140 + r * 86 });  // laid out by construct.js
+export const DOOR = { x: 506, y: 66 };                          // door to the break room (devs come from there and go back there)
+export const LANE = 106;                                  // walkway between the podium and the first row of desks
+export const QSPOTS = [{ x: 258, y: 101 }, { x: 306, y: 101 }, { x: 246, y: 106 }, { x: 318, y: 106 }];  // queue at the tech lead
+export const CAB = { x: -999, y: -999, w: 22, h: 44, ok: false };  // the MMX filing cabinet bought (build.js; ok: there is one)
+export const STAND = { x: 518, y: 246 };                        // where a dev stands to file a paper
+export const COFFEE = { x: 465, y: 76 };                       // in front of the coffee machine
 export const ARRIVAL_GAP = 2600;                                // ms between two devs coming in through the door
 export const arrivals = [];                                    // ids waiting outside, in launch order
 export let doorFree = 0;
-export let DESK_SP = 88;                                        // desk spacing, 88 / 68 / 56 as the open space grows (construct.js)
+export let DESK_SP = 120;                                       // desk spacing, 120 / 96 / 80 as the open space grows (construct.js)
 export const aisle = d => d.x - DESK_SP / 2;
 export const toDesk = d => [{ x: aisle(d), y: LANE }, { x: aisle(d), y: d.y + 28 }, { x: d.x, y: d.y + 28 }, { x: d.x, y: d.y + 22 }];
 export const fromDesk = d => [{ x: d.x, y: d.y + 28 }, { x: aisle(d), y: d.y + 28 }, { x: aisle(d), y: LANE }];
@@ -96,10 +105,12 @@ export const STATE_COLORS = { "Submitted": "#9aa3b5", "Open": "#9aa3b5", "In Pro
   "To Verify": "#5aa9ff", "Verified": "#51cf66", "Done": "#51cf66", "Closed": "#51cf66" };
 
 export function hash(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
-export function px(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x * S), Math.round(y * S), Math.ceil(w * S), Math.ceil(h * S)); }
+export function px(x, y, w, h, c) { raw.drawn = true; ctx.fillStyle = c; ctx.fillRect(Math.round(x * S), Math.round(y * S), Math.ceil(w * S), Math.ceil(h * S)); }
+// a fill over the whole canvas, whatever its transform (the night, a power cut, a veil)
+export function fillScreen(color) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = color; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore(); }
 export function font(size) { ctx.font = `${Math.round(size * S)}px VT323, monospace`; }
 export function text(t, x, y, c, size = 4, align = "left") {
-  font(size); ctx.fillStyle = c; ctx.textAlign = align; ctx.textBaseline = "top"; ctx.fillText(t, x * S, y * S);
+  raw.drawn = true; font(size); ctx.fillStyle = c; ctx.textAlign = align; ctx.textBaseline = "top"; ctx.fillText(t, x * S, y * S);
 }
 export function clip(t, n) { t = (t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; }
 

@@ -1,6 +1,7 @@
 // Game layer: bosses, XP, achievements, quests, 8-bit sounds.
 
 import { hub, provide } from "../hub.js";
+import { anchored } from "../iso/engine.js";
 import { DOOR, W, ctx, ents, px, selected, specialty, text, typeColor } from "../core/core.js";
 import { Flag } from "../save/flag.js";
 import { ART } from "../svg/base.js";
@@ -13,7 +14,8 @@ import { esc } from "../core/data.js";
 import { loadDetail, openPanel } from "../ui/panel.js";
 
 /* ---------- game: scene events, bosses, XP, achievements, quests, sounds ---------- */
-export const SHELF = { x: 233, y: 47, w: 50 }, FRAME = { x: 292, y: 5, w: 20, h: 26 };
+// the trophy shelf and the employee of the week's frame, where they hang (bought: build.js; offscreen: none)
+export const SHELF = { x: -999, y: -999, w: 50 }, FRAME = { x: -999, y: -999, w: 20, h: 26 };
 export const FX_BG = { pass: "#51cf66", fail: "#ff6b6b", mr: "#fbaa08", push: "#5aa9ff", commit: "#d5eeff", verify: "#5aa9ff", boss: "#fbaa08" };
 export let game = null, gameSeen = null, banner = null;
 export const evSeen = new Map(), particles = [], planes = [];
@@ -21,7 +23,7 @@ let recentCups = new Map();
 
 export function burst(x, y, colors, n = 18, spread = 1, up = 1) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) n = Math.min(n, 4);
-  for (let i = 0; i < n; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 0.06 * spread, vy: -Math.random() * 0.07 * up,
+  for (let i = 0; i < n; i++) particles.push({ x, y, ox: x, oy: y, vx: (Math.random() - 0.5) * 0.06 * spread, vy: -Math.random() * 0.07 * up,
     g: 0.00012, life: 0, max: 900 + Math.random() * 900, c: colors[i % colors.length], s: 1 + Math.random() });
 }
 function rain(x, y, color) {
@@ -80,20 +82,21 @@ export function drawFx(t) {
   if (hub.focusMode) return;
   for (const p of particles) if (p.life >= 0) {
     ctx.globalAlpha = Math.max(0, 1 - p.life / p.max);
-    px(p.x, p.y, p.s, p.s, p.c);
+    anchored(p.ox ?? p.x, p.oy ?? p.y, () => px(p.x, p.y, p.s, p.s, p.c));  // around where it burst (the isometric view moves it)
   }
   ctx.globalAlpha = 1;
   for (const pl of planes) {  // paper plane: desk → door, with a little arc
     const k = Math.min(1, (t - pl.t0) / 2400), x = pl.sx + (DOOR.x - pl.sx) * k, y = pl.sy + (DOOR.y - 10 - pl.sy) * k - Math.sin(k * Math.PI) * 18;
-    px(x - 3, y, 6, 1.2, "#f4f2ea"); px(x - 1, y - 1.5, 3, 1.5, "#f7f7f7"); px(x + 2, y - 0.6, 2, 1, "#d5eeff");
+    anchored(x, Math.max(y + 16, 74), () => { px(x - 3, y, 6, 1.2, "#f4f2ea"); px(x - 1, y - 1.5, 3, 1.5, "#f7f7f7"); px(x + 2, y - 0.6, 2, 1, "#d5eeff"); });
   }
-  if (banner && t < banner.until) {  // LEVEL UP
+  if (banner && t < banner.until) {  // LEVEL UP, in the middle of the screen
     const k = Math.min(1, (banner.until - t) / 400), bob = Math.sin(t / 120) * 1.2;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = k;
     px(W / 2 - 92, 96 + bob, 184, 24, "#1c1c24"); px(W / 2 - 90, 98 + bob, 180, 20, banner.color);
     text(banner.title, W / 2, 98.5 + bob, "#1c1c24", 9, "center");
     text(banner.sub, W / 2, 109 + bob, "#1c1c24", 5, "center");
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = 1; ctx.restore();
   }
 }
 
@@ -110,8 +113,8 @@ export function drawBell(x, y, t) {
   ART.bell.draw(x - 4 + sw, y - 0.6);
 }
 
-function drawShelf(t) {
-  const list = game?.achievements || [];
+function drawShelf(t, at = SHELF) {
+  const SHELF = at, list = game?.achievements || [];
   ART.shelf.draw(SHELF.x - 1, SHELF.y, { w: SHELF.w });
   list.forEach((a, i) => {
     const x = SHELF.x + 1 + i * (SHELF.w - 2) / Math.max(12, list.length), y = SHELF.y - 5;
@@ -122,12 +125,12 @@ function drawShelf(t) {
   text("SUCCÈS", SHELF.x + SHELF.w / 2, SHELF.y + 2, "#adadad", 3.8, "center");
 }
 
-function drawEmployee(t) {
-  const { x, y, w, h } = FRAME, emp = game?.employee;
+function drawEmployee(t, at = FRAME) {
+  const { x, y, w, h } = at, emp = game?.employee;
   px(x - 1, y - 1, w + 2, h + 2, "#c9a24b"); px(x, y, w, h, "#0c2470");
   if (emp) {
     px(x, y + h * 0.55, w, h * 0.45, typeColor(emp.type) + "55");
-    drawPerson(x + w / 2, y + h - 1, lookFor(emp.type, emp.type), { smile: true });
+    drawPerson(x + w / 2, y + h - 1, lookFor(emp.type, emp.type), { smile: true, flat: true });  // a portrait in its frame
     text("★", x + w - 3, y + 0.5, "#fbaa08", 4.5, "center");
   } else text("?", x + w / 2, y + 7, "#adadad", 9, "center");
   text("EMPLOYÉ SEMAINE", x + w / 2, y + h + 1.5, "#c9a24b", 3, "center");

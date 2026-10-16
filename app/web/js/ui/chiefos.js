@@ -11,17 +11,12 @@ import { furni, saveBuild } from "../world/build.js";
 import { clockNow } from "../sims/days.js";
 import { OsApp } from "../apps/base.js";
 
-// every office gets one, once (selling it is allowed)
-if (furni.items && !furni.chiefSeeded) {
-  if (!furni.items.some(i => i.type === "chiefdesk")) furni.items.push({ uid: ++furni.seq, type: "chiefdesk", style: "noyer", room: "office", x: 250, y: 70 });
-  furni.chiefSeeded = true; saveBuild();
-}
 const chiefDesk = () => furni.items.find(i => i.type === "chiefdesk");
 
 // the chief walks to his desk, sits, and ChiefOS opens
 function chiefToDesk() {
   const it = chiefDesk(); if (!it) return openChiefOs();
-  const go = () => chiefGo({ x: it.x + 17, y: it.y + 30 }, c => { c.at = "chiefos"; openChiefOs(); });
+  const sp = hub.spotsOf(it)[0], go = () => chiefGo({ x: sp.x, y: sp.y }, c => { c.at = "chiefos"; openChiefOs(); });
   if (hub.chiefBusyNow()) { openChiefOs(); return; }  // the team waits: the screen opens at once
   if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }

@@ -1,7 +1,7 @@
 // MMX cabinet: entries carried by devs, store panel, validation.
 
 import { hub, provide } from "../hub.js";
-import { DOOR, HAIRS, LANE, SKINS, STAND, arrivals, clip, couriers, ents, inTransit, mmx, mmxQueue, mmxSeen, recentIds, selected, storeStamp } from "../core/core.js";
+import { CAB, DOOR, HAIRS, LANE, SKINS, STAND, arrivals, clip, couriers, ents, inTransit, mmx, mmxQueue, mmxSeen, recentIds, selected, storeStamp } from "../core/core.js";
 import { esc } from "../core/data.js";
 
 /* ---------- MMX storage ---------- */
@@ -31,6 +31,7 @@ function dispatch(items) {
   // the dev who wrote it (its last action mentions MMX) brings it, else the archivist comes in
   const dev = [...ents.values()].find(e => e.seated && !e.leaving && !e.asking && /mmx|propos/i.test(e.agent.action || ""));
   const file = { ...STAND, wait: 1500, pose: "file", on: x => { hub.drawerUntil = performance.now() + 1500; setTimeout(() => fileItems(x), 1400); } };
+  if (!CAB.ok) return fileItems({ errand });  // no cabinet bought: filed at once, nobody walks
   if (dev) {
     const d = dev.desk, yy = d.y + 28;
     dev.seated = false; dev.errand = errand;

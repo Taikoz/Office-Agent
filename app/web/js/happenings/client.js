@@ -1,8 +1,9 @@
 // A client visits the office: greet them (click) before they leave, and they may sign a bonus; nobody came: a
 // disappointed client.
 
+import { hub } from "../hub.js";
 import { CHIEF_NAME, DOOR, HAIRS, SKINS, TEAM, badge, chief, hash, px, text } from "../core/core.js";
-import { bubble, drawPerson } from "../world/scene.js";
+import { bubble, drawPerson, headroom } from "../world/scene.js";
 import { chiefGo, chiefToOffice, officeRoute } from "../world/chief.js";
 import { pick } from "../world/lounge.js";
 import { sfx, toast } from "../sims/progress.js";
@@ -18,13 +19,14 @@ class ClientVisit extends Happening {
   start(t) {
     if (this.on) return;
     const look = { skin: SKINS[hash(String(t)) % SKINS.length], hair: HAIRS[(hash(String(t)) >> 3) % HAIRS.length], shirt: "#1c1c24", style: hash(String(t)) % 5, glasses: Math.random() < 0.4 };
-    this.visitor = { x: DOOR.x, y: DOOR.y + 2, look, path: officeRoute(DOOR.x, DOOR.y + 2, 248, 104), phase: "in", until: t + 75000, say: "", sayUntil: 0 };
+    this.visitor = { x: DOOR.x, y: DOOR.y + 2, look, path: officeRoute(DOOR.x, DOOR.y + 2, 308, 110), phase: "in", until: t + 75000, say: "", sayUntil: 0 };
     toast("VISITE CLIENT 🤝", "Un client arrive au bureau", "Va l'accueillir (clic sur lui) avant qu'il ne reparte : il pourrait signer un bonus.");
     sfx("push");
   }
   step(dt, t) {
     const v = this.visitor; if (!v) return;
     if (v.path.length) {
+      hub.routeAhead(v.path, v.x, v.y, "office");  // around the furniture (world/route.js)
       const tgt = v.path[0], dx = tgt.x - v.x, dy = tgt.y - v.y, dist = Math.hypot(dx, dy), sp = 0.04 * dt;
       if (dist > sp) { v.x += dx / dist * sp; v.y += dy / dist * sp; } else { v.x = tgt.x; v.y = tgt.y; v.path.shift(); }
       if (!v.path.length && v.phase === "in") { v.phase = "wait"; v.say = "Bonjour, je viens voir l'avancement !"; v.sayUntil = t + 4000; }
@@ -41,11 +43,11 @@ class ClientVisit extends Happening {
   draw(t) {
     const v = this.visitor; if (!v) return;
     const walking = v.path.length > 0;
-    drawPerson(v.x, v.y, v.look, { tux: true, smile: v.phase !== "out" || v.say.includes("signe"), frame: walking ? Math.floor(t / 180) : 0, back: walking && v.path[0].y < v.y });
+    drawPerson(v.x, v.y, v.look, { tux: true, smile: v.phase !== "out" || v.say.includes("signe"), frame: walking ? Math.floor(t / 180) : 0, back: walking && v.path[0].y < v.y, dir: walking ? [v.path[0].x - v.x, v.path[0].y - v.y] : null });
     px(v.x + 4, v.y - 9, 4, 3, "#5c3d27");  // briefcase
     badge(v.x, v.y + 2, "CLIENT", "#d6a77f");
     if (v.phase === "wait") { const left = Math.max(0, Math.ceil((v.until - t) / 1000)); text(`⏳ ${left} s`, v.x, v.y - 32, "#fbaa08", 4.4, "center"); }
-    if (t < v.sayUntil) bubble(v.x, v.y - 24, v.say, "#f4f2ea");
+    if (t < v.sayUntil) bubble(v.x, v.y - 24 - headroom(), v.say, "#f4f2ea");
   }
   hit(x, y) { const v = this.visitor; return !!v && Math.abs(x - v.x) <= 7 && y >= v.y - 22 && y <= v.y + 3; }
   // the chief goes to greet them: a bonus, and everyone is proud

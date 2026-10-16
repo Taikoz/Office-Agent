@@ -14,7 +14,7 @@ class KaraokeActivity extends Activity {
   }
   after(l) { px(l.x - 5, l.y - 17, 1.2, 4, "#2b2b33"); px(l.x - 5.4, l.y - 18.4, 2, 2, "#9aa0ad"); }
 }
-new KaraokeActivity({ id: "karaoke", label: "chante au karaoké", icon: "🎤", task: "Karaoké", spots: [{ x: 366, y: 132 }],
+new KaraokeActivity({ id: "karaoke", label: "chante au karaoké", icon: "🎤", task: "Karaoké",
   pose: { arms: "up" }, fx: { ennui: -4, moral: 1 }, serves: ["fun", "social"], social: true,
-  chief: { fx: { ennui: -18, social: 8 }, line: "🎤 Un, deux, un, deux…" }, area: [346, 104, 46, 36],
+  chief: { fx: { ennui: -18, social: 8 }, line: "🎤 Un, deux, un, deux…" },
   lines: ["🎤 Libéréééée, délivréééée !", "🎵 I will survive !", "🎶 Encore une !", "🎤 Merci Agent Office !"], want: { label: "Chanter au karaoké", pay: 70, pts: 60 } });

@@ -1,6 +1,7 @@
 // Brume, the office cat.
 
 import { hub, provide } from "../hub.js";
+import { isoDrawing, petRot } from "../iso/engine.js";
 import { CAB, CAT_NAME, COFFEE, DESKS, LANE, ctx, ents, px, text } from "../core/core.js";
 import { ART } from "../svg/base.js";
 import { bubble } from "./scene.js";
@@ -9,7 +10,7 @@ import { stepLaser } from "./fun.js";
 
 /* ---------- office cat ---------- */
 // wanders between the desks, naps on a free or idle desk, jumps for joy on deliveries, meows when clicked
-const CAT_ROWS = [LANE, 150, 212], CAT_AISLES = [18, 106, 194, 282];
+const CAT_ROWS = [LANE, 168, 254], CAT_AISLES = () => [18, ...new Set(DESKS.map(d => d.x - hub.DESK_SP / 2))];  // between the desks (construct.js)
 export const cat = { x: 300, y: LANE, dir: -1, path: [], mode: "sit", until: 4000, desk: null, jump: 0, say: "", sayUntil: 0 };
 
 export function catPath(tx, ty) {
@@ -18,7 +19,7 @@ export function catPath(tx, ty) {
   if (y < LANE) { path.push({ x, y: LANE }); y = LANE; }           // coming back from the coffee machine
   const row = ty < LANE ? LANE : ty;
   if (row !== y) {
-    const ax = CAT_AISLES.reduce((b, a) => Math.abs(a - x) + Math.abs(a - tx) < Math.abs(b - x) + Math.abs(b - tx) ? a : b);
+    const ax = CAT_AISLES().reduce((b, a) => Math.abs(a - x) + Math.abs(a - tx) < Math.abs(b - x) + Math.abs(b - tx) ? a : b);
     path.push({ x: ax, y }, { x: ax, y: row });
   }
   path.push({ x: tx, y: row });
@@ -43,7 +44,7 @@ function catNext(t) {
   } else if (r < 0.5) {
     cat.path = catPath(COFFEE.x - 18, COFFEE.y); cat.next = { mode: "sit" };
   } else {
-    cat.path = catPath(20 + Math.random() * 330, CAT_ROWS[Math.floor(Math.random() * CAT_ROWS.length)]); cat.next = { mode: "sit" };
+    cat.path = catPath(20 + Math.random() * 480, CAT_ROWS[Math.floor(Math.random() * CAT_ROWS.length)]); cat.next = { mode: "sit" };
   }
   cat.mode = "walk";
 }
@@ -66,6 +67,7 @@ function stepCat(dt, t) {
     if (cat.mode === "sleep") { cat.y = cat.desk.y + 28; cat.desk = null; }
     return catNext(t);
   }
+  hub.routeAhead(cat.path, cat.x, cat.y, "office");  // around the furniture (world/route.js)
   const tgt = cat.path[0], dx = tgt.x - cat.x, dy = tgt.y - cat.y, dist = Math.hypot(dx, dy), sp = 0.035 * dt;
   if (dx) cat.dir = Math.sign(dx);
   if (dist > sp) { cat.x += dx / dist * sp; cat.y += dy / dist * sp; return; }
@@ -98,12 +100,18 @@ export function drawCat(t) {
   const moving = mode === "walk" || mode === "chase";
   const pose = mode === "sleep" ? "sleep" : moving ? "walk" : "sit";
   const frame = moving ? Math.floor(t / (mode === "chase" ? 90 : 140)) % 2 : pose === "sit" ? (Math.floor(t / 180) % 23 === 0 ? 2 : Math.sin(t / 300) > 0 ? 1 : 0) : 0;  // 2 = blink
-  if (!ART.cat.draw(x, y, { pose, frame }, { flip: dir < 0 })) drawCatPx(t, x, y);  // svg/figures.js; she faces right
+  if (isoDrawing()) { if (!ART.isocat.draw(x, y, { pose, frame, rot: pose === "sit" ? 0 : petRot(cat, dir) })) drawCatPx(t, x, y); }  // in volume (svg/iso.js), sitting: facing us
+  else if (!ART.cat.draw(x, y, { pose, frame }, { flip: dir < 0 })) drawCatPx(t, x, y);  // svg/figures.js; she faces right
   if (mode === "sleep") {  // z z z
     const k = (t / 1400) % 1;
     ctx.globalAlpha = 1 - k; text("z", x + 5 + k * 3, y - 8 - k * 6, "#d5eeff", 4); ctx.globalAlpha = 1;
   }
-  const head = pose === "sleep" ? 8 : 15;
+  if (!isoDrawing()) drawCatSay(t, y);  // in isometric view, over the world (rooms/office.js)
+}
+// what she says, her name under the pointer (y: where she is drawn, a jump included)
+export function drawCatSay(t, y = cat.y) {
+  if (hub.focusMode) return;
+  const { x, mode } = cat, head = mode === "sleep" ? 8 : 15;
   if (t < cat.sayUntil) bubble(x, y - head, cat.say, "#f4f2ea");
   else if (mode === "comfort" && Math.floor(t / 3000) % 2) bubble(x, y - head, `♥ courage ${cat.comfort || ""}`, "#f4c2d7");
   else if (mode === "hide") bubble(x, y - head, "🙀", "#f4f2ea");
