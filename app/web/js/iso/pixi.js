@@ -32,7 +32,7 @@ function texFor(src) {
   return t;
 }
 // sprites and small canvases, reused frame after frame
-const sprites = [], scratch = [];
+const sprites = [], scratch = [], M = new PIXI.Matrix();  // M: one matrix for all (setFromMatrix copies it)
 let nSprite = 0, nScratch = 0;
 function sprite() {
   let s = sprites[nSprite++];
@@ -84,14 +84,14 @@ export const PX = {
     artHook.emit = (img, x0, y0, dw, dh, flip) => {
       const m = g.getTransform(), sx = (flip ? -dw : dw) / (img.naturalWidth || img.width), sy = dh / (img.naturalHeight || img.height), ox = flip ? x0 + dw : x0;
       const s = sprite(); s.texture = texFor(img); s.alpha = g.globalAlpha;
-      s.transform.setFromMatrix(new PIXI.Matrix(m.a * sx, m.b * sx, m.c * sy, m.d * sy, m.a * ox + m.c * y0 + m.e + bx, m.b * ox + m.d * y0 + m.f + by));
+      s.transform.setFromMatrix(M.set(m.a * sx, m.b * sx, m.c * sy, m.d * sy, m.a * ox + m.c * y0 + m.e + bx, m.b * ox + m.d * y0 + m.f + by));
       app.stage.addChild(s);
     };
     raw.drawn = false;
     try { withCtx(g, draw); } finally { artHook.emit = null; }
     if (raw.drawn) {  // painted by hand: over the images of the piece
       k.tex.frame = new PIXI.Rectangle(0, 0, bw, bh); k.tex.updateUvs(); k.tex.baseTexture.update();
-      const s = sprite(); s.texture = k.tex; s.transform.setFromMatrix(new PIXI.Matrix(1, 0, 0, 1, bx, by));
+      const s = sprite(); s.texture = k.tex; s.transform.setFromMatrix(M.set(1, 0, 0, 1, bx, by));
       app.stage.addChild(s);
     } else nScratch--;  // nothing painted: its canvas serves the next piece
     return first;

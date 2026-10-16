@@ -127,7 +127,8 @@ export function resize() {
   cv.style.width = `${Math.round(w)}px`;
   tl.style.width = `${Math.round(Math.min(w, 900))}px`;  // the timeline floats above the clock
   S = Math.max(1.2, w / W);
-  const dpr = window.devicePixelRatio || 1;
+  // pixels of the layers per CSS pixel: the device's, or fewer (ui/quality.js: a budget, the frames measured)
+  const dpr = hub.renderRes?.(W * S, H * S) || window.devicePixelRatio || 1;
   cv.width = Math.round(W * S * dpr); cv.height = Math.round(H * S * dpr);
   cv.style.height = `${Math.round(H * S)}px`;
   S *= dpr;
