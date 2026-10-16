@@ -43,7 +43,7 @@ export function nightOver() {
 export function lampsOver(room) {
   const h = hub.clockNow().getHours(), night = h < 8 || h >= 19;
   if (!(hub.Happening.get("power").on && room === "office")) for (const it of itemsIn(room)) {  // the neon signs on the walls: a halo of their colour
-    const d = defOf(it.type); if (!d.glow || d.kind !== "wall") continue;
+    const d = defOf(it.type); if (!d.glow || d.kind !== "wall" || it.off) continue;
     const st = hub.styleOf(it), col = st.c || st.sw || "#ff4fb8", p = hub.ISO.wallPt(it.side || "back", it.x + d.w / 2, it.y + d.h / 2), cx = p.x * S, cy = p.y * S, r = (Math.max(d.w, d.h) * 0.5 + 18) * S;
     if (night) {  // the tube shines through the dark: the night's veil wiped where it is (whoever stands in front keeps their place)
       ctx.save(); ctx.globalCompositeOperation = "destination-out";
@@ -56,8 +56,9 @@ export function lampsOver(room) {
 
   }
   for (const it of itemsIn(room)) if (defOf(it.type).light && it.on && !(hub.Happening.get("power").on && room === "office")) {
-    const [x0, y0, x1, y1] = footOf(it), p = P((x0 + x1) / 2, (y0 + y1) / 2, defOf(it.type).light), cx = p.x * S, cy = p.y * S, g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 46 * S);
-    g.addColorStop(0, `rgba(255,214,120,${night ? 0.32 : 0.12})`); g.addColorStop(1, "rgba(255,214,120,0)");
-    ctx.fillStyle = g; ctx.fillRect(cx - 46 * S, cy - 46 * S, 92 * S, 92 * S);
+    const d = defOf(it.type), [x0, y0, x1, y1] = footOf(it), p = P((x0 + x1) / 2, (y0 + y1) / 2, d.light), cx = p.x * S, cy = p.y * S, r = (d.lightR || 46) * S;
+    const col = hub.styleOf(it).lc || d.lc || "#ffd678", [R, G, B] = [1, 3, 5].map(i => parseInt(col.slice(i, i + 2), 16)), g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(${R},${G},${B},${night ? 0.34 : 0.12})`); g.addColorStop(1, `rgba(${R},${G},${B},0)`);  // its colour (an LED column), its reach (a chandelier)
+    ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
   }
 }

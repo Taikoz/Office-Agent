@@ -85,7 +85,7 @@ function contextOf(a, b, extra) {
   return {
     a: a.name, b: b?.name || "", ma, h: d.getHours(), dow: d.getDay(), season: hub.seasonNow?.() || "", weather: weather(), holiday: HOLIDAY(d),
     act: a.spot?.act?.id || "", actLines: [...(a.spot?.act?.lines || []), ...(ACT_MORE[a.spot?.act?.id] || [])], rel: b ? hub.rel(a.name, b.name) : 0, traits, trait: traits.length ? pick(traits) : null,
-    best: best && hub.defOf(best.type).name.toLowerCase(), music: !!jukebox.playing, dog: hub.petBook?.dog ? hub.DOG_NAME : null, ...extra,
+    best: best && hub.defOf(best.type).name.toLowerCase(), music: !!jukebox.playing, hackathon: !!hub.Happening?.get("hackathon")?.on, welcome: hub.Happening?.get("welcome")?.on ? hub.Happening.get("welcome").names : null, dog: hub.petBook?.dog ? hub.DOG_NAME : null, ...extra,
   };
 }
 function fill(s, c, others) {

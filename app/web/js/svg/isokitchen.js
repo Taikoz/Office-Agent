@@ -117,3 +117,56 @@ export const KHOOD = new FlatArt("kwallhood", 14, 22, ({ c = "#c9ccd6", on = fal
 export const KSPICE = new FlatArt("kwallspice", 18, 12, ({ w = "#a8784a" }) => R(0, 4.4, 18, 1, w) + R(0, 10, 18, 1, w) + R(0.6, 5.4, 0.8, 4.6, shade(w, 0.75)) + R(16.6, 5.4, 0.8, 4.6, shade(w, 0.75))
   + ["#c0303a", "#e8c23a", "#51cf66", "#8a5a2a", "#f4f2ea"].map((c, i) => R(2 + i * 3, 1, 2, 3.4, "#e6eef4", ' fill-opacity=".8"') + R(2 + i * 3, 2.2, 2, 2.2, c) + R(2 + i * 3, 0.6, 2, 0.6, "#2a2a30")).join("")
   + [0, 1, 2, 3].map(i => R(2.4 + i * 3.6, 6.4, 2.4, 3.6, ["#9a5a2a", "#f4f2ea", "#2f6e4c", "#d8a0a8"][i])).join("") + R(0, 11, 18, 1, "#000", ' fill-opacity=".15"'));
+
+/* ---------- coffee machines, from the worst to the best (items/catalog2.js), each on its stand ---------- */
+const stand = (w, d, c = "#8a6a4a") => ishadow(w, d, 0) + ibox(0, 0, w, d, 0, 13, T(c)) + ifront(1, d, w - 2, 1.5, 10, shade(c, 0.88)) + ibox(0, 0, w, d, 13, 1, T(shade(c, 1.1)));
+// the drip coffee maker: a black body, the glass jug, its warming plate
+art("isocoffeefilter", 14, 8, 30, ({ c = "#1c1c22", on = false }) => {
+  let g = stand(14, 8) + ibox(3, 1, 8, 5, 14, 2, T(c)) + ibox(3, 1, 8, 2.6, 16, 10, T(c)) + ibox(3, 1, 8, 5, 26, 1.6, T(c));
+  g += ibox(4.4, 3.6, 5, 3.4, 16, 5.6, ["#dfe8ee", "#cfdde6", "#b8c6d0"], ' fill-opacity=".55"') + ifront(4.4, 7, 5, 16.2, 2.6, "#5a3418", ' fill-opacity=".9"');
+  return g + ifront(9.6, 6, 0.8, 21.5, 0.8, on ? "#ff3b3b" : "#7a2020") + ibox(8.4, 4, 1, 1, 21.2, 1, T("#2a2a30"));
+});
+// the capsule machine: a sleek body in a colour, a drip tray, a box of coloured capsules
+art("isocoffeecapsule", 14, 8, 30, ({ c = "#c0303a", on = false }) => {
+  let g = stand(14, 8) + ibox(3, 1, 6, 6, 14, 11, T(c)) + ibox(3, 0.6, 6, 6.8, 25, 1.2, T(shade(c, 1.15))) + ibox(4, 5, 4, 2, 14, 0.8, T("#2a2a30"));
+  g += ibox(5, 5.2, 2, 1.4, 16.2, 1.8, T("#f4f2ea")) + ifront(4, 7, 4, 21, 1.6, "#1c1c22") + ifront(4.4, 7, 0.8, 21.4, 0.8, on ? "#51cf66" : "#3a3a46");
+  for (const [i, k] of ["#c0303a", "#e8c23a", "#2a6fd0", "#2a2a30", "#51cf66"].entries()) g += iell(10.5 + (i % 2) * 1.6, 2 + i * 1.1, 14.6, 0.7, k);
+  return g + ibox(9.6, 1, 3.4, 6, 14, 0.6, T("#3a3a46"));
+});
+// the lever espresso machine of a real barista: two group heads, long levers, a dome, a gauge, cups warming on top
+art("isocoffeepro", 26, 9, 40, ({ c = "#c9ccd6", on = false }) => {
+  let g = stand(26, 9, "#5c3d27") + ibox(2, 0.5, 22, 7.6, 14, 12, T(c)) + ibox(2, 0.5, 22, 7.6, 26, 1, T(shade(c, 1.15)));
+  g += ifront(3, 8.1, 20, 19, 4, shade(c, 0.85)) + iell(13, 8.1, 22.5, 1.6, "#f7f2e2") + iline(ipt(13, 8.1, 22.5), ipt(13.8, 8.1, 23.4), "#c0303a", 0.25);
+  for (const x of [6, 20]) g += ibox(x - 1, 6, 2, 2.6, 16.4, 2.4, T("#a7acb6")) + ibox(x - 0.4, 7.6, 0.8, 0.8, 18.8, 9, T("#1c1c22")) + iell(x, 8, 28, 1, "#1c1c22") + ibox(x - 1, 6, 2, 2, 14, 1.4, T("#f4f2ea"));
+  g += icyl(13, 4, 27, 4, 3.4, shade(c, 0.9), shade(c, 1.2)) + iell(13, 4, 31.2, 1, "#d4a640") + ibox(12.6, 3.6, 0.8, 0.8, 31.2, 2, T("#d4a640"));
+  for (const x of [4, 7.5, 18.5, 22]) g += icyl(x, 3, 27, 1.6, 1.2, "#e6e6ea", "#f4f2ea");
+  return g + (on ? iell(6, 8.4, 15.2, 1.2, "#5a3418") + iell(20, 8.4, 15.2, 1.2, "#5a3418") : "");
+});
+
+/* ---------- lights (items/catalog2.js): the light itself glows warm when on ---------- */
+const bulb = (x, y, z, on, c = "#fff3c4", r = 1.6) => iell(x, y, z, r, on ? c : "#c9c4b0") + (on ? iell(x, y, z, r * 2.2, c, ' fill-opacity=".25"') : "");
+// the arc floor lamp: a marble foot, a steel arc, a dome hanging far out
+art("isolamparc", 14, 14, 52, ({ c = "#c9ccd6", on = true }) => {
+  const [x0, y0] = ipt(2, 12, 2), [x1, y1] = ipt(2, 12, 46), [x2, y2] = ipt(12, 2, 44);
+  return iell(2, 12, 0, 3, "#000", ' fill-opacity=".2"') + icyl(2, 12, 0, 2.4, 2.6, "#d9d6cf", "#f0ede6") + `<path fill="none" stroke="${c}" stroke-width=".9" d="M${n2(x0)} ${n2(y0)}L${n2(x1)} ${n2(y1)}Q${n2(x1 + 6)} ${n2(y1 - 8)} ${n2(x2)} ${n2(y2)}"/>`
+    + icyl(12, 2, 36, 5, 4, shade(c, 0.85), shade(c, 1.1)) + bulb(12, 2, 36, on, "#fff3c4", 2.2);
+});
+// the photographer's tripod lamp: three legs, a big drum shade
+art("isolamptripod", 12, 12, 42, ({ c = "#2a2a30", on = true }) => {
+  let g = iell(6, 6, 0, 5, "#000", ' fill-opacity=".18"');
+  for (const [x, y] of [[1, 2], [11, 3], [6, 11]]) g += iline(ipt(x, y, 0), ipt(6, 6, 28), "#5c3d27", 0.8);
+  return g + ibox(5.6, 5.6, 0.8, 0.8, 28, 4, T("#3a3a46")) + icyl(6, 6, 30, 8, 4.6, shade(c, 0.9), on ? "#fff3c4" : shade(c, 1.2)) + (on ? iell(6, 6, 30, 5, "#fff3c4", ' fill-opacity=".3"') : "");
+});
+// the LED column: a tall bar of colour
+art("isolampled", 8, 8, 40, ({ c = "#b46bff", on = true }) => iell(4, 4, 0, 3.4, "#000", ' fill-opacity=".2"') + icyl(4, 4, 0, 1.4, 3, "#1c1c22", "#2a2a30")
+  + ibox(3, 3, 2, 2, 1.4, 34, on ? [shade(c, 1.4), c, shade(c, 0.8)] : T("#3a3a46")) + (on ? ibox(2.4, 2.4, 3.2, 3.2, 1.4, 34, T(c), ' fill-opacity=".25"') : ""));
+// the pendant: hanging from the ceiling (its cord goes up out of sight), a shade over a table or a desk
+art("isopendant", 10, 10, 78, ({ c = "#2a2a30", on = true }) => iline(ipt(5, 5, 54), ipt(5, 5, 78), "#1c1c22", 0.4)
+  + `<path fill="${c}" d="M${ipt(1, 5, 48).join(" ")}L${ipt(5, 1, 49).join(" ")}L${ipt(9, 5, 48).join(" ")}L${ipt(5, 9, 47).join(" ")}Z"/>`
+  + icyl(5, 5, 48, 6, 2, shade(c, 0.85), shade(c, 1.15)) + `<path fill="${shade(c, 0.75)}" d="M${ipt(1.5, 8.5, 48).join(" ")}Q${ipt(5, 5, 54).join(" ")} ${ipt(8.5, 1.5, 48).join(" ")}Z"/>` + bulb(5, 5, 47.6, on, "#fff3c4", 2.6));
+// the crystal chandelier: gilt arms, candles, crystal drops
+art("isochandelier", 16, 16, 82, ({ c = "#d4a640", on = true }) => {
+  let g = iline(ipt(8, 8, 60), ipt(8, 8, 82), "#3a3a44", 0.4) + icyl(8, 8, 52, 8, 1.2, shade(c, 0.85), c);
+  for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, x = 8 + Math.cos(a) * 6, y = 8 + Math.sin(a) * 6; g += iline(ipt(8, 8, 54), ipt(x, y, 54), c, 0.6) + icyl(x, y, 54, 2.6, 0.5, "#f4f2ea", "#fff") + bulb(x, y, 57, on, "#ffe9a8", 0.9) + iell(x, y, 51.6, 0.5, "#dff3ff"); }
+  return g + iell(8, 8, 50, 1.2, "#dff3ff");
+});

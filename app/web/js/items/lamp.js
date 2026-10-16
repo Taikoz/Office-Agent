@@ -4,7 +4,7 @@ import { hub } from "../hub.js";
 import { sfx } from "../sims/progress.js";
 import { Item } from "./base.js";
 
-class Lamp extends Item {
+export class Lamp extends Item {
   thumbState() { return true; }
   pie(it) { return [["lamp", it.on ? "🌑" : "💡", it.on ? "Éteindre" : "Allumer"]]; }
   act(it, id) { if (id !== "lamp") return false; it.on = !it.on; hub.saveBuild(); sfx("commit"); return true; }

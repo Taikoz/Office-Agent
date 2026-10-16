@@ -397,9 +397,10 @@ chairArts("egg", 14, 12, 26, ({ c = "#ef7d22", inner = "#f7c08a" }) => {
 }, ({ c = "#ef7d22" }) => ibox(0.5, 0, 13, 3, 7, 17, T(c)) + ipoly([ipt(0.5, 3, 24), ipt(13.5, 3, 24), ipt(12, 3, 26), ipt(2, 3, 26)], shade(c, 1.15)) + ifront(3, 3, 8, 12, 0.4, shade(c, 0.8)));
 /* ---------- armchairs, sofas, beanbags of the shop (items/furniture.js) ---------- */
 // a seat with a deep back: its back (w × bd, behind whoever sits), its seat (w × (d - bd), from y = bd), both for the shop
-function seatArts(key, w, d, bd, H, back, seat) {
+// (rear: [z0, height, colour of the style] of its back seen from behind, when it is turned away from the viewer)
+function seatArts(key, w, d, bd, H, back, seat, rear = null) {
   const B = `iso${key}back`, S = `iso${key}`, [ox, oy] = ipt(0, bd);
-  reg(class extends IsoArt { constructor() { super(B, w, bd, H); } body(o) { return back(o); } });
+  reg(class extends IsoArt { constructor() { super(B, w, bd, H); } body(o) { return o.back && rear ? back(o) + ifront(0, bd, w, rear[0], rear[1], shade(rear[2](o), 0.88)) + ifront(0, bd, w, rear[0] + rear[1] - 0.6, 0.6, shade(rear[2](o), 1.1)) : back(o); } });
   reg(class extends IsoArt { constructor() { super(S, w, d - bd, 16); } body(o) { return seat(o); } });
   reg(class extends IsoArt { constructor() { super(`${S}full`, w, d, H); } body(o) { return back(o) + `<g transform="translate(${n2(ox)} ${n2(oy)})">${seat(o)}</g>`; } });
 }
@@ -409,7 +410,7 @@ const woodLegs = (x0, y0, x1, y1, h, c = "#3a2618") => legs4(x0, y0, x1, y1, h, 
 // armchairs (24 × 18, back 6 deep)
 seatArts("armrecup", 24, 18, 6, 24, ({ c = "#b8902a" }) => ibox(1, 0, 22, 6, 1, 19, T(c)) + ifront(5, 6, 5, 13, 4, shade(c, 1.35)) + iline(ipt(5, 6, 13), ipt(10, 6, 17), shade(c, 0.6), 0.3) + plaid(8, 0, 8, 6.4, 14, 7),
   ({ c = "#b8902a" }) => woodLegs(1, 0.5, 23, 11.5, 1.2) + ibox(1, 0, 22, 12, 1, 5, T(c)) + ibox(4, 0, 16, 11, 6, 1.8, T(shade(c, 1.06))) + ibox(0, 0, 4, 12, 1, 11, T(c)) + ibox(20, 0, 4, 12, 1, 11, T(c))
-    + iell(22, 4, 12.05, 1.2, "#f4f2ea") + ifront(1, 12, 22, 3, 0.3, shade(c, 0.6)));
+    + iell(22, 4, 12.05, 1.2, "#f4f2ea") + ifront(1, 12, 22, 3, 0.3, shade(c, 0.6)), [1, 19, o => o.c || "#b8902a"]);
 seatArts("armrattan", 24, 18, 6, 24, ({ w = "#c49a5a", k = "#f0efe9" }) => {
   let g = ibox(1, 0, 22, 5, 4, 18, T(w));
   for (let z = 6; z < 22; z += 2) g += iline(ipt(1, 5, z), ipt(23, 5, z), shade(w, 0.7), 0.25);
@@ -418,56 +419,56 @@ seatArts("armrattan", 24, 18, 6, 24, ({ w = "#c49a5a", k = "#f0efe9" }) => {
   let g = ishadow(24, 12, 0) + ibox(1, 0, 22, 12, 0, 7, T(w)) + ibox(0, 0, 3, 12, 4, 9, T(w)) + ibox(21, 0, 3, 12, 4, 9, T(w));
   for (let z = 1; z < 7; z += 1.6) g += iline(ipt(1, 12, z), ipt(23, 12, z), shade(w, 0.7), 0.25);
   return g + ibox(3, 0.5, 18, 10.5, 7, 2.4, T(k));
-});
+}, [4, 18, o => o.w || "#c49a5a"]);
 seatArts("armcocoon", 24, 18, 6, 22, ({ c = "#ece4d4" }) => ibox(0, 0, 24, 6, 1.5, 15, T(c)) + itop(1, 0.5, 22, 5, 16.51, shade(c, 1.12)) + fabric(1, 6, 22, 4, 12, c, 9),
   ({ c = "#ece4d4" }) => woodLegs(1.5, 0.5, 22.5, 11.5, 1.5, "#8a6a4a") + ibox(0, 0, 24, 12, 1.5, 6, T(c)) + ibox(0, 0, 4.5, 11.5, 1.5, 11.5, T(c)) + ibox(19.5, 0, 4.5, 11.5, 1.5, 11.5, T(c))
-    + ibox(4.5, 0, 15, 10.5, 7.5, 2.4, T(shade(c, 1.06))) + fabric(0, 12, 24, 2, 5, c, 10) + itop(0.6, 1, 3.4, 9.5, 13.01, shade(c, 1.12)) + itop(20.1, 1, 3.4, 9.5, 13.01, shade(c, 1.12)));
+    + ibox(4.5, 0, 15, 10.5, 7.5, 2.4, T(shade(c, 1.06))) + fabric(0, 12, 24, 2, 5, c, 10) + itop(0.6, 1, 3.4, 9.5, 13.01, shade(c, 1.12)) + itop(20.1, 1, 3.4, 9.5, 13.01, shade(c, 1.12)), [1.5, 15, o => o.c || "#ece4d4"]);
 seatArts("armrecliner", 24, 18, 6, 26, ({ c = "#6a6a72" }) => ibox(2, 0, 20, 6, 6, 17, T(c)) + ibox(4, 1.5, 16, 4.5, 19, 4, T(shade(c, 1.12))) + ifront(4, 6, 16, 12, 0.4, shade(c, 0.7)),
   ({ c = "#6a6a72" }) => ishadow(24, 12, 0) + ibox(1, 0, 22, 12, 0, 7, T(c)) + ibox(3.5, 0, 17, 11, 7, 3, T(shade(c, 1.08))) + ibox(0, 0, 3.5, 12, 0, 12, T(c)) + ibox(20.5, 0, 3.5, 12, 0, 12, T(c))
-    + ifront(3.5, 12, 17, 1, 5, shade(c, 0.8)) + iside(24, 5, 1.5, 6, 4, "#2a2a33"));
+    + ifront(3.5, 12, 17, 1, 5, shade(c, 0.8)) + iside(24, 5, 1.5, 6, 4, "#2a2a33"), [6, 17, o => o.c || "#6a6a72"]);
 seatArts("armclub", 24, 18, 6, 21, ({ c = "#9a5a2a" }) => ibox(1, 0, 22, 6, 1.5, 14, T(c)) + ibox(1, 0, 22, 6, 15.5, 1.6, T(shade(c, 1.15))) + itop(4, 1, 6, 1.5, 17.11, "#ffffff", ' fill-opacity=".2"'),
   ({ c = "#9a5a2a" }) => woodLegs(0.6, 0.5, 23.4, 11.5, 1.5) + ibox(1, 0, 22, 12, 1.5, 6, T(c)) + ibox(4.5, 0, 15, 11, 7.5, 2.5, T(shade(c, 1.1))) + ibox(0, 0, 4.5, 12, 1.5, 10, T(c)) + ibox(19.5, 0, 4.5, 12, 1.5, 10, T(c))
-    + ibox(0, 0, 4.5, 12, 11.5, 1.2, T(shade(c, 1.15))) + ibox(19.5, 0, 4.5, 12, 11.5, 1.2, T(shade(c, 1.15))) + ifront(1, 12, 22, 3, 0.3, shade(c, 0.55)) + itop(6, 2, 5, 1.2, 10.01, "#ffffff", ' fill-opacity=".18"'));
+    + ibox(0, 0, 4.5, 12, 11.5, 1.2, T(shade(c, 1.15))) + ibox(19.5, 0, 4.5, 12, 11.5, 1.2, T(shade(c, 1.15))) + ifront(1, 12, 22, 3, 0.3, shade(c, 0.55)) + itop(6, 2, 5, 1.2, 10.01, "#ffffff", ' fill-opacity=".18"'), [1.5, 15.6, o => o.c || "#9a5a2a"]);
 seatArts("armlounge", 24, 18, 6, 24, ({ w = "#5c3d27", c = "#1c1c22" }) => ibox(2, 0, 20, 2, 7, 16, wood(w)) + ibox(3, 2, 18, 3.4, 8, 14.5, T(c)) + ifront(3, 5.4, 18, 15, 0.4, shade(c, 0.6)) + dots(4, 5.4, 16, 11.5, 3, shade(c, 0.5)) + dots(4, 5.4, 16, 19, 3, shade(c, 0.5)),
   ({ w = "#5c3d27", c = "#1c1c22" }) => {
     let g = ishadow(24, 12, 0);
     for (const [x, y] of [[4, 2], [20, 2], [12, -1], [6, 11], [18, 11]]) g += iline(ipt(12, 6, 1.2), ipt(x, y, 0.4), "#2a2a33", 0.9);
     g += ibox(11.3, 5.3, 1.4, 1.4, 1, 3, "#2a2a33") + ibox(2, 0, 20, 12, 4, 3, wood(w)) + ibox(3, 0, 18, 11, 7, 3, T(c));
     return g + ibox(0.6, 0, 1.4, 10, 7, 3, wood(w)) + ibox(22, 0, 1.4, 10, 7, 3, wood(w)) + ibox(0.4, 0.5, 2, 9, 10, 2.4, T(c)) + ibox(21.6, 0.5, 2, 9, 10, 2.4, T(c));
-  });
+  }, [7, 16, o => o.w || "#5c3d27"]);
 seatArts("armbergere", 24, 18, 6, 26, ({ c = "#2a4a8a" }) => ibox(1, 0, 22, 4, 6, 16, gold) + ifront(3, 4, 18, 8, 12, c) + ipoly([ipt(8, 4, 22), ipt(16, 4, 22), ipt(12, 4, 25)], gold[0]) + dots(4, 4, 16, 14, 4, gold[0]),
   ({ c = "#2a4a8a" }) => {
     let g = ishadow(24, 12, 0);
     for (const [x, y] of [[1, 0.6], [21.6, 0.6], [1, 10.4], [21.6, 10.4]]) g += ibox(x, y, 1.4, 1, 0, 5.4, gold);
     return g + ibox(0.5, 0.3, 23, 11.4, 5, 1.6, gold) + ifront(10, 11.7, 4, 4.4, 0.6, gold[0]) + ibox(2, 0.8, 20, 10.4, 6.6, 2.6, T(c))
       + ibox(0, 1, 1.4, 10, 6.6, 6, gold) + ibox(22.6, 1, 1.4, 10, 6.6, 6, gold) + ibox(-0.1, 2.5, 1.6, 7, 10.4, 1.6, T(c)) + ibox(22.5, 2.5, 1.6, 7, 10.4, 1.6, T(c));
-  });
+  }, [6, 16, o => gold[1]]);
 // sofas (22 deep, back 6 deep)
 const cushions = (n, x0, w, y, d, z, h, c) => Array.from({ length: n }, (_, i) => ibox(x0 + i * w / n + 0.2, y, w / n - 0.4, d, z, h, T(c))).join("");
 seatArts("sofaold", 40, 22, 6, 22, ({ c = "#7a4a2a" }) => ibox(0, 0, 40, 6, 1, 15, T(c)) + ifront(25, 6, 6, 9, 3, shade(c, 1.35)) + iell(10, 6, 12, 1.4, "#f4f2ea") + plaid(26, 0, 9, 6.4, 13, 6),
   ({ c = "#7a4a2a" }) => woodLegs(1, 0.5, 39, 15.5, 1) + ibox(0, 0, 40, 16, 1, 5, T(c)) + ibox(5, 0.5, 14.8, 15, 6, 1.6, T(shade(c, 1.06))) + ibox(20.2, 0.5, 14.8, 15, 6, 2.4, T(shade(c, 1.06)))
-    + ibox(0, 0, 5, 16, 1, 10, T(c)) + ibox(35, 0, 5, 16, 1, 10, T(c)) + iell(37.5, 5, 11.05, 1.2, "#f4f2ea") + ifront(0, 16, 40, 2.5, 0.3, shade(c, 0.55)));
+    + ibox(0, 0, 5, 16, 1, 10, T(c)) + ibox(35, 0, 5, 16, 1, 10, T(c)) + iell(37.5, 5, 11.05, 1.2, "#f4f2ea") + ifront(0, 16, 40, 2.5, 0.3, shade(c, 0.55)), [1, 15, o => o.c || "#7a4a2a"]);
 seatArts("sofafuton", 44, 22, 6, 20, ({ c = "#1c1c22" }) => ibox(0, 1.5, 44, 2, 4, 3, wood("#b08860")) + ibox(1, 1, 42, 4.6, 7, 12, T(c)) + dots(3, 5.6, 38, 13, 5, shade(c, 1.5)),
   ({ c = "#1c1c22" }) => {
     let g = ishadow(44, 16, 0) + ibox(0, 0, 44, 16, 0, 4, wood("#b08860"));
     for (let x = 4; x < 44; x += 5) g += ifront(x, 16, 0.4, 0.6, 2.8, shade("#b08860", 0.6));
     return g + ibox(2, 0, 40, 15.4, 4, 4, T(c)) + dots(4, 15.4, 36, 6, 5, shade(c, 1.5)) + ibox(0, 0, 2, 16, 0, 8, wood("#b08860")) + ibox(42, 0, 2, 16, 0, 8, wood("#b08860"));
-  });
+  }, [4, 15, o => o.c || "#1c1c22"]);
 seatArts("sofa2", 40, 22, 6, 20, ({ c = "#8d929c" }) => ibox(1, 0, 38, 6, 2, 14, T(c)) + cushions(2, 5, 30, 3.5, 2.5, 7, 8.5, shade(c, 1.08)),
   ({ c = "#8d929c" }) => woodLegs(1, 0.5, 39, 15.5, 2, "#8a6a4a") + ibox(0, 0, 40, 16, 2, 5, T(c)) + cushions(2, 5, 30, 0.3, 15.4, 7, 2.6, shade(c, 1.06))
-    + ibox(0, 0, 5, 16, 2, 9.5, T(c)) + ibox(35, 0, 5, 16, 2, 9.5, T(c)));
+    + ibox(0, 0, 5, 16, 2, 9.5, T(c)) + ibox(35, 0, 5, 16, 2, 9.5, T(c)), [2, 14, o => o.c || "#8d929c"]);
 seatArts("sofamodern", 56, 22, 6, 20, ({ c = "#3a3f48" }) => ibox(0, 0, 56, 2.5, 2.5, 13, T(c)) + cushions(3, 3.5, 49, 2.5, 3.5, 7, 9.5, shade(c, 1.08)),
   ({ c = "#3a3f48" }) => legs4(1, 0.5, 55, 15.5, 2.5, ["#3a3a46", "#1c1c24", "#14141c"], 0.8) + ibox(0, 0, 56, 16, 2.5, 4.5, T(c)) + cushions(3, 3.5, 49, 0.3, 15.4, 7, 2.6, shade(c, 1.06))
-    + ibox(0, 0, 3.5, 16, 2.5, 8, T(c)) + ibox(52.5, 0, 3.5, 16, 2.5, 8, T(c)));
+    + ibox(0, 0, 3.5, 16, 2.5, 8, T(c)) + ibox(52.5, 0, 3.5, 16, 2.5, 8, T(c)), [2.5, 13, o => o.c || "#3a3f48"]);
 seatArts("sofachester", 58, 22, 6, 21, ({ c = "#5a3420" }) => {
   let g = ibox(0, 0, 58, 6, 1.5, 14.5, T(c)) + ibox(0, 0, 58, 6, 16, 1.4, T(shade(c, 1.15)));
   for (const z of [6, 9.5, 13]) g += dots(2, 6, 54, z, 12, shade(c, 0.55));
   return g;
 }, ({ c = "#5a3420" }) => woodLegs(1, 0.5, 57, 15.5, 1.5) + ibox(0, 0, 58, 16, 1.5, 5.5, T(c)) + cushions(3, 6, 46, 0.3, 15.4, 7, 2.4, shade(c, 1.08))
-  + ibox(0, 0, 6, 16, 1.5, 12, T(c)) + ibox(52, 0, 6, 16, 1.5, 12, T(c)) + ibox(0, 0, 6, 16, 13.5, 1.4, T(shade(c, 1.15))) + ibox(52, 0, 6, 16, 13.5, 1.4, T(shade(c, 1.15))) + dots(0, 16, 58, 6.4, 24, "#d4a640"));
+  + ibox(0, 0, 6, 16, 1.5, 12, T(c)) + ibox(52, 0, 6, 16, 1.5, 12, T(c)) + ibox(0, 0, 6, 16, 13.5, 1.4, T(shade(c, 1.15))) + ibox(52, 0, 6, 16, 13.5, 1.4, T(shade(c, 1.15))) + dots(0, 16, 58, 6.4, 24, "#d4a640"), [1.5, 15.9, o => o.c || "#5a3420"]);
 seatArts("sofacloud", 60, 22, 6, 22, ({ c = "#f0efe9" }) => ibox(2, 0, 56, 6, 5, 12, T(c)) + [10, 30, 50].map(x => iell(x, 3, 17.2, 7, shade(c, 1.08))).join(""),
   ({ c = "#f0efe9" }) => ishadow(60, 16, 0) + ibox(0, 0, 60, 16, 0, 5, T(shade(c, 0.95))) + cushions(3, 6, 48, 0, 15.6, 5, 4, c)
-    + [14, 30, 46].map(x => iell(x, 8, 9.1, 5.6, shade(c, 1.1))).join("") + ibox(0, 0, 6, 16, 0, 12, T(c)) + ibox(54, 0, 6, 16, 0, 12, T(c)) + iell(3, 8, 12.1, 3, shade(c, 1.12)) + iell(57, 8, 12.1, 3, shade(c, 1.12)));
+    + [14, 30, 46].map(x => iell(x, 8, 9.1, 5.6, shade(c, 1.1))).join("") + ibox(0, 0, 6, 16, 0, 12, T(c)) + ibox(54, 0, 6, 16, 0, 12, T(c)) + iell(3, 8, 12.1, 3, shade(c, 1.12)) + iell(57, 8, 12.1, 3, shade(c, 1.12)), [5, 12, o => o.c || "#f0efe9"]);
 seatArts("sofabaroque", 60, 22, 6, 28, ({ c = "#8f1f2a" }) => {
   let g = ibox(0, 0, 60, 4, 6, 18, gold) + ifront(3, 4, 54, 9, 13, c);
   for (const x of [8, 30, 52]) g += ipoly([ipt(x - 6, 4, 24), ipt(x + 6, 4, 24), ipt(x, 4, x === 30 ? 28 : 26)], gold[0]);
@@ -477,13 +478,13 @@ seatArts("sofabaroque", 60, 22, 6, 28, ({ c = "#8f1f2a" }) => {
   for (const [x, y] of [[1, 0.6], [57.6, 0.6], [1, 14.4], [57.6, 14.4], [29.3, 14.4]]) g += ibox(x, y, 1.4, 1, 0, 4.4, gold);
   return g + ibox(0, 0, 60, 16, 4, 2, gold) + ifront(26, 16, 8, 3.2, 0.8, gold[0]) + ibox(2, 0.5, 56, 15, 6, 3, T(c)) + ibox(0, 1, 2.4, 14, 6, 8, gold) + ibox(57.6, 1, 2.4, 14, 6, 8, gold)
     + ibox(-0.1, 3, 2.6, 9, 12, 1.6, T(c)) + ibox(57.5, 3, 2.6, 9, 12, 1.6, T(c));
-});
+}, [6, 18, o => gold[1]]);
 seatArts("sofacurve", 58, 22, 6, 20, ({ c = "#1f6e4a" }) => {
   let g = ibox(0, 0, 58, 6, 1, 14, T(c)) + itop(0, 0, 58, 6, 15.01, shade(c, 1.15));
   for (let x = 4; x < 58; x += 4) g += ifront(x, 6, 0.4, 7, 8, shade(c, 0.7));
   return g;
 }, ({ c = "#1f6e4a" }) => ishadow(58, 16, 0) + ibox(1, 1, 56, 14, 0, 1, ["#2a2a30", "#1c1c22", "#14141c"]) + ibox(0, 0, 58, 16, 1, 5, T(c)) + ibox(5, 0, 48, 15, 6, 3, T(shade(c, 1.08)))
-  + ibox(0, 0, 5, 16, 1, 14, T(c)) + ibox(53, 0, 5, 16, 1, 14, T(c)) + itop(0, 0, 5, 16, 15.01, shade(c, 1.15)) + itop(53, 0, 5, 16, 15.01, shade(c, 1.15)));
+  + ibox(0, 0, 5, 16, 1, 14, T(c)) + ibox(53, 0, 5, 16, 1, 14, T(c)) + itop(0, 0, 5, 16, 15.01, shade(c, 1.15)) + itop(53, 0, 5, 16, 15.01, shade(c, 1.15)), [1, 14, o => o.c || "#1f6e4a"]);
 // beanbags and poufs (one piece, the sitter on it)
 const pouf = (name, w, d, H, body) => reg(class extends IsoArt { constructor() { super(name, w, d, H); } body(o) { return body(o); } });
 pouf("isopoufpneu", 16, 16, 9, ({ c = "#d23a2a" }) => {
@@ -1060,6 +1061,7 @@ class IsoAvatar extends SvgArt {
     else if (hat === "party") { block(-2.4, -2.4, 4.8, 4.8, zh + 9.4, 2, "#b48cff"); block(-1.4, -1.4, 2.8, 2.8, zh + 11.4, 2, "#b48cff"); block(-0.6, -0.6, 1.2, 1.2, zh + 13.4, 1.4, "#fbaa08"); }
     else if (hat === "crown") { block(-3.4, -3.4, 6.8, 6.8, zh + 9.2, 1.4, "#fbaa08"); for (const [x, y] of [[-3.4, -3.4], [2.2, -3.4], [-3.4, 2.2], [2.2, 2.2]]) block(x, y, 1.2, 1.2, zh + 10.6, 1.6, "#fbaa08"); }
     else if (hat === "fedora") { block(-5, -5, 10, 10, zh + 8.4, 0.8, "#4a3826"); block(-3.4, -3.4, 6.8, 6.8, zh + 9.2, 3, "#5c4632", [["front", 0, 0, 6.8, 0.8, "#1c1c24"]]); }
+    else if (hat === "vr") { block(-4.3, -4.3, 8.6, 8.6, zh + 3.4, 2.8, "#1c1c22", [["front", 0.8, 0.5, 7, 1.6, "#3bc4ff"]]); block(-4.4, -4.4, 8.8, 8.8, zh + 6.6, 0.6, "#2a2a33"); }
     else if (hat === "headset") { block(-3.9, -0.6, 7.8, 1.2, zh + 9.4, 0.8, "#2a2a33"); block(-4.4, -1.2, 0.9, 2.4, zh + 2, 3, "#2a2a33"); block(3.5, -1.2, 0.9, 2.4, zh + 2, 3, "#2a2a33"); }
     return svg();
   }

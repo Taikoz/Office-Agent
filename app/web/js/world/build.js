@@ -137,7 +137,14 @@ function itemPieAction(uid, id) {
 }
 // the chief on a free computer: he walks to the desk, sits and plays a while, then goes back to his podium
 function chiefToPc(slot) {
-  const go = () => { const d = DESKS[slot]; if ([...ents.values()].some(e => e.desk === d && !e.leaving)) return say(CHIEF_NAME, "Quelqu'un y travaille."); chiefGo({ x: d.x, y: d.y + 22 }, c => { c.at = "pc"; c.pcSlot = slot; c.pcUntil = performance.now() + 14000; }); chief.manual = true; };
+  const go = () => {
+    const d = DESKS[slot]; if ([...ents.values()].some(e => e.desk === d && !e.leaving)) return say(CHIEF_NAME, "Quelqu'un y travaille.");
+    // the computer on this desk sets the game (ui/pcgames.js); without one, nothing to play
+    const pc = d.uid && itemsIn("office").find(o => o.on_ === d.uid && hub.GAME_OF?.[o.type]);
+    if (!pc) return say(CHIEF_NAME, "Il n'y a pas d'ordinateur sur ce bureau.");
+    chiefGo({ x: d.x, y: d.y + 22 }, c => { c.at = "pc"; c.pcSlot = slot; c.pcUntil = performance.now() + 14000; hub.openPcGame?.(pc.type, true); });
+    chief.manual = true;
+  };
   if (hub.chiefBusyNow()) return say(CHIEF_NAME, "Pas maintenant, l'équipe a besoin de moi !");
   if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }
@@ -155,9 +162,18 @@ export function drawChiefPc(t) {
 }
 // the desk where the chief plays (-1: none), and the game on its screen
 export const chiefPcSlot = () => chief.room === "office" && chief.at === "pc" && !chief.path.length ? chief.pcSlot : -1;
-export function drawChiefPcScreen(d, t) {
-  const f = Math.floor(t / 200) % 2;
-  px(d.x - 7, d.y - 11, 14, 8, "#1d3b2a"); px(d.x - 7 + ((t / 60) % 12), d.y - 6, 2, 2, "#ffd43b"); px(d.x - 6, d.y - 4.4, 12, 1, "#51cf66"); px(d.x + 2 - f, d.y - 9, 2, 2, "#ff6b6b");
+// the screen while the chief plays: the game of this computer (ui/pcgames.js GAME_OF), in miniature
+export function drawChiefPcScreen(d, t, type = "pc") {
+  const f = Math.floor(t / 200) % 2, k = (t / 60) % 12, x = d.x - 7, y = d.y - 11, game = hub.GAME_OF?.[type] || "breakout";
+  const bg = { snake: "#0e1a10", breakout: "#10142a", invaders: "#06060e", flappy: "#7fc4ff", pong: "#0a0a0a", runner: "#f4f2ea", racer: "#1c1c22" }[game];
+  px(x, y, 14, 8, bg);
+  if (game === "snake") { for (let i = 0; i < 4; i++) px(x + ((k + 8 - i) % 12) + 1, y + 4, 1, 1, i ? "#3aaf4a" : "#7dff8a"); px(x + 11, y + 2, 1, 1, "#ff6b6b"); }
+  else if (game === "breakout") { for (let i = 0; i < 6; i++) px(x + 1 + i * 2.1, y + 1, 1.8, 1, ["#ff6b6b", "#ff9a3b", "#ffe14d", "#51cf66", "#3bc4ff", "#b46bff"][i]); px(x + k, y + 6.6, 3, 0.6, "#f4f2ea"); px(x + 13 - k, y + 3 + f, 0.8, 0.8, "#f4f2ea"); }
+  else if (game === "invaders") { for (let i = 0; i < 5; i++) px(x + 1 + i * 2.5 + f * 0.5, y + 1.5, 1.4, 1, "#ff4fb8"); px(x + 2 + (k % 10), y + 6.5, 1.6, 1, "#4dff88"); px(x + 2.6 + (k % 10), y + 6.5 - (t / 40) % 5, 0.3, 0.8, "#fff"); }
+  else if (game === "flappy") { px(x + 4 + (12 - k) % 12, y, 1.4, 3, "#51cf66"); px(x + 4 + (12 - k) % 12, y + 5.5, 1.4, 2.5, "#51cf66"); px(x + 3, y + 3.5 + f, 1.2, 1, "#c0303a"); }
+  else if (game === "pong") { px(x + 0.6, y + 2 + f, 0.6, 3, "#f4f2ea"); px(x + 12.8, y + 3 - f, 0.6, 3, "#f4f2ea"); px(x + 1 + Math.abs(6 - k / 1) * 2, y + 1 + (k % 6), 0.8, 0.8, "#f4f2ea"); }
+  else if (game === "runner") { px(x, y + 6.4, 14, 0.3, "#3a3a46"); px(x + 2, y + 4.6 - f * 1.4, 1.2, 1.6, "#3a3a46"); px(x + 13 - k, y + 5.2, 0.8, 1.2, "#c0303a"); }
+  else { px(x + 4, y, 6, 8, "#2e2e38"); px(x + 6.8, y + ((k * 2) % 8), 0.3, 1.4, "#f4f2ea"); px(x + 7, y + 5.4, 1.4, 2, "#ff3b3b"); px(x + 5, y + (k % 8) - 1, 1.4, 2, "#3bc4ff"); }
 }
 
 /* ---------- buy mode ---------- */
@@ -307,7 +323,7 @@ function placeAt(type, style, spot, room, rot) {
   const d = defOf(type);
   if (d.unique && furni.items.some(i => i.type === type)) { toast("MODE ACHAT", `Un seul ${d.name.toLowerCase()}`, "Déplace celui qui est déjà là."); return false; }
   if (!spend(d.price, d.name)) return false;
-  const it = { uid: ++furni.seq, type, style, room, rot: d.kind === "wall" ? 0 : rot, ...spot, ...(type === "lamp" ? { on: true } : {}) };
+  const it = { uid: ++furni.seq, type, style, room, rot: d.kind === "wall" ? 0 : rot, ...spot, ...(d.light ? { on: true } : {}) };
   furni.items.push(it); saveBuild(); sfx("achievement");
   dustAt(it);
   if (d.workstation && it.slot != null) { const n = TEAM[it.slot]; crewAdd(n, { moral: 15 }); toast("MODE ACHAT", `${n} a un bureau`, "Ajoute un ordinateur dessus et une chaise devant."); }

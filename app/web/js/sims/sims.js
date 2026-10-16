@@ -141,7 +141,7 @@ function stepChiefNeeds(dt) {
   });
   const avg = NEEDS.reduce((sum, x) => sum + x[3](m), 0) / NEEDS.length + moodletSum(CHIEF_NAME);
   m.moral = clamp(m.moral + (avg - m.moral) * 0.4 * k);
-  if (sipping && chief.coffeeUntil && t > chief.coffeeUntil) { chief.coffeeUntil = 0; chief.cup = true; crewAdd(CHIEF_NAME, { cafe: 60, faim: 35, fatigue: -10 }); chief.bubble = "🥐 café + croissant, parfait."; chief.until = t + 3000; chiefGo("podium", c => { c.cup = false; }); }
+  if (sipping && chief.coffeeUntil && t > chief.coffeeUntil) { chief.coffeeUntil = 0; chief.cup = true; crewAdd(CHIEF_NAME, { cafe: Math.round(60 * (COFFEE.cup?.cafe || 45) / 45), faim: 35, fatigue: -10 }); chief.bubble = "🥐 café + croissant, parfait."; chief.until = t + 3000; chiefGo("podium", c => { c.cup = false; }); }
 }
 
 /* Sims 4 needs window (bottom-left button, B): one sim at a time, the chief by default — he is the one you control.

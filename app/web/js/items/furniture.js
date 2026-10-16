@@ -45,6 +45,9 @@ const addC = def => new Colored(def);
 
 /* ---------- work ---------- */
 export class Computer extends Colored {
+  // a game on it (ui/pcgames.js): the chief sits at this desk and plays
+  pie(it) { const g = hub.PC_GAMES?.[hub.GAME_OF?.[it.type]]; const desk = it.on_ && hub.itemByUid(it.on_); return g && desk?.slot != null ? [["play", g.icon, `Jouer à ${g.name}`]] : []; }
+  act(it, id) { if (id !== "play") return false; const desk = hub.itemByUid(it.on_); enqueue("🎮", "Jouer sur l'ordinateur", () => hub.chiefToPc(desk.slot)); return true; }
   // the screen(s): the work of the dev of this desk (or the chief's game), painted live on the monitor; screens:
   // [{ x, y, z, w, h }] where each is on the model (its front plane at y), tint: a CRT's phosphor (the style's)
   over(it, t, G) {
@@ -53,7 +56,7 @@ export class Computer extends Colored {
     const power = hub.Happening.get("power")?.on, tint = hub.styleOf(it).tint;
     const draw = () => {
       if (power) return px(0, 0, 16, 10, "#08080c");
-      if (d && chiefPcSlot() === slot) drawChiefPcScreen({ x: 8, y: 12 }, t); else drawDeskScreen({ x: 8, y: 12 }, e, t);
+      if (d && chiefPcSlot() === slot) drawChiefPcScreen({ x: 8, y: 12 }, t, it.type); else drawDeskScreen({ x: 8, y: 12 }, e, t);
       if (tint) { ctx.globalAlpha = 0.4; px(0, 0, 16, 10, tint); ctx.globalAlpha = 1; for (let y = 0; y < 10; y += 1.4) px(0, y, 16, 0.4, "rgba(0,0,0,.3)"); }
     };
     for (const s of this.screens || [{ x: 2, y: 1.85, z: 3, w: 16, h: 8 }]) {
@@ -146,7 +149,7 @@ addC({ type: "sofa", cat: "canapes", name: "Canapé", price: 900, room: "any", w
   spots: [14, 28, 42].map(x => ({ x, y: 14, face: [0, 1], lift: 3 })), desc: "Trois places, face à la télé.", styles: [{ id: "bleu", name: "Bleu", sw: "#1f75be" }] });
 
 /* ---------- coffee, kitchen ---------- */
-addC({ type: "espresso", cat: "cafe", name: "Machine à espresso", price: 900, room: "any", w: 22, d: 7, rots: 2, art: "isocoffee", role: "coffee", act: "kitchen", spots: [{ x: 11, y: 15, face: [0, -1] }],
+addC({ type: "espresso", cat: "cafe", name: "Machine à espresso", price: 900, coffee: { tier: 3, cafe: 45, moral: 4, fatigue: -12, wait: 4500 }, room: "any", w: 22, d: 7, rots: 2, art: "isocoffee", role: "coffee", act: "kitchen", spots: [{ x: 11, y: 15, face: [0, -1] }],
   desc: "Sur son meuble : la pause café de l'équipe (au bureau) et un café en salle de repos.", styles: [{ id: "inox", name: "Inox", sw: "#c9cdd5" }] });
 addC({ type: "counter", cat: "cuisine", name: "Plan de travail", price: 700, room: "any", w: 42, d: 10, rots: 2, art: "isocounter", act: "kitchen", surface: { z: 16.4 },
   spots: [{ x: 12, y: 18, face: [0, -1] }, { x: 30, y: 18, face: [0, -1] }], desc: "Évier, cafetière, planche à découper.", styles: [{ id: "marine", name: "Marine", sw: "#11379e" }] });

@@ -43,7 +43,11 @@ function hire(n) {
 }
 export function buyProject(id) {
   const p = PROJECTS.find(x => x.id === id); if (!p || !p.ok() || !spend(p.price, p.name)) return;
-  if (id === "open1" || id === "open2") { con.level++; const before = TEAM.length; hire(2); toast("CONSTRUCTION 🏗️", `${p.name} : ${TEAM.length} devs`, `Bienvenue à ${TEAM.slice(before).join(" et ")} ! Achète-leur un bureau.`); }
+  if (id === "open1" || id === "open2") {
+    con.level++; const before = TEAM.length; hire(2);
+    toast("CONSTRUCTION 🏗️", `${p.name} : ${TEAM.length} devs`, `Bienvenue à ${TEAM.slice(before).join(" et ")} ! Achète-leur un bureau.`);
+    setTimeout(() => hub.Happening?.get("welcome")?.start(performance.now(), TEAM.slice(before)), 4000);  // the welcome drink (social/officetalk.js)
+  }
   else { con.rooms.push(id); saveCon(); toast("CONSTRUCTION 🏗️", `${p.name} construite`, "Sa porte est dans la salle de repos ; la pièce est aussi dans la barre du haut."); renderRoomBar(); }
   sfx("level"); saveCon(); renderBuy();
 }

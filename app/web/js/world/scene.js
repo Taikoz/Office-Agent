@@ -133,7 +133,7 @@ export function drawCabinet(t, hover) {
 }
 
 export function drawPerson(x, y, look, opts = {}) {
-  const hat = look === hub.CHIEF_LOOK ? hub.chiefHat() : look.team ? hub.shop.hat : "";
+  const hat = opts.hat || (look === hub.CHIEF_LOOK ? hub.chiefHat() : look.team ? hub.shop.hat : "");  // opts.hat: a VR headset…
   const o = { frame: (opts.frame || 0) % 2, back: !!opts.back, seated: !!opts.seated, arms: opts.arms || "down", tux: !!opts.tux, smile: !!opts.smile, hat };
   // the isometric view: in volume, turned toward where they go or look (opts.dir: a 2D direction; else facing us, or
   // the wall when seen from behind), a quarter turn at a time (svg/iso.js IsoAvatar)
