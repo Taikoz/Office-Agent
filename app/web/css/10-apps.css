@@ -54,3 +54,7 @@
   #chiefos .schedform { margin: 8px 0 14px; padding: 10px 12px; background: #2a2a2a; border-radius: 10px; }
   #chiefos .schedform textarea, #chiefos .schedform input:not([type]), #chiefos .schedform select { width: 100%; }
   #chiefos .schedays { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } #chiefos .schedays label { display: flex; align-items: center; gap: 3px; }
+
+  /* ChiefOS → the hidden dev app (apps/dev.js) */
+  #chiefos .devhead { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; padding: 10px 12px; background: #13261a; border-left: 3px solid #2f9e44; border-radius: 8px; }
+  #chiefos .devhead b { font-family: "Ubuntu Mono", monospace; color: #8ff0a4; }

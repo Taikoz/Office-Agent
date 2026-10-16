@@ -25,7 +25,7 @@ export function clockNow() {
 const WORK = { start: 8, end: 19 };
 const isWeekend = (d = clockNow()) => d.getDay() === 0 || d.getDay() === 6;
 export function workHours(d = clockNow()) { const h = d.getHours() + d.getMinutes() / 60; return !isWeekend(d) && h >= WORK.start && h < (d.getDay() === 5 ? 20 : WORK.end); }
-export function afterworkTime(d = clockNow()) { const h = d.getHours() + d.getMinutes() / 60; return d.getDay() === 5 && h >= 17 && h < 20; }
+function afterworkTime(d = clockNow()) { const h = d.getHours() + d.getMinutes() / 60; return d.getDay() === 5 && h >= 17 && h < 20; }
 export const onMission = name => [...ents.values()].some(e => e.who === name && !e.leaving);
 // at home: outside working hours, unless an agent called the dev in (then it works late, see moods.js)
 export const atHome = name => !workHours() && !onMission(name);
@@ -35,7 +35,7 @@ export const weekId = (d = clockNow()) => { const t = new Date(d); t.setHours(0,
 const missionsThisWeek = () => wallet.log.filter(l => !l.spend && new Date(l.t) >= new Date(weekId())).length;
 
 // party spots: along the break-room corridor, or on the terrace (construct.js)
-export const PARTY_SPOTS = [150, 172, 194, 216, 238, 260, 284, 306, 328, 120, 98, 76].map((x, i) => ({ x, y: i % 2 ? 106 : 96 }));
+const PARTY_SPOTS = [150, 172, 194, 216, 238, 260, 284, 306, 328, 120, 98, 76].map((x, i) => ({ x, y: i % 2 ? 106 : 96 }));
 const PARTY_ACT = { id: "party", label: "à l'afterwork", pose: { arms: "up" }, fx: { ennui: -6, fatigue: 1, moral: 2 }, cup: true };
 
 function stepDays(t) {

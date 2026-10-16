@@ -59,11 +59,11 @@ function drawSeasonTerrace(t) {
     for (let i = 0; i < 40; i++) { const x = (i * 37 + (still ? 0 : t / (60 + i % 5 * 10))) % W, y = (i * 23 + (still ? 0 : t / 40)) % H; px(x, y, 1.2, 1.2, "#ffffff"); }
   } else if (s === "automne") {
     for (let i = 0; i < 14; i++) { const x = (i * 53 + (still ? 0 : t / 70)) % W, y = (i * 31 + (still ? 0 : t / 55)) % H; px(x + Math.sin(t / 400 + i) * 3, y, 2, 1.4, ["#e07a2f", "#c45a1f", "#d9a03a"][i % 3]); }
-  } else if (s === "printemps") {
-    for (const [x, y] of [[18, 192], [366, 192], [150, 84], [250, 84]]) for (let k = 0; k < 5; k++) px(x + k * 3, y - 2 - (k % 2) * 2, 2, 2, ["#ff9ec7", "#fff3b0", "#ffffff"][k % 3]);
-  } else if (!still) for (let i = 0; i < 4; i++) px(334 + i * 5, 88 - ((t / 50 + i * 11) % 16), 2.4, 2.4, "rgba(230,230,235,.45)");  // summer: the barbecue is always on
+  } else if (s === "printemps" && !still) {  // petals in the wind (the planters bloom, svg/terrace.js)
+    for (let i = 0; i < 10; i++) { const x = (i * 61 + t / 90) % W, y = 60 + (i * 29 + t / 70) % (H - 60); px(x + Math.sin(t / 300 + i) * 4, y, 1.4, 1, ["#ff9ec7", "#ffffff"][i % 2]); }
+  }  // summer: the grill is always on (rooms/built.js)
 }
 export function seasonLabel() { return { hiver: "❄️ Hiver", printemps: "🌸 Printemps", "été": "☀️ Été", automne: "🍂 Automne" }[seasonNow()]; }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get drawSeasonTerrace() { return drawSeasonTerrace; } });
+provide({ get WEATHER_FR() { return WEATHER_FR; }, get drawSeasonTerrace() { return drawSeasonTerrace; }, get seasonNow() { return seasonNow; } });

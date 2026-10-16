@@ -9,7 +9,7 @@ export class OsApp {
   // order of the Activités grid (an app not listed comes last)
   static ORDER = ["questions", "alerts", "gitlab", "browser", "blueprint", "terminal", "skills", "mmx", "dashboard", "notifs", "schedule", "planning",
     "mr", "pipes", "tickets", "debriefs", "report", "week", "costs", "money", "team", "meteo", "settings"];
-  static list() { const rank = id => (OsApp.ORDER.indexOf(id) + 1) || 999; return [...OsApp.all.values()].sort((a, b) => rank(a.id) - rank(b.id)); }
+  static list() { const rank = id => (OsApp.ORDER.indexOf(id) + 1) || 999; return [...OsApp.all.values()].filter(a => !a.hidden).sort((a, b) => rank(a.id) - rank(b.id)); }
   static get(id) { return OsApp.all.get(id); }
   // events of an app's window, for the apps that wire them in their own module: handler(ev) runs only while that app
   // is the one shown (chiefos.js dispatches). ids: one app or several sharing the handler
@@ -21,9 +21,10 @@ export class OsApp {
   }
   static EVENTS = ["click", "input", "change", "keydown", "paste", "focusin", "focusout", "dragstart"];
 
-  // live: re-rendered every 3 s while open (lists that follow the agents); forms and long pages stay still
-  constructor(id, icon, label, tint, { live = false } = {}) {
-    Object.assign(this, { id, icon, label, tint, live });
+  // live: re-rendered every 3 s while open (lists that follow the agents); forms and long pages stay still;
+  // hidden: neither in Activités nor in the dock (opened some other way)
+  constructor(id, icon, label, tint, { live = false, hidden = false } = {}) {
+    Object.assign(this, { id, icon, label, tint, live, hidden });
     OsApp.all.set(id, this);
   }
   render() { return ""; }      // the HTML inside the window

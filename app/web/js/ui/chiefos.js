@@ -40,9 +40,9 @@ function osBadge(id) { const n = OsApp.get(id)?.badge(); return n ? `<b class="o
 /* ---------- the dock: the main apps only, pinned and ordered by the user (right click, drag and drop, Réglages) ---------- */
 const DOCK_DEFAULT = ["questions", "notifs", "terminal", "gitlab", "browser", "blueprint", "dashboard", "planning", "settings"];
 let dockBook = new SaveSlot("office-dock", { apps: DOCK_DEFAULT }).data;
-const dockApps = () => dockBook.apps.filter(id => OsApp.get(id));
+const dockApps = () => dockBook.apps.filter(id => OsApp.get(id) && !OsApp.get(id).hidden);
 function saveDock(apps) { dockBook.apps = [...new Set(apps)]; SaveSlot.get("office-dock").save(dockBook); renderChiefOs(); }
-const pinApp = id => saveDock([...dockApps(), id]);
+const pinApp = id => { if (!OsApp.get(id)?.hidden) saveDock([...dockApps(), id]); };
 const unpinApp = id => saveDock(dockApps().filter(x => x !== id));
 function moveApp(id, delta) { const a = dockApps(), i = a.indexOf(id), j = Math.max(0, Math.min(a.length - 1, i + delta)); if (i < 0 || i === j) return; a.splice(i, 1); a.splice(j, 0, id); saveDock(a); }
 let osMenu = null;  // the open context menu: { id, x, y, from }

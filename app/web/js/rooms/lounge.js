@@ -9,18 +9,38 @@ import { drawSky } from "../svg/sky.js";
 import { bubble } from "../world/scene.js";
 import { chiefLoungeWalk, drawChiefLounge, drawChiefLoungeOver } from "../world/chief.js";
 import { ACTS, inArea } from "../activities/base.js";
-import { drawLounger, loungeFloorCanvas, loungers } from "../world/lounge.js";
+import { drawLounger, loungeFloorCanvas, loungers, setView } from "../world/lounge.js";
 import { nameTag } from "../world/shop.js";
 import { decor, doorSprite, drawWall, drawWindow, woodSprite } from "../world/decor.js";
 import { drawTournament } from "../games/base.js";
+import { toast } from "../sims/progress.js";
 import { TABLE, drawKitchenFx, socialItems } from "../social/kitchen.js";
 import { drawSocialOver } from "../social/people.js";
-import { drawBuyOverlay, drawRoomItems, hitItem, roomDepthItems } from "../world/build.js";
+import { buy, drawBuyOverlay, drawRoomItems, hitItem, renderBuy, roomDepthItems, toggleBuy } from "../world/build.js";
 import { drawPartyOver, emptyLoungeText } from "../sims/days.js";
 import { Room } from "./base.js";
 
 class LoungeRoom extends Room {
+  // the doors to the rooms built in construction mode (construct.js); not built yet: under work tape, a click opens the
+  // construction tab of the buy mode
+  static DOORS = [{ room: "meeting", x: 269, label: "🤝 RÉUNION" }, { room: "terrace", x: 318, label: "🌿 TERRASSE" }];
   constructor() { super("lounge", "☕ Repos"); }
+  drawDoor(d) {
+    const built = hub.con.rooms.includes(d.room);
+    ART.roomdoor.draw(d.x, 19, { room: d.room, built });
+    px(d.x - 2, 12, 28, 6, built ? "#f7f7f7" : "#3a3a44"); text(built ? d.label : "🏗️ BIENTÔT", d.x + 12, 12.6, built ? "#081746" : "#fbaa08", 3.6, "center");
+  }
+  doorAt(p) { return LoungeRoom.DOORS.find(d => p.x >= d.x - 2 && p.x <= d.x + 26 && p.y >= 11 && p.y <= 67); }
+  click(p) {
+    const d = this.doorAt(p); if (!d) return false;
+    if (hub.con.rooms.includes(d.room)) setView(d.room);
+    else {
+      if (!buy.on) toggleBuy(true);
+      buy.cat = "construction"; renderBuy();
+      toast("CONSTRUCTION", `${d.label.slice(3)} : pas encore construite`, "Construis-la dans l'onglet 🏗️ Construction du mode achat.");
+    }
+    return true;
+  }
   render(t) {
     // room
     drawWall("lounge");
@@ -33,6 +53,7 @@ class LoungeRoom extends Room {
     doorSprite("lounge").draw(8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
     for (const a of ACTS) a.wall(t);  // dartboard, kitchen, TV (js/activities/)
     woodSprite("bookshelf", decor.lounge.wood).draw(240, 28); drawRoomItems("lounge", t, "wall");
+    for (const d of LoungeRoom.DOORS) this.drawDoor(d);
     drawTournament(t);
     for (const [x, y] of [[372, 200], [6, 206], [140, 54]]) SPRITES.plant.draw(x - 2, y - 2);
     ART.cornerrug.draw(30, 150);  // the beanbag corner
@@ -54,6 +75,7 @@ class LoungeRoom extends Room {
     drawBuyOverlay("lounge", t);
   }
   hit(x, y) {
+    if (this.doorAt({ x, y })) return "room-door";  // taken by click()
     if (x >= 8 && x <= 40 && y >= 10 && y <= 72) return "office";
     const duel = ACTS.find(a => inArea(a.duel, x, y)); if (duel) return `duel:${duel.id}`;  // challenge a dev (duel.js)
     for (const l of [...loungers.values()].filter(l => !l.partyRoom).sort((a, b) => b.y - a.y)) if (Math.abs(x - l.x) <= 7 && y >= l.y - 22 && y <= l.y + 3) return `mate:${l.name}`;

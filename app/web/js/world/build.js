@@ -139,7 +139,7 @@ export function drawChiefPc(t) {
 /* ---------- buy mode ---------- */
 export const buy = { on: false, cat: "bureau", sel: null, style: null, placing: null, moving: null, pick: null, mx: -99, my: -99 };
 const buyBox = document.getElementById("buy"), buyTool = document.getElementById("buytool"), buyBtn = document.getElementById("buybtn");
-function toggleBuy(open = !buy.on) {
+export function toggleBuy(open = !buy.on) {
   buy.on = open; buy.placing = buy.moving = buy.pick = null;
   document.body.classList.toggle("buy-on", open); buyBox.hidden = !open; buyBtn.classList.toggle("on", open); buyBtn.setAttribute("aria-expanded", open);
   buyTool.hidden = true; closePie(); if (open) { if (view === "game") setView("lounge"); renderBuy(); }

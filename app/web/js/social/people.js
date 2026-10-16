@@ -37,7 +37,6 @@ export function bond(a, b, d) {
   }
 }
 
-
 /* ---------- moving people to a place ---------- */
 // a dev: through the break-room corridor (sendTo of lounge.js), to a spot with its own activity
 export function sendMate(l, sp, act, ms) { l.busy = true; sendTo(l, { ...sp, act }, performance.now()); l.next = performance.now() + ms; }
@@ -58,7 +57,6 @@ export function chiefDo(fn) {
   if (chief.room === "lounge") return fn();
   chief.pendingSocial = fn; chiefToLounge();
 }
-
 
 function burstLounge(x, y, colors) { for (let i = 0; i < 8; i++) floatUp(x - 14 + Math.random() * 28, y - Math.random() * 6, "✦", colors[i % colors.length]); }
 // over everything: progress bar of the cook, forks, floating pluses and hearts

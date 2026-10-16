@@ -42,7 +42,7 @@ cv.addEventListener("mouseleave", () => { cv.classList.remove("hover-store"); ca
 cv.addEventListener("click", ev => {
   hub.closePie();
   if (hub.buy.on && view !== "game") return hub.buyClick(canvasPoint(ev));  // buy mode: place, pick, move, sell (build.js)
-  if (view === "game") return hub.Room.get("game").click(canvasPoint(ev), performance.now());
+  if (hub.Room.current().click(canvasPoint(ev), performance.now())) return;  // a game, the meeting room's board and TV (js/rooms/)
   const id = hit(ev);
   if (!id) {  // an empty spot of the floor: the chief walks there
     const p = canvasPoint(ev);

@@ -25,7 +25,6 @@ export const cookXp = n => social.cook[n] ?? (n === CHIEF_NAME ? 0 : hash(`${n}:
 export const cookLevel = n => COOK_XP.filter(x => cookXp(n) >= x).length;
 const everyone = () => [CHIEF_NAME, ...TEAM];
 
-
 /* ---------- the Sims window: relationships and cooking skill of the shown sim ---------- */
 export function simSocialHtml(name) {
   const rels = everyone().filter(o => o !== name).map(o => [o, rel(name, o)]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 4);

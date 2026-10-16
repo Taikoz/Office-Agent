@@ -17,9 +17,9 @@ import { fmtSim, spend, wallet } from "../sims/money.js";
 import { BUY_CATS, dustAt, furni, renderBuy, saveBuild } from "./build.js";
 import { addMoodlet } from "../sims/moods.js";
 
-let petBook = new SaveSlot("office-pets", { cat: { faim: 80, love: 70 }, dog: null, at: Date.now() }).data;
+export let petBook = new SaveSlot("office-pets", { cat: { faim: 80, love: 70 }, dog: null, at: Date.now() }).data;
 const savePets = () => { petBook.at = Date.now(); SaveSlot.get("office-pets").save(petBook); };
-const DOG_NAME = "Biscuit", DOG_PRICE = 2000;
+export const DOG_NAME = "Biscuit", DOG_PRICE = 2000;
 
 /* ---------- Brume's needs and her bowl ---------- */
 BUY_CATS.splice(BUY_CATS.length - 1, 0, ["animaux", "🐾", "Animaux"]);
@@ -98,7 +98,7 @@ function dogAction(id) {
   }
   savePets();
 }
-function adoptDog() {
+export function adoptDog() {
   if (petBook.dog || !spend(DOG_PRICE, `Adoption de ${DOG_NAME}`)) return;
   petBook.dog = { faim: 90, love: 60, since: Date.now() }; savePets();
   dog.x = DOOR.x; dog.y = DOOR.y + 2; dogGo(200, LANE);

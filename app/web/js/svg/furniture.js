@@ -81,8 +81,22 @@ class ShelfArt extends SvgArt {
   body({ w }) { return R(0, 0, w + 2, 1.6, "#8a6a4a") + R(0, 0, w + 2, 0.5, "#a88660") + `<path fill="#6d5238" d="M1.4 1.6h1.2l-1.2 2.2zM${w - 0.6} 1.6h1.2v2.2z"/>`; }
 }
 ART.shelf = new ShelfArt();
-// meeting room and terrace (construct.js)
-ART.meettable = new StaticArt("meettable", 140, 30, R(0, 0, 140, 26, "#6d5238") + R(0, 0, 140, 2, "#8a6a4a") + R(4, 26, 4, 4, "#4a3826") + R(132, 26, 4, 4, "#4a3826") + R(50, 8, 40, 10, "#3a3a48") + R(52, 10, 36, 6, "#5aa9ff"));
-ART.meetchair = new StaticArt("meetchair", 10, 10, R(0, 0, 10, 7, "#2a2a33") + R(1, 7, 8, 2, "#3a3a48"));
-ART.bbq = new StaticArt("bbq", 22, 20, R(2, 6, 18, 8, "#2a2a33") + R(0, 4, 22, 3, "#3a3a44") + R(4, 14, 2, 6, "#2a2a33") + R(16, 14, 2, 6, "#2a2a33"));
-ART.deckchair = new StaticArt("deckchair", 20, 12, R(0, 6, 20, 4, "#f7f7f7") + R(0, 6, 20, 1, "#ff6b6b") + R(14, 0, 6, 7, "#f7f7f7") + R(1, 10, 1.4, 2, "#8a6a4a") + R(17, 10, 1.4, 2, "#8a6a4a"));
+// (the meeting room and the terrace: svg/meeting.js, svg/terrace.js)
+
+// a door of the break room to a built room (rooms/lounge.js): its frame, the leaf in the room's style (walnut with a
+// glass strip for the meeting room, a glass door with the sky for the terrace), its plate; not built yet: work tape
+class RoomDoorArt extends SvgArt {
+  constructor() { super("roomdoor", 24, 48); }
+  body({ room = "meeting", built = false }) {
+    let g = R(0, 0, 24, 48, "#061238") + R(2, 2, 20, 46, room === "terrace" ? "#c9ccd6" : "#6d4a2e") + R(2, 2, 1, 46, "#ffffff", ' fill-opacity=".18"');
+    if (room === "terrace") {  // glass, the sky behind, a push bar
+      g += R(4, 4, 16, 40, "#8ec5ff") + R(4, 4, 16, 14, "#bfe3f5") + `<path fill="#ffffff" fill-opacity=".45" d="M6 5h3l-4 8v-3zM14 5h2l-6 12h-2z"/>` + R(4, 30, 16, 14, "#7fb8e8")
+        + R(3, 24, 18, 1.6, "#8d929c") + R(3, 24, 18, 0.5, "#e0e3ea");
+    } else {  // walnut with a glass strip and a steel handle
+      g += R(5, 5, 14, 18, "#5c3d27") + R(5, 27, 14, 17, "#5c3d27") + R(10, 6, 4, 16, "#bfe3f5", ' fill-opacity=".8"') + R(17, 25, 3, 1.4, "#c9ccd6") + R(17, 25, 1, 3, "#c9ccd6");
+    }
+    if (!built) g += `<path fill="#fbaa08" d="M0 14l24 14v4L0 18zM0 32l24 -14v4L0 36z"/>` + `<path fill="#1c1c24" d="M4 16.3l3 1.8v4l-3 -1.8zM12 21l3 1.8v4l-3 -1.8zM20 25.7l3 1.8v2l-3 -1.8zM4 33.7l3 -1.8v4l-3 1.8zM12 29l3 -1.8v4l-3 1.8zM20 24.3l3 -1.8v2.6l-3 1.8z"/>`;
+    return g;
+  }
+}
+ART.roomdoor = new RoomDoorArt();

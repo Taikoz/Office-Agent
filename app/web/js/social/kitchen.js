@@ -27,12 +27,12 @@ export const RECIPES = [
   { id: "gateau", cost: 60, icon: "🎂", label: "Gâteau au chocolat", lvl: 6, portions: 8, ms: 22000, fill: 40, food: "#6d4a2e", top: "#f7f7f7", fun: 15 },
 ];
 // the fridge: ingredients bought with § (🛒 Faire les courses), each recipe takes its own; the devs only cook what is in it
-const INGREDIENTS = { pates: ["🍝", "Pâtes", 4], tomates: ["🍅", "Tomates", 5], viande: ["🥩", "Viande hachée", 9], farine: ["🌾", "Farine", 4], oeufs: ["🥚", "Œufs", 5],
+export const INGREDIENTS = { pates: ["🍝", "Pâtes", 4], tomates: ["🍅", "Tomates", 5], viande: ["🥩", "Viande hachée", 9], farine: ["🌾", "Farine", 4], oeufs: ["🥚", "Œufs", 5],
   lait: ["🥛", "Lait", 4], fromage: ["🧀", "Fromage", 12], legumes: ["🥕", "Légumes", 9], riz: ["🍚", "Riz", 5], chocolat: ["🍫", "Chocolat", 14], beurre: ["🧈", "Beurre", 6] };
 const NEEDS_OF = { pates: { pates: 1, tomates: 1, viande: 1 }, crepes: { farine: 1, oeufs: 1, lait: 1 }, pizza: { farine: 1, tomates: 1, fromage: 1 },
   curry: { legumes: 2, riz: 1 }, gateau: { chocolat: 1, oeufs: 2, farine: 1, beurre: 1 } };
-let pantry = new SaveSlot("office-pantry", { pates: 1, tomates: 1, viande: 1, farine: 1, oeufs: 1, lait: 1 }).data;  // a first shopping bag
-const savePantry = () => SaveSlot.get("office-pantry").save(pantry);
+export let pantry = new SaveSlot("office-pantry", { pates: 1, tomates: 1, viande: 1, farine: 1, oeufs: 1, lait: 1 }).data;  // a first shopping bag
+export const savePantry = () => SaveSlot.get("office-pantry").save(pantry);
 const missingFor = rc => Object.entries(NEEDS_OF[rc.id] || {}).filter(([k, n]) => (pantry[k] || 0) < n);
 export const hasIngredients = rc => !missingFor(rc).length;
 const basketCost = rc => Object.entries(NEEDS_OF[rc.id] || {}).reduce((sum, [k, n]) => sum + INGREDIENTS[k][2] * n, 0);
@@ -53,7 +53,6 @@ export function shopFor(rc) {
 const STAGES = [[0.3, "🔪 prépare"], [0.85, "🔥 cuisine"], [1, "🍽️ dresse"]];
 export let cooking = null, dish = null, fire = null, nextAuto = 0, nextVisit = 0;
 export const eaters = new Map(), convos = [], socialFx = [], steam = [];
-
 
 /* ---------- cooking ---------- */
 export function startCooking(cook, recipe, helper = null) {
@@ -176,7 +175,6 @@ export function stepEaters(t, dt) {
   if (dish && !dish.portions && !eaters.size) dish = null;
   if (dish && t - dish.at > 600000) { dish = null; }  // 10 min on the table: thrown away
 }
-
 
 // on the counter, over the kitchen sprite: cutting board, pan on the burner, flames, food that jumps, plates
 export function drawKitchenFx(t) {
