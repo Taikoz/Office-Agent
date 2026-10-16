@@ -1,0 +1,107 @@
+  /* Sims 4 needs window, bottom-left of the office (sims.js) */
+  #simsbtn { position: fixed; right: 16px; bottom: 14px; z-index: 12; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+    width: 72px; height: 72px; padding: 0; border-radius: 50%; color: var(--text); font-size: 13px; line-height: 1;
+    background: radial-gradient(circle at 35% 30%, #4a4757, #22212a 70%); border: 3px solid var(--line); box-shadow: 0 8px 22px #000b, inset 0 2px 0 #ffffff1a; cursor: pointer; }
+  #simsbtn .lbl { margin-top: 2px; letter-spacing: 1px; }
+  #simsbtn:hover, #simsbtn.on { border-color: var(--accent); }
+  #simsbtn svg { width: 20px; height: 32px; overflow: visible; animation: plumbob 2.4s ease-in-out infinite; } #simsbtn .pb { fill: #51cf66; }
+  #simsbtn.on { border-color: var(--sims); box-shadow: 0 0 0 4px #5fd38d33, 0 8px 22px #000b; }
+  #sims { position: fixed; right: 16px; bottom: 98px; z-index: 12; width: min(430px, calc(100% - 32px)); max-height: calc(100vh - 180px); overflow-y: auto; padding: 12px 14px;
+    background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid var(--sims); border-radius: var(--r); box-shadow: 0 14px 34px #000b; backdrop-filter: blur(8px); scrollbar-width: thin; }
+  #sims[hidden] { display: none; }
+  #sims .who { display: flex; gap: 10px; align-items: flex-end; }
+  #sims .face { position: relative; flex: none; width: 64px; height: 72px; border: 3px solid var(--m); background: radial-gradient(#45424f, #17161d); }
+  #sims .face img { position: absolute; left: 0; bottom: 0; width: 100%; height: 73px; image-rendering: pixelated; }
+  #sims .crystal { position: absolute; left: 50%; top: -34px; width: 18px; height: 30px; margin-left: -9px; filter: drop-shadow(0 0 5px var(--m)); animation: plumbob 2.4s ease-in-out infinite; }
+  @keyframes plumbob { 0% { transform: translateY(0) scaleX(1); } 25% { transform: translateY(-3px) scaleX(.25); } 50% { transform: translateY(0) scaleX(-1); } 75% { transform: translateY(-3px) scaleX(.25); } 100% { transform: translateY(0) scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { #sims .crystal, #simsbtn svg { animation: none; } }
+  #sims .id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #sims .id b { font-weight: normal; font-size: 26px; line-height: 1; color: var(--accent); }
+  #sims .id .muted { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sims .mood { display: flex; align-items: center; gap: 6px; color: var(--m); }
+  #sims .bar { flex: 1; height: 10px; background: #17161d; border: 1px solid var(--line); } #sims .bar i { display: block; height: 100%; transition: width .6s; }
+  #sims .x { align-self: flex-start; color: var(--muted); background: transparent; border: 2px solid var(--line); cursor: pointer; padding: 0 7px; }
+  #sims .x:hover { color: var(--text); border-color: var(--accent); }
+  #sims .needs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 10px 0 8px; }
+  #sims .need { display: grid; grid-template-columns: 20px 56px 1fr 22px; gap: 4px; align-items: center; font-size: 17px; }
+  #sims .need .ic { text-align: center; } #sims .need .nl { color: var(--muted); }
+  #sims .need.low .nl { color: var(--err); } #sims .need.low .bar { animation: lowneed 1s steps(2) infinite; }
+  @keyframes lowneed { 50% { border-color: var(--err); } }
+  #sims .need .tr { color: var(--ok); font-size: 13px; letter-spacing: -2px; } #sims .need .tr.dn { color: var(--err); }
+  #sims .house { display: flex; gap: 4px; overflow-x: auto; padding-top: 6px; border-top: 1px solid var(--line); scrollbar-width: thin; }
+  #sims .house button { flex: none; position: relative; width: 36px; height: 40px; padding: 0; background: #17161d; border: 2px solid var(--line); cursor: pointer; overflow: hidden; }
+  #sims .house button::after { content: ""; position: absolute; right: 2px; top: 2px; width: 6px; height: 6px; background: var(--m); transform: rotate(45deg); }
+  #sims .house button.on { border-color: var(--accent); } #sims .house button:hover { border-color: var(--text); }
+  #sims .house img { position: absolute; left: 0; bottom: 0; width: 100%; image-rendering: pixelated; }
+  #sims .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 17px; }
+  #sims .acts button { color: var(--text); background: var(--panel); border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
+  #sims .acts button:hover { border-color: var(--accent); }
+  /* relationships and cooking skill in the needs window, pie menu of the break room (social.js) */
+  #sims .social { margin: 0 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+  #sims .skill { display: grid; grid-template-columns: 20px 112px 1fr auto; gap: 4px; align-items: center; font-size: 17px; }
+  #sims .skill .nl { color: var(--muted); } #sims .skill .lv { color: var(--accent); font-size: 15px; }
+  #sims .pips { display: flex; gap: 2px; } #sims .pips i { flex: 1; height: 9px; background: #17161d; border: 1px solid var(--line); }
+  #sims .pips i.on { background: #51cf66; } #sims .pips i.part { background: linear-gradient(90deg, #51cf6688 var(--k), #17161d var(--k)); }
+  #sims .rels { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 6px; }
+  #sims .rels button { display: grid; grid-template-columns: 26px 1fr; grid-template-rows: auto 6px; gap: 0 6px; align-items: center; padding: 2px 4px; text-align: left;
+    color: var(--text); background: #17161d; border: 2px solid var(--line); cursor: pointer; font: inherit; font-size: 15px; }
+  #sims .rels button:hover { border-color: var(--accent); }
+  #sims .rels .pf { grid-row: span 2; position: relative; width: 26px; height: 28px; overflow: hidden; } #sims .rels .pf img { position: absolute; left: 0; bottom: 0; width: 100%; image-rendering: pixelated; }
+  #sims .rels .rn { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1; } #sims .rels .rn small { margin-left: 5px; font-size: 13px; }
+  .rbar { position: relative; display: block; height: 6px; background: #17161d; border: 1px solid var(--line); }
+  .rbar::before { content: ""; position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: var(--muted); }
+  .rbar i { position: absolute; top: 0; height: 100%; transition: width .6s, left .6s; }
+  #pie { position: fixed; z-index: 40; width: 0; height: 0; }
+  #pie[hidden] { display: none; }
+  #pie .core { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
+    min-width: 150px; min-height: 96px; justify-content: center; padding: 8px 14px; text-align: center; font-size: 15px; line-height: 1.05;
+    background: radial-gradient(#45424f, #22212af5); border: 3px solid var(--accent); border-radius: 50%; box-shadow: 0 0 0 4px #22212a80, 0 10px 28px #000b; pointer-events: none; }
+  #pie .core b { font-weight: normal; font-size: 22px; color: var(--accent); } #pie .core .rbar { width: 90px; }
+  #pie button { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; min-width: 92px; padding: 3px 8px;
+    font: inherit; font-size: 16px; line-height: 1.05; color: var(--text); background: linear-gradient(#3d3a4a, #2e2c37); border: 2px solid #6e6a7c; border-radius: 999px;
+    box-shadow: 0 4px 10px #000a; cursor: pointer; transform: translate(-50%, -50%) translate(var(--x), var(--y)); animation: piein .22s var(--d) both ease-out; }
+  #pie button .ic { font-size: 20px; }
+  #pie button small { font-size: 12px; color: var(--muted); }
+  #pie button:hover:not([disabled]), #pie button:focus-visible { background: linear-gradient(#4f4a5e, #2e2c37); border-color: var(--accent); color: var(--accent); outline: none; }
+  #pie button[disabled] { opacity: .55; cursor: not-allowed; }
+  @keyframes piein { from { opacity: 0; transform: translate(-50%, -50%) scale(.4); } to { opacity: 1; transform: translate(-50%, -50%) translate(var(--x), var(--y)); } }
+  @media (prefers-reduced-motion: reduce) { #pie button { animation: none; } }
+  /* decor editor, top-right of the office (decor.js) */
+  #decor { position: fixed; right: 16px; top: 66px; z-index: 13; border-radius: var(--r); width: min(400px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; padding: 10px 12px;
+    background: linear-gradient(#2e2c37f2, #22212af5); border: 3px solid var(--line); border-top-color: var(--accent); box-shadow: 0 10px 28px #000b; scrollbar-width: thin; }
+  #decor[hidden] { display: none; }
+  #decor button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); cursor: pointer; padding: 0 7px; }
+  #decor button:hover { border-color: var(--text); } #decor button.on { border-color: var(--accent); color: var(--accent); }
+  #decor .dhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } #decor .dhead b { font-weight: normal; font-size: 22px; color: var(--accent); }
+  #decor .tabs { flex: 1; display: flex; gap: 4px; flex-wrap: wrap; }
+  #decor .x { margin-left: auto; color: var(--muted); background: transparent; }
+  #decor .drow { padding: 6px 0; border-top: 1px solid var(--line); }
+  #decor .dl { color: var(--muted); font-size: 17px; margin-bottom: 3px; }
+  #decor .chips { display: flex; flex-wrap: wrap; gap: 4px; font-size: 16px; }
+  #decor .sws { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 5px; }
+  #decor .sw { width: 20px; height: 20px; padding: 0; background: var(--c); border: 2px solid #17161d; }
+  #decor .sw.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  #decor .pick { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; color: var(--muted); cursor: pointer; }
+  #decor .pick input { width: 24px; height: 22px; padding: 0; border: 2px solid var(--line); background: none; cursor: pointer; }
+  #decor .dfoot { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 16px; }
+
+  /* first-launch setup: the team, the office name and the logo */
+  #setup form { max-width: 760px; margin: 0 auto; }
+  #setup .setup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 12px; }
+  #setup label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); }
+  #setup input:not([type=file]) { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); padding: 2px 6px; }
+  #setup input:focus { outline: none; border-color: var(--accent); }
+  #setup h4 { display: flex; align-items: center; gap: 10px; }
+  #setup .x { font: inherit; color: var(--text); background: none; border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
+  #setup .x:hover { border-color: var(--accent); }
+  #setup label.file { display: inline-block; color: var(--text); }
+  #setup .setup-logo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #setup .logo-box { width: 220px; height: 64px; display: flex; align-items: center; justify-content: center; background: #f7f7f7; border: 3px solid #1c1b23; }
+  #setup .logo-box img { max-width: 200px; max-height: 52px; }
+  #setup .logo-box .muted { color: #878292; }
+  #setup .go { font: inherit; font-size: 24px; margin-top: 6px; padding: 4px 18px; color: #22212a; background: var(--accent); border: 0; cursor: pointer; }
+  #setup .go:disabled { opacity: .6; cursor: wait; }
+  #setup-msg.err { color: var(--err); }
+  #logo[hidden] { display: none; }
+  /* light plate: any logo stays readable on the navy bar */
+  #logo { height: 28px; width: auto; max-width: 180px; object-fit: contain; padding: 3px 6px; background: #f7f7f7; border: 2px solid #1c1b23; }

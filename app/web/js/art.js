@@ -436,3 +436,33 @@ function drawSky(x0, y0, t) {
   }
   ctx.restore();
 }
+
+// karaoke corner: a small stage, two speakers whose cones pulse, a screen with the lyrics scrolling, the mic stand
+function karaokeArt(frame, on) {
+  const pulse = on && frame % 2 ? 0.6 : 0;
+  let g = R(0, 26, 46, 10, "#5b2a86") + R(0, 26, 46, 1.4, "#8a4fc0") + R(0, 34, 46, 2, "#3a1a58");  // stage
+  for (let i = 0; i < 7; i++) g += `<circle cx="${3 + i * 6.6}" cy="30.6" r=".7" fill="${on && (i + frame) % 3 === 0 ? "#fbaa08" : "#ffd88a"}"/>`;  // stage lights
+  const speaker = x => R(x, 8, 8, 18, "#1c1c24") + R(x + 0.6, 8.6, 6.8, 16.8, "#2b2b33")
+    + `<circle cx="${x + 4}" cy="13" r="${2 + pulse * 0.5}" fill="#454552"/><circle cx="${x + 4}" cy="13" r="1" fill="#1c1c24"/>`
+    + `<circle cx="${x + 4}" cy="20.4" r="${2.8 + pulse}" fill="#454552"/><circle cx="${x + 4}" cy="20.4" r="1.3" fill="#1c1c24"/>`;
+  g += speaker(1) + speaker(37);
+  g += R(12, 0, 22, 14, "#14141c") + R(13, 1, 20, 12, on ? "#1b2a6b" : "#0b0b14");  // screen
+  if (on) {
+    const lines = [[15, 4, 14], [16, 7, 12], [15, 10, 15]];
+    lines.forEach(([x, y, w], i) => { g += R(x, y, w, 1, "#f7f7f7", ' fill-opacity=".55"'); if (i === frame % 3) g += R(x, y, w * (0.3 + 0.2 * frame), 1, "#fbaa08"); });
+  } else g += R(17, 6, 12, 1.4, "#3a3a50");
+  g += R(21, 14, 4, 2, "#2b2b33") + R(22.5, 16, 1, 10, "#2b2b33") + R(20.5, 25.4, 5, 0.8, "#2b2b33");  // screen foot
+  if (!on) g += R(30, 15, 0.8, 11, "#9aa0ad") + `<circle cx="30.4" cy="14.6" r="1.1" fill="#2b2b33"/>` + R(28.4, 25.4, 4, 0.8, "#9aa0ad");  // the mic waits on its stand
+  return g;
+}
+// low table with a board game: board, pawns that move turn after turn, dice
+function boardgameArt(frame) {
+  let g = R(0, 3, 34, 7, "#7a4b32") + R(0, 3, 34, 1, "#9b6544") + R(2, 10, 2, 4, "#5b3a20") + R(30, 10, 2, 4, "#5b3a20");
+  g += R(7, 1.6, 20, 7, "#e9dcc0") + R(7.6, 2.2, 18.8, 5.8, "#f7f0dc");
+  const cells = ["#c0392b", "#2f9e44", "#2c7ae0", "#fbaa08"];
+  for (let i = 0; i < 9; i++) g += R(8 + i * 2.05, 2.4, 1.6, 1, cells[i % 4]) + R(8 + i * 2.05, 6.8, 1.6, 1, cells[(i + 2) % 4]);
+  const pos = [[10 + frame * 3, 4.4, "#c0392b"], [24 - frame * 2.6, 5, "#2c7ae0"]];
+  for (const [x, y, c] of pos) g += `<circle cx="${x}" cy="${y}" r=".9" fill="${c}"/>`;
+  g += R(3, 4.4, 2, 2, "#f7f7f7") + `<circle cx="4" cy="5.4" r=".35" fill="#1c1c24"/>` + R(28.4, 5, 2, 2, "#f7f7f7") + `<circle cx="${29 + (frame % 2) * 0.8}" cy="${5.6 + (frame % 2) * 0.8}" r=".35" fill="#1c1c24"/>`;
+  return g;
+}

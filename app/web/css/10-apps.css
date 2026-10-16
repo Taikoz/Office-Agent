@@ -1,0 +1,56 @@
+  /* ChiefOS → 💻 Terminal (terminal.js): Ubuntu's purple GNOME Terminal, tabs on top */
+  #chiefos .ubwin:has(.termapp) .osapp { padding: 0; overflow: hidden; display: flex; }
+  #chiefos .termapp { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: #300a24; }
+  #chiefos .termbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: #2b2b2b; border-bottom: 1px solid #111; flex-wrap: wrap; }
+  #chiefos .termbar button, #chiefos .termbar select { padding: 3px 10px; color: #eee; background: #3d3d3d; border: 0; border-radius: 6px; cursor: pointer; font: 500 13px "Ubuntu", sans-serif; }
+  #chiefos .termbar button:hover { background: #4d4d4d; }
+  #chiefos .termtab { display: flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; color: #ccc; background: #232323; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  #chiefos .termtab.on { color: #fff; background: #4a1a3c; box-shadow: inset 0 -2px #e95420; }
+  #chiefos .termtab button { padding: 0 6px; background: transparent; }
+  #chiefos .termtab .tt { max-width: 140px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #chiefos .termquick { display: flex; gap: 4px; } #chiefos .termmsg { margin-left: auto; font-size: 12px; }
+  #chiefos .termscreen { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 8px; color: #fff; background: #300a24; outline: 0; cursor: text;
+    font: 14px/17px "Ubuntu Mono", ui-monospace, monospace; white-space: pre; scrollbar-width: thin; scrollbar-color: #6b3a5d transparent; }
+  #chiefos .termscreen > div > div { height: 17px; overflow: hidden; }
+  #chiefos .tcur { color: #300a24; background: #ddd; } #chiefos .termscreen:not(:focus) .tcur { color: inherit; background: transparent; outline: 1px solid #ddd; }
+  #chiefos .termprobe { position: absolute; visibility: hidden; left: -9999px; top: 0; font: 14px/17px "Ubuntu Mono", ui-monospace, monospace; white-space: pre; }
+  #chiefos .termempty { flex: 1; display: grid; place-content: center; text-align: center; color: #eee; padding: 20px; }
+
+  /* ChiefOS → 📝 Skills & agents (skilledit.js): list on the left, editor on the right */
+  #chiefos .ubwin:has(.seapp) .osapp { padding: 0; overflow: hidden; display: flex; }
+  #chiefos .seapp { flex: 1; min-width: 0; display: grid; grid-template-columns: 300px 1fr; }
+  #chiefos .seside { display: flex; flex-direction: column; gap: 6px; min-height: 0; padding: 10px; background: #242424; border-right: 1px solid #111; }
+  #chiefos .sesearch, #chiefos .sedupname { width: 100%; }
+  #chiefos .sekinds { display: flex; gap: 4px; flex-wrap: wrap; }
+  #chiefos .sekinds button { padding: 2px 8px; color: #ddd; background: #333; border: 0; border-radius: 12px; cursor: pointer; font-size: 12px; }
+  #chiefos .sekinds button.on { color: #fff; background: var(--ub-orange, #e95420); }
+  #chiefos .selist { flex: 1; overflow-y: auto; scrollbar-width: thin; }
+  #chiefos .selist h4 { margin: 10px 2px 4px; }
+  #chiefos .selist button { display: flex; flex-direction: column; width: 100%; margin: 2px 0; padding: 6px 8px; text-align: left; color: #eee; background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+  #chiefos .selist button:hover { background: #333; } #chiefos .selist button.on { background: #4a2a1a; box-shadow: inset 3px 0 #e95420; }
+  #chiefos .selist small { color: #aaa; font-size: 12px; }
+  #chiefos .sefoot button { padding: 0 6px; color: #ddd; background: #333; border: 0; border-radius: 6px; cursor: pointer; }
+  #chiefos .semain { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; padding: 12px; }
+  #chiefos .sehead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; } #chiefos .sehead code { color: #aaa; font-size: 12px; }
+  #chiefos .setext { flex: 1; min-height: 200px; width: 100%; resize: none; padding: 10px; color: #eee; background: #1e1e1e; border: 1px solid #111; border-radius: 8px;
+    font: 14px/1.45 "Ubuntu Mono", ui-monospace, monospace; tab-size: 2; }
+  #chiefos .sepreview { flex: 1; overflow-y: auto; }
+  #chiefos .seempty { margin: auto; text-align: center; max-width: 420px; }
+  @media (max-width: 800px) { #chiefos .seapp { grid-template-columns: 1fr; grid-template-rows: 220px 1fr; } }
+
+  /* ChiefOS → 🧠 MMX, 📊 Tableau de bord, 🔔 Notifications, ⏰ Planification (chiefapps.js) */
+  #chiefos .mxgrid { display: grid; grid-template-columns: 1fr; gap: 12px; } #chiefos .mxgrid:has(.mxside) { grid-template-columns: 1fr 340px; }
+  #chiefos .mxside { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #2a2a2a; border-radius: 10px; }
+  #chiefos .mxside button { padding: 1px 8px; color: #ddd; background: #3d3d3d; border: 0; border-radius: 6px; cursor: pointer; }
+  #chiefos .mxp { align-self: center; min-width: 34px; padding: 2px 6px; text-align: center; color: #fff; background: #5e5c64; border-radius: 6px; font-weight: 700; font-size: 12px; }
+  #chiefos .mxp.p5 { background: #c01c28; } #chiefos .mxp.p4 { background: #e66100; } #chiefos .mxp.p3 { background: #a68300; }
+  @media (max-width: 900px) { #chiefos .mxgrid:has(.mxside) { grid-template-columns: 1fr; } }
+  #chiefos .dashchart { display: block; width: 100%; height: 170px; background: #242424; border-radius: 8px; }
+  #chiefos .dashchart text { fill: #aaa; font: 11px "Ubuntu", sans-serif; }
+  #chiefos .dashrate { display: inline-block; vertical-align: middle; width: 120px; height: 8px; overflow: hidden; background: #3d3d3d; border-radius: 4px; }
+  #chiefos .dashrate i { display: block; height: 100%; border-radius: 4px; }
+  #chiefos .nfsum { margin-bottom: 10px; padding: 10px 12px; background: #3a2a1a; border-left: 3px solid #e95420; border-radius: 8px; }
+  #chiefos .nfrow small { letter-spacing: .5px; font-size: 11px; }
+  #chiefos .schedform { margin: 8px 0 14px; padding: 10px 12px; background: #2a2a2a; border-radius: 10px; }
+  #chiefos .schedform textarea, #chiefos .schedform input:not([type]), #chiefos .schedform select { width: 100%; }
+  #chiefos .schedays { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } #chiefos .schedays label { display: flex; align-items: center; gap: 3px; }

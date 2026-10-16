@@ -1,0 +1,79 @@
+  /* dev's computer: modal imitating a monitor (bezel, desktop bar, editor + terminal windows, stand) */
+  #pc { position: fixed; inset: 0; z-index: 20; background: #0a0910d9; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+  #pc[hidden] { display: none; }
+  .bezel { width: min(1180px, 100%); height: min(720px, calc(100vh - 110px)); background: linear-gradient(#3a3a46, #2a2a33); border-radius: 14px; padding: 14px 14px 26px;
+    box-shadow: 0 20px 60px #000c, inset 0 2px 0 #55556a; position: relative; display: flex; }
+  .bezel::after { content: "DEV-PC"; position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); color: #77778c; font-size: 14px; letter-spacing: 3px; }
+  .bezel .led { position: absolute; bottom: 9px; right: 22px; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .stand { width: 120px; height: 34px; background: linear-gradient(#2f2f3a, #23232c); clip-path: polygon(30% 0, 70% 0, 80% 100%, 20% 100%); }
+  .foot { width: 260px; height: 10px; border-radius: 6px 6px 2px 2px; background: #2a2a33; box-shadow: 0 6px 18px #0009; }
+  .screen { flex: 1; min-width: 0; background: radial-gradient(ellipse at center, #1b2440 0%, #0f1528 100%); border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; position: relative;
+    font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d8d3dd; }
+  .screen::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2; background: repeating-linear-gradient(#0000 0 2px, #0000000f 2px 3px); }
+  .osbar { display: flex; align-items: center; gap: 10px; padding: 3px 10px; background: #0b1020; color: #aba6b5; font: 16px "VT323", monospace; }
+  .osbar .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .osbar button { font: inherit; color: var(--text); background: #1e2640; border: 1px solid #3e3c49; padding: 0 8px; cursor: pointer; }
+  .osbar button:hover { border-color: var(--accent); }
+  .desk { flex: 1; min-height: 0; display: grid; grid-template-columns: 3fr 2fr; gap: 10px; padding: 10px; }
+  .win { min-height: 0; display: flex; flex-direction: column; border: 1px solid #36343f; border-radius: 6px; overflow: hidden; background: #15141a; box-shadow: 0 6px 18px #0008; }
+  .win .tb { display: flex; align-items: center; gap: 6px; padding: 3px 8px; background: #24232b; color: #aba6b5; font: 15px "VT323", monospace; }
+  .win .tb i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .win .tb span { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .win .empty { padding: 14px; color: #6a6674; }
+  .monitor .files { display: flex; gap: 2px; overflow-x: auto; background: #141a2c; padding: 2px 2px 0; flex: none; }
+  .monitor .files button { font: 15px "VT323", monospace; color: var(--muted); background: #24232b; border: 0; padding: 1px 8px; cursor: pointer; white-space: nowrap; }
+  .monitor .files button.on { color: var(--text); background: #15141a; }
+  .monitor .files button.failed { text-decoration: line-through; }
+  .monitor .files b { font-weight: normal; color: var(--ok); } .monitor .files i { font-style: normal; color: var(--err); }
+  .monitor .path { color: var(--muted); font: 15px "VT323", monospace; padding: 2px 8px; border-bottom: 1px solid #2c2b34; overflow-wrap: anywhere; flex: none; }
+  .monitor .path .warn { color: var(--err); }
+  .monitor pre { margin: 0; padding: 4px 0; flex: 1; min-height: 0; overflow: auto; font: inherit; }
+  .monitor pre div { padding: 0 8px 0 4px; white-space: pre; min-height: 1.45em; }
+  .monitor pre div::before { content: attr(data-s); display: inline-block; width: 1.4em; color: #6a6674; }
+  .monitor pre .add { background: #12351f; color: #b7f0c8; } .monitor pre .add::before { color: var(--ok); }
+  .monitor pre .del { background: #3a1620; color: #f3b8c2; } .monitor pre .del::before { color: var(--err); }
+  .monitor pre .gap { color: #6a6674; font-style: italic; }
+  .term { flex: 1; min-height: 0; overflow: auto; padding: 6px 8px; background: #070b14; }
+  .term .cmd { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .term .ps { color: var(--ok); } .term .ps b { color: #5aa9ff; font-weight: normal; }
+  .term .desc { color: #6a6674; font-style: italic; }
+  .term .out { color: #9b96a6; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16em; overflow: auto; }
+  .term .out.err { color: #f3a0ae; }
+  .term .caret { display: inline-block; width: .6em; height: 1.1em; vertical-align: text-bottom; background: #d8d3dd; animation: blink 1s steps(2) infinite; }
+  @media (max-width: 760px) { .desk { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } .bezel { height: calc(100vh - 90px); padding: 8px 8px 20px; } }
+  @media (prefers-reduced-motion: reduce) { .term .caret { animation: none; } }
+  #panel .head { padding: 12px 16px 8px; border-bottom: 2px solid var(--line); }
+  #panel .head .top { display: flex; align-items: center; gap: 8px; }
+  #panel .head .top .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 22px; }
+  #panel button.x { font: inherit; font-size: 22px; color: var(--text); background: none; border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
+  #panel button.x:hover { border-color: var(--accent); }
+  #panel .mission { color: var(--muted); margin-top: 4px; max-height: 5em; overflow: auto; overflow-wrap: anywhere; }
+  #panel .body { padding: 12px 16px 16px; overflow-y: auto; flex: 1; }
+  #panel h3 { font-size: 18px; font-weight: normal; color: var(--muted); margin: 14px 0 6px; letter-spacing: 1px; }
+  .bar { position: relative; height: 22px; border: 2px solid var(--line); background: #17161d; }
+  .bar > i { position: absolute; inset: 0 auto 0 0; background: var(--warn); transition: width .4s ease-out; }
+  .bar.working > i { background: repeating-linear-gradient(-45deg, var(--warn) 0 8px, #d99a2b 8px 16px); background-size: 22.6px 22.6px; animation: slide 0.8s linear infinite; }
+  .bar.done > i { background: var(--ok); } .bar.blocked > i { background: var(--err); } .bar.gone > i { background: var(--muted); }
+  .bar > b { position: absolute; inset: 0; text-align: center; font-weight: normal; line-height: 18px; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+  @keyframes slide { to { background-position: 22.6px 0; } }
+  @media (prefers-reduced-motion: reduce) { .bar.working > i { animation: none; } #panel { transition: none; } }
+  .plabel { display: flex; justify-content: space-between; color: var(--muted); margin-top: 4px; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { padding: 1px 0; overflow-wrap: anywhere; }
+  .steps li.done { color: var(--ok); } .steps li.current { color: var(--warn); } .steps li.todo { color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .stats div { border: 2px solid var(--line); padding: 4px 6px; }
+  .stats small { display: block; color: var(--muted); font-size: 15px; }
+  .now { border: 2px solid var(--line); padding: 6px 8px; overflow-wrap: anywhere; }
+  .tl { list-style: none; margin: 0; padding: 0; font-size: 16px; }
+  .tl li { display: grid; grid-template-columns: 44px 1fr; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  .tl li time { color: var(--muted); }
+  .tl li.text span { color: #d5eeff; font-style: italic; }
+  .tl li.error span { color: var(--err); }
+  .tl li .tool { color: var(--accent); }
+  .s-asking { color: var(--accent); }
+  header button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); padding: 0 10px; cursor: pointer; }
+  header button:hover, header button.on { border-color: var(--accent); }
+  #qbadge { background: var(--accent); color: #22212a; border-color: var(--accent); animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { filter: brightness(1.35); } }
+  @media (prefers-reduced-motion: reduce) { #qbadge { animation: none; } }

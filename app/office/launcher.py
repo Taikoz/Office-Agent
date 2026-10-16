@@ -50,8 +50,9 @@ def terminal(cmd: list[str], cwd: Path = LAUNCH_DIR) -> list[str] | None:
     return None
 
 
-def launch(agent: str, prompt: str) -> tuple[bool, str]:
-    """Open a terminal running claude as `agent` with `prompt`; argv only, no shell."""
+def launch(agent: str, prompt: str, cwd: Path | None = None) -> tuple[bool, str]:
+    """Open a terminal running claude as `agent` with `prompt` (in `cwd`, else the launch dir); argv only, no shell."""
+    cwd = cwd if cwd and cwd.is_dir() else LAUNCH_DIR
     if agent not in agents():
         return False, "agent inconnu"
     prompt = prompt.strip()
@@ -59,22 +60,22 @@ def launch(agent: str, prompt: str) -> tuple[bool, str]:
         return False, "mission vide ou trop longue"
     claude = shutil.which("claude") or str(Path.home() / ".local" / "bin" / "claude")
     if sys.platform == "win32":
-        return launch_windows(claude, agent, prompt)
-    argv = terminal([claude, "--agent", agent, prompt])
+        return launch_windows(claude, agent, prompt, cwd)
+    argv = terminal([claude, "--agent", agent, prompt], cwd)
     if argv is None:
         return False, "pas de terminal graphique disponible"
-    subprocess.Popen(argv, cwd=LAUNCH_DIR, env=clean_env(dict(os.environ)), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    subprocess.Popen(argv, cwd=cwd, env=clean_env(dict(os.environ)), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
     return True, f"{agent} lancé dans un nouveau terminal"
 
 
-def launch_windows(claude: str, agent: str, prompt: str) -> tuple[bool, str]:
+def launch_windows(claude: str, agent: str, prompt: str, cwd: Path = LAUNCH_DIR) -> tuple[bool, str]:
     """Windows: claude.exe in a new console window, argv only. A claude.cmd (npm install) would go through cmd.exe,
     which reparses the mission text: refused rather than risking it."""
     exe = claude if claude.lower().endswith(".exe") else shutil.which("claude.exe") or ""
     if not exe:
         return False, "claude.exe introuvable (installation npm ?) : lance l'agent depuis Claude Code"
-    subprocess.Popen([exe, "--agent", agent, prompt], cwd=LAUNCH_DIR, env=clean_env(dict(os.environ)),
+    subprocess.Popen([exe, "--agent", agent, prompt], cwd=cwd, env=clean_env(dict(os.environ)),
                      creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0x10))
     return True, f"{agent} lancé dans une nouvelle console"
 

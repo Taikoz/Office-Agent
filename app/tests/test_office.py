@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, config, framecheck, game, gitlab, history, launcher, pricing, questions, routes, savegame, team, transcripts  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, pricing, questions, routes, savegame, schedules, team, terminal, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -187,7 +187,7 @@ class BillingTests(unittest.TestCase):
 class StaticTests(unittest.TestCase):
     def test_only_css_and_js_of_web_are_served(self) -> None:
         files = routes.static_files()
-        self.assertIn("/static/style.css", files)
+        self.assertIn("/static/css/01-base.css", files)
         self.assertIn("/static/js/main.js", files)
         self.assertTrue(all(p.suffix in (".css", ".js") and routes.WEB in p.parents for p in files.values()))
         self.assertNotIn("/static/../server.py", files)
@@ -372,3 +372,150 @@ class BlueprintTests(unittest.TestCase):
                 code, out = blueprints.publish({**body, "mode": "claude", "blueprint": {"nodes": []}})
             self.assertEqual(code, 200)
             self.assertTrue(Path(out["draft"]).exists())
+
+
+class TerminalTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "pty")
+    def test_shell_runs_a_command_and_closes(self) -> None:
+        home = Path(tempfile.mkdtemp())
+        with mock.patch.object(Path, "home", lambda: home), mock.patch.dict("os.environ", {"SHELL": "/bin/sh"}):
+            t = terminal.open_term(str(home), 24, 80)
+            terminal.write(t["id"], "echo office-$((40+2))\n")
+            out, since = b"", 0
+            for _ in range(30):
+                r = terminal.read(t["id"], since, 0.2)
+                out += __import__("base64").b64decode(r["data"]); since = r["next"]
+                if b"office-42" in out:
+                    break
+            terminal.close(t["id"])
+        self.assertIn(b"office-42", out)
+        with mock.patch.object(Path, "home", lambda: home):
+            with self.assertRaises(ValueError):
+                terminal.open_term("/etc")
+
+
+class ClaudeFilesTests(unittest.TestCase):
+    def test_only_skills_agents_commands_and_backups(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        base = tmp / ".claude"
+        (base / "skills" / "deploy").mkdir(parents=True)
+        (base / "agents").mkdir()
+        (base / "skills" / "deploy" / "SKILL.md").write_text("---\nname: deploy\ndescription: Déploie.\n---\nCorps")
+        (base / "settings.json").write_text("{}")
+        with mock.patch.object(claudefiles, "roots", lambda: [("Global", base)]), mock.patch.object(claudefiles, "BACKUPS", tmp / "b"), mock.patch.object(claudefiles, "TRASH", tmp / "t"):
+            files = claudefiles.list_files()
+            self.assertEqual([(f["kind"], f["name"], f["description"]) for f in files], [("skill", "deploy", "Déploie.")])
+            path = files[0]["path"]
+            got = claudefiles.read(path)
+            with self.assertRaises(ValueError):
+                claudefiles.read(str(base / "settings.json"))   # not a skill / agent / command
+            with self.assertRaises(FileExistsError):
+                claudefiles.save(path, "x", got["mtime"] - 10)  # changed on disk meanwhile
+            claudefiles.save(path, "---\nname: deploy\n---\nNouveau", got["mtime"])
+            self.assertEqual(len(list((tmp / "b").iterdir())), 1)
+            claudefiles.save(str(base / "agents" / "copie.md"), "---\nname: copie\n---\n")  # a new file (duplicate)
+            with self.assertRaises(ValueError):
+                claudefiles.save(str(base / "hooks" / "x.sh"), "echo")
+            claudefiles.delete(path)
+            self.assertFalse((base / "skills" / "deploy").exists())
+            self.assertEqual(len(list((tmp / "t").iterdir())), 1)
+
+
+class ScheduleTests(unittest.TestCase):
+    def test_due_only_in_its_window_and_once(self) -> None:
+        from datetime import datetime
+        with mock.patch.object(schedules, "agents", lambda: ["cleaner"]):
+            item = schedules.clean({"agent": "cleaner", "prompt": "Nettoie", "days": [0], "time": "09:00"})
+        monday = datetime(2026, 10, 19, 9, 5)
+        self.assertEqual(schedules.due(item, monday), "2026-10-19 09:00")
+        self.assertIsNone(schedules.due(item, monday.replace(hour=8, minute=59)))
+        self.assertIsNone(schedules.due(item, monday.replace(hour=10)))           # missed long ago: skipped
+        self.assertIsNone(schedules.due(item, datetime(2026, 10, 20, 9, 5)))      # Tuesday
+        self.assertIsNone(schedules.due({**item, "last": "2026-10-19 09:00"}, monday))
+        with mock.patch.object(schedules, "agents", lambda: ["cleaner"]):
+            for bad in ({"agent": "x", "prompt": "p", "days": [0], "time": "09:00"}, {"agent": "cleaner", "prompt": "p", "days": [], "time": "09:00"}, {"agent": "cleaner", "prompt": "p", "days": [1], "time": "25:00"}):
+                with self.assertRaises(ValueError):
+                    schedules.clean(bad)
+
+
+class HookAndDashboardTests(unittest.TestCase):
+    def test_hook_install_merges_settings_once(self) -> None:
+        home = Path(tempfile.mkdtemp())
+        repo = home / "app"
+        (repo / ".claude").mkdir(parents=True)
+        (repo / ".claude" / "settings.json").write_text('{"permissions": {"allow": ["Bash(ls)"]}}')
+        with mock.patch.object(Path, "home", lambda: home), mock.patch.object(blueprints, "DRAFTS", home / "drafts"):
+            body = {"kind": "hook", "name": "no-push-main", "target": str(repo), "content": "#!/usr/bin/env bash\nexit 0\n", "mode": "write",
+                    "hook": {"event": "PreToolUse", "matcher": "Bash"}}
+            self.assertEqual(blueprints.publish(body)[0], 200)
+            self.assertEqual(blueprints.publish({**body, "overwrite": True})[0], 200)
+        conf = json.loads((repo / ".claude" / "settings.json").read_text())
+        self.assertEqual(conf["permissions"], {"allow": ["Bash(ls)"]})
+        self.assertEqual(conf["hooks"]["PreToolUse"], [{"matcher": "Bash", "hooks": [{"type": "command", "command": 'bash "$CLAUDE_PROJECT_DIR/.claude/hooks/no-push-main.sh"'}]}])
+        self.assertTrue(os.access(repo / ".claude" / "hooks" / "no-push-main.sh", os.X_OK))
+
+    def test_dashboard_per_day_type_and_causes(self) -> None:
+        fake = [{"type": "feature-builder", "status": "done", "first": 1_760_000_000, "last": 1_760_000_600, "cost": 2.0, "errors": 1, "lastError": ""},
+                {"type": "feature-builder", "status": "blocked", "first": 1_760_000_000, "last": 1_760_000_100, "cost": 1.0, "errors": 3, "lastError": "Timeout 30000ms"}]
+        with mock.patch.object(history, "runs", lambda game, days: iter(fake)):
+            d = history.dashboard(None, 30)
+        self.assertEqual((d["perType"][0]["runs"], d["perType"][0]["rate"], d["perType"][0]["avgCost"]), (2, 50, 1.5))
+        self.assertEqual(d["causes"], [{"cause": "délai dépassé", "n": 1}])
+        self.assertEqual(sum(x["runs"] for x in d["perDay"]), 2)
+
+
+class HostCheckTests(unittest.TestCase):
+    def test_foreign_host_is_refused(self) -> None:
+        import http.client
+        import threading
+        from http.server import ThreadingHTTPServer
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), routes.make_handler(60, mock.MagicMock()))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        port = srv.server_address[1]
+        try:
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            c.request("GET", "/api/viewer", headers={"Host": "evil.example:%d" % port})
+            self.assertEqual(c.getresponse().status, 403)
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            c.request("GET", "/api/term/list")  # right host, no token
+            self.assertEqual(c.getresponse().status, 403)
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            c.request("GET", "/api/viewer")
+            self.assertEqual(c.getresponse().status, 200)
+        finally:
+            srv.shutdown()
+
+
+class PlatformTests(unittest.TestCase):
+    """The new tools on macOS and Windows, checked from any OS by faking the platform."""
+
+    def test_macos_terminal_opens_in_the_folder(self) -> None:
+        with mock.patch.object(launcher.sys, "platform", "darwin"):
+            argv = launcher.terminal(["claude", "--agent", "x", "it's \"quoted\""], Path("/Users/me/my repo"))
+        self.assertEqual(argv[:2], ["osascript", "-e"])
+        self.assertIn("cd '/Users/me/my repo' && claude --agent x", argv[2])
+        self.assertIn('\\"quoted\\"', argv[2])
+
+    def test_windows_has_no_builtin_terminal(self) -> None:
+        with mock.patch.object(terminal, "available", return_value=False):
+            with self.assertRaises(ValueError):
+                terminal.open_term(str(Path.home()))
+
+    def test_windows_claude_in_folder_needs_claude_exe(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(launcher.sys, "platform", "win32"), \
+                mock.patch.object(launcher.shutil, "which", return_value=None), mock.patch.object(launcher.subprocess, "Popen") as popen:
+            ok, out = launcher.launch_claude_in(Path(d), "écris le skill")
+        self.assertFalse(ok)
+        self.assertIn("claude.exe", out)
+        popen.assert_not_called()
+
+    def test_windows_claude_in_folder_uses_argv(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(launcher.sys, "platform", "win32"), \
+                mock.patch.object(launcher.shutil, "which", return_value="C:/claude/claude.exe"), mock.patch.object(launcher.subprocess, "Popen") as popen:
+            ok, _ = launcher.launch_claude_in(Path(d), 'a "b" & c')
+        self.assertTrue(ok)
+        self.assertEqual(popen.call_args.args[0], ["C:/claude/claude.exe", 'a "b" & c'])
+
+    def test_global_hook_command_is_a_posix_path(self) -> None:
+        home = Path.home().resolve()
+        self.assertEqual(blueprints.hook_command(home, home / ".claude" / "hooks" / "h.sh"), f'bash "{(home / ".claude" / "hooks" / "h.sh").as_posix()}"')

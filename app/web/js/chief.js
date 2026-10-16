@@ -78,7 +78,7 @@ function chiefLoungeAct(actId) {
   const via = chief.lspot?.via ? [{ ...chief.lspot.via }] : [];
   chief.lpath = [...via, { x: via[0]?.x ?? chief.lx, y: LOUNGE_CORRIDOR }, { x: sp.via ? sp.via.x : sp.x, y: LOUNGE_CORRIDOR }, ...(sp.via ? [{ ...sp.via }] : []), { x: sp.x, y: sp.y }];
   chief.lspot = { ...sp, act };
-  chief.bubble = { kitchen: "Un petit encas 🍕", sofa: "Pause canapé 💤", read: "Un peu de lecture 📖", chat: "On papote ? 💬", arcade: "Une partie 🎮", darts: "Aux fléchettes 🎯", pingpong: "Échauffement 🏓", babyfoot: "Baby ! ⚽" }[actId] || "";
+  chief.bubble = { kitchen: "Un petit encas 🍕", sofa: "Pause canapé 💤", read: "Un peu de lecture 📖", chat: "On papote ? 💬", arcade: "Une partie 🎮", darts: "Aux fléchettes 🎯", pingpong: "Échauffement 🏓", babyfoot: "Baby ! ⚽", karaoke: "🎤 Un, deux, un, deux…", boardgame: "Qui veut une partie ? 🎲" }[actId] || "";
   chief.until = performance.now() + 2500;
 }
 

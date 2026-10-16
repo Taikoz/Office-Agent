@@ -1,0 +1,64 @@
+  /* ChiefOS × GitLab (gitlabapp.js) */
+  #chiefos .ubok { background: var(--ub-orange) !important; }
+  #chiefos code { padding: 0 4px; font-family: "Ubuntu Mono", monospace; background: #1e1e1e; border-radius: 4px; }
+  #chiefos .pipe { margin-bottom: 10px; } #chiefos .pipe .osrow { border-radius: 10px 10px 0 0; margin: 0; }
+  #chiefos .pipe details { padding: 6px 14px 10px; background: var(--ub-card); border-radius: 0 0 10px 10px; } #chiefos .pipe summary { cursor: pointer; color: var(--ub-dim); }
+  #chiefos .pipe pre.md { margin-top: 6px; max-height: 260px; }
+  #chiefos .osrow small { font-size: 12px; } #chiefos .osrow input { width: 100%; }
+
+  /* ChiefOS → 🦊 GitLab (glview.js): list of MRs, one MR with its widget, threads, pipeline and diff */
+  #chiefos .glapp { --gl-purple: #7b58cf; --gl-blue: #428fdc; --gl-green: #2da160; --gl-red: #ec5941; --gl-orange: #e9be74; --gl-line: #404040; }
+  #chiefos .glbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; } #chiefos .gllogo { font-size: 22px; }
+  #chiefos .glbar b { font-size: 16px; } #chiefos .glsearch { flex: 1; min-width: 160px; }
+  #chiefos .gltabs { display: flex; gap: 4px; border-bottom: 1px solid var(--gl-line); margin: 6px 0 10px; }
+  #chiefos .gltabs button { padding: 8px 14px; color: var(--ub-dim); background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; cursor: pointer; font-weight: 500; }
+  #chiefos .gltabs button:hover { color: var(--ub-text); border-bottom-color: #666; } #chiefos .gltabs button.on { color: var(--ub-text); border-bottom-color: var(--gl-purple); }
+  #chiefos .glcount { margin-left: 4px; padding: 0 7px; font-size: 12px; color: var(--ub-text); background: #4a4a4a; border-radius: 999px; }
+  #chiefos .gllist { display: flex; flex-direction: column; border: 1px solid var(--gl-line); border-radius: 8px; overflow: hidden; }
+  #chiefos .glmr { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 14px; text-align: left; color: var(--ub-text); background: #2f2f2f; border: 0; border-bottom: 1px solid var(--gl-line); cursor: pointer; }
+  #chiefos .glmr:last-child { border-bottom: 0; } #chiefos .glmr:hover { background: #383838; }
+  #chiefos .glmain { display: flex; flex-direction: column; gap: 3px; min-width: 0; } #chiefos .glmain b { font-weight: 500; } #chiefos .glmain small { color: var(--ub-dim); }
+  #chiefos .glmeta { display: flex; align-items: center; gap: 10px; color: var(--ub-dim); font-size: 13px; white-space: nowrap; }
+  #chiefos .glempty { padding: 16px; text-align: center; }
+  #chiefos .glci { display: inline-grid; place-items: center; width: 20px; height: 20px; flex: none; font-size: 12px; font-weight: 700; color: #fff; border-radius: 50%; background: #666; }
+  #chiefos .glci.success { background: var(--gl-green); } #chiefos .glci.failed { background: var(--gl-red); } #chiefos .glci.running { background: var(--gl-blue); } #chiefos .glci.pending, #chiefos .glci.created { background: #c17d10; }
+  #chiefos .glci.canceled, #chiefos .glci.skipped, #chiefos .glci.none { background: #737278; } #chiefos .glci.manual { background: #5e5c64; }
+  #chiefos .glav { display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; font-size: calc(var(--s) * .42); font-weight: 700; color: #fff; background: var(--av); border-radius: 50%; vertical-align: middle; }
+  #chiefos .gllabels { display: flex; flex-wrap: wrap; gap: 4px; }
+  #chiefos .gllabel { padding: 0 8px; font-size: 12px; color: #fff; background: var(--lc); border-radius: 999px; } #chiefos .gllabel.scoped { padding: 0; background: #2f2f2f; border: 2px solid var(--lc); overflow: hidden; }
+  #chiefos .gllabel.scoped b { padding: 0 6px; font-weight: 500; background: var(--lc); } #chiefos .gllabel.scoped { padding-right: 6px; } #chiefos .gllabel.scoped b { margin-right: 6px; }
+  #chiefos .gldraft { padding: 0 6px; font-size: 11px; color: #1e1e1e; background: var(--gl-orange); border-radius: 4px; }
+  #chiefos .glhead h2 { margin: 6px 0 4px; font-size: 22px; font-weight: 500; } #chiefos .glsub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--ub-dim); }
+  #chiefos .glstate { padding: 1px 10px; font-size: 12px; font-weight: 700; color: #fff; border-radius: 999px; } #chiefos .glstate.open { background: var(--gl-green); } #chiefos .glstate.merged { background: var(--gl-blue); }
+  #chiefos .glstate.closed { background: var(--gl-red); } #chiefos .glstate.draft { color: #1e1e1e; background: var(--gl-orange); }
+  #chiefos .glbtn { padding: 4px 14px; color: #fff; background: #4a4a4a; border-radius: 6px; text-decoration: none; font-weight: 500; } #chiefos .glbtn:hover { background: #5a5a5a; color: #fff; }
+  #chiefos .glwidget { margin: 12px 0; border: 1px solid var(--gl-line); border-radius: 8px; overflow: hidden; }
+  #chiefos .glwhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #333; border-bottom: 1px solid var(--gl-line); }
+  #chiefos .glcheck { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; padding: 6px 14px; border-bottom: 1px solid #353535; } #chiefos .glcheck:last-child { border-bottom: 0; }
+  #chiefos .glok { color: #52b87a; } #chiefos .glko { color: var(--gl-red); } #chiefos .glna { color: var(--ub-dim); }
+  #chiefos .glpane { min-height: 120px; }
+  #chiefos .glgrid { display: grid; grid-template-columns: 1fr 220px; gap: 16px; }
+  #chiefos .gldesc { padding: 12px 16px; line-height: 1.6; background: #2f2f2f; border-radius: 8px; } #chiefos .glh { display: block; margin: 6px 0 2px; font-size: 16px; }
+  #chiefos .glside { display: flex; flex-direction: column; gap: 12px; font-size: 13px; } #chiefos .glside small { display: block; margin-bottom: 4px; color: var(--ub-dim); font-weight: 700; letter-spacing: .5px; }
+  #chiefos pre.glcode { margin: 6px 0; padding: 8px 10px; white-space: pre-wrap; font: 13px/1.4 "Ubuntu Mono", monospace; background: #1e1e1e; border-radius: 6px; }
+  #chiefos .glthread { margin-bottom: 10px; border: 1px solid var(--gl-line); border-radius: 8px; overflow: hidden; } #chiefos .glthread.resolved { opacity: .75; }
+  #chiefos .glthread.open { border-left: 3px solid var(--gl-orange); }
+  #chiefos .glth { display: flex; justify-content: space-between; gap: 10px; padding: 6px 12px; font-size: 13px; background: #333; }
+  #chiefos .glnote { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 12px; border-top: 1px solid #353535; } #chiefos .glnote:first-of-type { border-top: 0; }
+  #chiefos .glnh { margin-bottom: 2px; } #chiefos .glnb { line-height: 1.5; overflow-wrap: anywhere; }
+  #chiefos .glsys { margin-top: 10px; color: var(--ub-dim); font-size: 13px; } #chiefos .glsys summary { cursor: pointer; } #chiefos .glsys div { padding: 2px 0 2px 12px; }
+  #chiefos .glpipehead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  #chiefos .glstages { display: flex; gap: 18px; padding: 12px; overflow-x: auto; background: #2a2a2a; border-radius: 8px; }
+  #chiefos .glstage { display: flex; flex-direction: column; gap: 8px; min-width: 170px; } #chiefos .glstage > small { color: var(--ub-dim); font-weight: 700; text-transform: capitalize; }
+  #chiefos .gljob { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 6px 10px; text-align: left; color: var(--ub-text); background: #383838; border: 1px solid #4a4a4a; border-radius: 999px; cursor: pointer; }
+  #chiefos .gljob:hover, #chiefos .gljob.on { border-color: var(--gl-blue); } #chiefos .gljob.failed { border-color: #7a2e24; } #chiefos .gljob small { color: var(--ub-dim); }
+  #chiefos .gljoblog { margin-top: 12px; }
+  #chiefos .glfile { margin-bottom: 8px; border: 1px solid var(--gl-line); border-radius: 8px; overflow: hidden; }
+  #chiefos .glfh { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; text-align: left; color: var(--ub-text); background: #333; border: 0; cursor: pointer; }
+  #chiefos .glstat { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  #chiefos .glstat i { width: 50px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, var(--gl-green) calc(var(--a) / (var(--a) + var(--d) + .001) * 100%), var(--gl-red) 0); }
+  #chiefos .gladd { color: #52b87a; } #chiefos .gldel { color: var(--gl-red); }
+  #chiefos .gltag { padding: 0 6px; font-size: 11px; background: #4a4a4a; border-radius: 4px; } #chiefos .gltag.new { background: #1f5c3a; } #chiefos .gltag.del { background: #7a2e24; }
+  #chiefos .gldiff { max-height: 420px; overflow: auto; font: 13px/1.45 "Ubuntu Mono", monospace; background: #1e1e1e; }
+  #chiefos .gldiff div { padding: 0 12px; white-space: pre; } #chiefos .gldiff .add { background: #1d3a2a; color: #b4e5c4; } #chiefos .gldiff .del { background: #3f1f1c; color: #f4b9b0; } #chiefos .gldiff .hunk { color: #8fb5e8; background: #232b38; }
+  @media (max-width: 900px) { #chiefos .glgrid { grid-template-columns: 1fr; } #chiefos .glmr { grid-template-columns: auto 1fr; } #chiefos .glmeta { grid-column: 2; } }
