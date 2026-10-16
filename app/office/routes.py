@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, framecheck, gitlab, history, net, savegame, schedules, team, terminal
+from . import blueprints, claudefiles, framecheck, gitlab, history, net, savegame, schedules, slack, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
@@ -115,6 +115,13 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 else:
                     target = parse_qs(urlparse(self.path).query).get("url", [""])[0]
                     self.reply(200, "application/json", json.dumps(framecheck.check(target), ensure_ascii=False).encode())
+            elif self.path.startswith("/api/slack/"):  # a Slack channel, read-only, the token kept server-side (slack.py); only this page
+                if not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
+                    self.reply(403, "application/json", b'{"error": "interdit"}')
+                else:
+                    fn = {"status": slack.status, "messages": slack.messages}.get(urlparse(self.path).path.rsplit("/", 1)[-1])
+                    code, body = slack.safe(fn) if fn else (404, {"error": "inconnu"})
+                    self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
             elif self.path.startswith("/api/gitlab/"):  # read-only, with the user's token kept server-side (gitlab.py)
                 what, q = urlparse(self.path).path.rsplit("/", 1)[-1], parse_qs(urlparse(self.path).query)
                 num = lambda k: int(q.get(k, ["0"])[0]) if q.get(k, ["0"])[0].isdigit() else 0
@@ -177,7 +184,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/blueprint/publish", "/api/net", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/blueprint/publish", "/api/net", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -212,6 +219,10 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 if self.path == "/api/blueprint/publish":
                     code, body = blueprints.publish(data if isinstance(data, dict) else {})
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/slack/config":
+                    code, body = slack.safe(slack.forget if data.get("forget") else lambda: slack.save(str(data.get("token", "")), str(data.get("channel", ""))))
+                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/gitlab/config":
                     code, body = gitlab.safe(gitlab.forget if data.get("forget") else lambda: gitlab.save(str(data.get("url", "")), str(data.get("token", ""))))

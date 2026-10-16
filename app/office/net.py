@@ -50,7 +50,7 @@ DUEL_INFO = re.compile(r"^[0-9a-f]{8}:(?:pingpong|babyfoot|darts):[0-9a-f]{8}$")
 VISIO = re.compile(r"^(?:ring|accept|decline|end|busy):[0-9a-f]{8}$")
 GIFT = re.compile(r"^(?:coffee|croissants|pizza|cake|plant|flowers)$")
 PARTY = re.compile(r"^(?:start|stop|join|leave)$")
-ACT = re.compile(r"^(?:(?:talk|cheer|coffee|kudos|wave):[^\x00-\x1f:]{1,24}|use:\d{1,10}:(?:lamp|blind|music))$")
+ACT = re.compile(r"^(?:(?:talk|cheer|coffee|kudos|wave|pet):[^\x00-\x1f:]{1,24}|use:\d{1,10}:(?:lamp|blind|music))$")
 
 
 def clean_text(v: Any, n: int) -> str:
@@ -113,7 +113,9 @@ def clean_crew(v: Any) -> list[dict[str, Any]]:
                     "look": clean_look(m.get("look")), "pose": clean_pose(m.get("pose")), "b": clean_text(m.get("b"), 60),
                     "tag": clean_text(m.get("tag"), 30), "c": m["c"] if isinstance(m.get("c"), str) and HEX.match(m["c"]) else "",
                     "st": m["st"] if m.get("st") in STATUS else "", "what": clean_text(m.get("what"), 40),
-                    "mood": int(num(m.get("mood"), 0, 100, 50)), "kudos": int(num(m.get("kudos"), 0, 1e6)), "sk": skills})
+                    "mood": int(num(m.get("mood"), 0, 100, 50)), "kudos": int(num(m.get("kudos"), 0, 1e6)), "sk": skills,
+                    **({"pet": m["pet"], "pm": m.get("pm") if m.get("pm") in ("walk", "sit", "sleep") else "sit",
+                        "fx": round(num(m.get("fx"), 0, 900, 0), 1), "fy": round(num(m.get("fy"), 0, 500, 0), 1)} if m.get("pet") in ("cat", "dog") else {})})
     return out
 
 

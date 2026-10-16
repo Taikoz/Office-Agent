@@ -141,8 +141,16 @@ export function stepOf(state, x, y) {
   if (d < 15) state._sd = (state._sd || 0) + d;  // more: a jump (a door, another room), no step
   return (state._sd || 0) / STRIDE;
 }
+// what keeps a person alive when nothing happens: breathing, a blink now and then, each at its own beat (its look)
+const beat = look => { let h = 0; for (const c of `${look.skin}${look.hair}${look.shirt}${look.style}`) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 4000; };
 export function drawPerson(x, y, look, opts = {}) {
-  if (opts.step != null) { opts = { ...opts, frame: Math.floor(opts.step) }; y -= Math.abs(Math.sin(opts.step * Math.PI)) * 0.7; }  // up between two steps, down on each
+  let walk;
+  if (opts.step != null) {  // the walk cycle: 8 poses over two steps; the body up when the legs pass, down on each step
+    walk = Math.floor(opts.step * 4) % 8; opts = { ...opts, frame: Math.floor(opts.step) };
+    y -= Math.abs(Math.cos(opts.step * Math.PI)) * 0.7;
+  }
+  const now = performance.now(), b = beat(look);
+  const life = { walk, breath: walk == null && Math.floor((now + b) / 1500) % 2 ? 1 : 0, blink: (now + b * 1.7) % 4300 < 130, talk: !!opts.talk && Math.floor(now / 110) % 2 === 0 };
   const hat = opts.hat || (look === hub.CHIEF_LOOK ? hub.chiefHat() : look.team ? hub.shop.hat : "");  // opts.hat: a VR headset…
   const o = { frame: (opts.frame || 0) % 2, back: !!opts.back, seated: !!opts.seated, arms: opts.arms || "down", tux: !!opts.tux, smile: !!opts.smile, hat };
   // the isometric view: in volume, turned toward where they go or look (opts.dir: a 2D direction; else facing us, or
@@ -151,7 +159,7 @@ export function drawPerson(x, y, look, opts = {}) {
     const d = opts.dir;
     let rot = o.back ? 2 : 0;
     if (d && (d[0] || d[1])) rot = Math.abs(d[0]) > Math.abs(d[1]) ? (d[0] > 0 ? 1 : 3) : (d[1] > 0 ? 0 : 2);
-    if (!ART.isoavatar.draw(x, y, { look: lookTraits(look), rot, frame: o.frame, seated: o.seated, arms: o.arms, tux: o.tux, smile: o.smile, hat: o.hat })) return drawPersonPx(x, y, look, opts);
+    if (!ART.isoavatar.draw(x, y, { look: lookTraits(look), rot, frame: o.frame, seated: o.seated, arms: o.arms, tux: o.tux, smile: o.smile, hat: o.hat, ...life })) return drawPersonPx(x, y, look, opts);
     if (o.arms === "baton") {  // the baton in the raised hand
       const [hx, hy] = [[4.9, 0], [0, -4.9], [-4.9, 0], [0, 4.9]][rot], top = (o.seated ? 4 : 8) + 16 + (o.frame ? 2 : 0), hp = { x: x + (hx - hy) * 0.6, y: y + (hx + hy) * 0.3 - top };
       raw.drawn = true; ctx.strokeStyle = "#f4f2ea"; ctx.lineWidth = Math.max(1, S * 0.6); ctx.beginPath();

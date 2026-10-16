@@ -182,7 +182,7 @@ export function setView(v) {
 // how a dev of the break room stands now (drawPerson options): also what the visitors of the office see (world/share.js)
 export function loungerPose(l, t) {
   const walking = l.path.length > 0, act = !walking && l.spot?.act, f = Math.floor(t / (walking ? 180 : 260));
-  let opts = { frame: walking ? f : 0, step: walking ? stepOf(l, l.x, l.y) : null, back: walking && l.path[0].y < l.y, smile: mate(l.name).moral >= 50, dir: walking ? [l.path[0].x - l.x, l.path[0].y - l.y] : l.spot?.face };
+  let opts = { frame: walking ? f : 0, step: walking ? stepOf(l, l.x, l.y) : null, talk: t < (l.sayUntil || 0), back: walking && l.path[0].y < l.y, smile: mate(l.name).moral >= 50, dir: walking ? [l.path[0].x - l.x, l.path[0].y - l.y] : l.spot?.face };
   if (act) {
     opts = { ...opts, ...act.pose, frame: act.pose.arms === "type" ? f : 0 };
     if (act.dress) opts = act.dress(l, opts, t);  // an Activity (js/activities/); cooking, eating… are plain objects (social.js)

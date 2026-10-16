@@ -115,7 +115,7 @@ function stepChief(dt, t) {
 export function drawChiefLounge(t) {
   const walking = chief.lpath.length > 0, act = !walking && chief.lspot?.act, g = chief.gesture && t < chief.gesture.until ? chief.gesture.pose : {};
   const pose = { ...(act?.pose || {}), ...(act && chief.lspot.back ? { back: true } : {}), ...(walking ? {} : g) };
-  drawPerson(chief.lx, chief.ly, CHIEF_LOOK, { tux: true, smile: true, frame: Math.floor(t / (walking ? 180 : 300)), step: walking ? stepOf(chief.lstep ||= {}, chief.lx, chief.ly) : null,
+  drawPerson(chief.lx, chief.ly, CHIEF_LOOK, { tux: true, smile: true, frame: Math.floor(t / (walking ? 180 : 300)), step: walking ? stepOf(chief.lstep ||= {}, chief.lx, chief.ly) : null, talk: t < (chief.until || 0),
     seated: !!pose.seated, back: !!pose.back || (walking && chief.lpath[0].y < chief.ly), arms: pose.arms || "down",
     dir: walking ? [chief.lpath[0].x - chief.lx, chief.lpath[0].y - chief.ly] : chief.lspot?.face });
 }

@@ -116,6 +116,7 @@ function frame(t) {
   const g = run.g, game = PC_GAMES[run.id];
   if (!run.s.over) { game.step(run.s, dt, run.keys, run.pressed); run.pressed = {}; if (run.s.over) gameOver(); }
   else if (run.pressed[" "] || run.pressed.Enter) { run.s = game.init(); run.pressed = {}; }
+  g.setTransform(run.k, 0, 0, run.k, 0, 0);  // the recent computers draw finely (ui/pcgames2.js: hd)
   g.fillStyle = game.bg; g.fillRect(0, 0, W, H); game.draw(g, run.s);
   if (run.s.over) { g.fillStyle = "#000a"; g.fillRect(0, 34, W, 30); g.fillStyle = "#fbaa08"; g.font = "10px monospace"; g.textAlign = "center"; g.fillText("GAME OVER", W / 2, 46); g.fillStyle = "#f4f2ea"; g.font = "7px monospace"; g.fillText("Espace : rejouer · Échap : quitter", W / 2, 57); g.textAlign = "left"; }
   box.querySelector(".sc").textContent = `Score ${run.s.score} · Record ${Math.max(best(run.id), run.s.score)}`;
@@ -137,8 +138,11 @@ export function openPcGame(type, seated = chief.at === "pc") {
   }
   box.querySelector("b").textContent = `${game.icon} ${game.name}`; box.querySelector("footer").textContent = game.keys;
   box.hidden = false;
-  const g = box.querySelector("canvas").getContext("2d"); g.imageSmoothingEnabled = false;
-  run = { id, g, s: game.init(), keys: {}, pressed: {}, last: performance.now(), seated };
+  const cv = box.querySelector("canvas"), k = game.hd ? 3 : 1;
+  if (cv.width !== W * k) { cv.width = W * k; cv.height = H * k; }
+  cv.classList.toggle("hd", !!game.hd);
+  const g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
+  run = { id, g, k, s: game.init(), keys: {}, pressed: {}, last: performance.now(), seated };
   if (chief.at === "pc") chief.pcUntil = Infinity;  // he stays seated while he plays
   requestAnimationFrame(frame);
 }

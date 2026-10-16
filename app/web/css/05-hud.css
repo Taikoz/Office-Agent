@@ -312,3 +312,13 @@
   /* économie: no blur behind the panels (it is redone at every frame over the moving scene) */
   body.eco * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   .qbtns { display: flex; gap: 6px; } .qbtns button.on { border-color: var(--accent); color: var(--accent); }
+  #pcgame canvas.hd { image-rendering: auto; }  /* the recent computers' games are drawn finely (ui/pcgames2.js) */
+  /* ChiefOS → Support: a Slack channel (apps/support.js) */
+  .suphead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; } .suphead b { font-size: 18px; color: #e0457e; } .suphead button { margin-left: auto; }
+  .suplist { max-height: min(60vh, 560px); overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .supmsg { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 6px 8px; border-radius: 8px; }
+  .supmsg:hover { background: #ffffff08; } .supmsg.new { background: #e0457e14; box-shadow: inset 3px 0 0 #e0457e; }
+  .supmsg .av { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; background: #4a5a8a; font-weight: bold; } .supmsg .av.bot { background: #2a3350; }
+  .supmsg .who { display: flex; align-items: baseline; gap: 8px; } .supmsg .who small { color: var(--muted); } .supmsg .who a { margin-left: auto; text-decoration: none; }
+  .supmsg .txt { line-height: 1.45; word-break: break-word; } .supmsg .txt code { padding: 0 4px; background: #ffffff14; border-radius: 4px; }
+  .supmsg .meta { display: flex; gap: 6px; margin-top: 4px; } .supmsg .meta span { padding: 1px 7px; font-size: 13px; background: #ffffff10; border-radius: 999px; }

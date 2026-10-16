@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, net, pricing, questions, routes, savegame, schedules, team, terminal, transcripts  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, net, pricing, questions, routes, savegame, schedules, slack, team, terminal, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -658,6 +658,11 @@ class NetCrewTests(unittest.TestCase):
         self.assertNotIn("cmd", alice)
         self.assertEqual(alice["look"], {"skin": "#f1c7a3", "beardColor": "#222222"})
         self.assertEqual(alice["pose"], {"seated": True, "arms": "type", "dir": [0.0, -1.0], "z": 3.0})
+        net.act("crew", {"sid": a["sid"], "crew": [{"n": "Brume", "room": "office", "x": 10, "y": 90, "pet": "cat", "pm": "sleep", "fx": 12, "fy": 99, "pose": {"z": 12.6}},
+                                                    {"n": "Rex", "room": "office", "x": 1, "y": 1, "pet": "tiger", "pm": "eat"}]})
+        pets = net.HUB.snapshot(b["sid"], 0)[1]["crew"]
+        self.assertEqual((pets[0]["pet"], pets[0]["pm"], pets[0]["fy"]), ("cat", "sleep", 99.0))
+        self.assertNotIn("pet", pets[1])  # an unknown animal: a plain entry, nothing more
         self.assertNotIn("crew", net.HUB.snapshot(a["sid"], 0)[1])  # the host visits nobody
         self.assertEqual(next(p for p in net.HUB.snapshot(a["sid"], 0)[1]["peers"] if p["pid"] == b["pid"])["pose"], {"seated": True})
         # acts: to the office we are in, of a known kind only
@@ -751,3 +756,59 @@ class NetRejoinTests(unittest.TestCase):
         self.assertEqual(sorted(p["name"] for p in net.HUB.peers.values()), ["G", "H"])
         self.assertNotIn(g1["sid"], net.HUB.peers)
         self.assertNotIn(h1["sid"], net.HUB.peers)
+
+
+class SlackTests(unittest.TestCase):
+    """The Slack channel of ChiefOS → Support, with a fake Slack API (no network)."""
+
+    def fake(self, token: str, method: str, params: dict | None = None) -> dict:
+        self.calls.append(method)
+        if token != "xoxb-good-token-123":
+            raise slack.SlackError(slack.ERRORS["invalid_auth"])
+        return {
+            "auth.test": {"ok": True, "team": "Acme", "url": "https://acme.slack.com/", "user": "office-bot"},
+            "conversations.list": {"ok": True, "channels": [{"id": "C0SUPPORT1", "name": "support"}]},
+            "conversations.info": {"ok": True, "channel": {"id": "C0SUPPORT1", "name": "support"}},
+            "users.info": {"ok": True, "user": {"profile": {"display_name": "Léa"}}},
+            "conversations.history": {"ok": True, "messages": [
+                {"ts": "1700000002.000200", "user": "U1", "text": "Ping <@U1> voir <https://x.io/a|le ticket> &amp; merci", "reply_count": 2, "reactions": [{"name": "eyes", "count": 3}]},
+                {"ts": "1700000001.000100", "subtype": "channel_join", "user": "U1", "text": "a rejoint"},
+                {"ts": "1700000000.000100", "bot_profile": {"name": "Alertes"}, "text": "CI rouge"}]},
+        }[method]
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self.calls: list[str] = []
+        self.patches = [mock.patch.object(config, "STATE_DIR", self.tmp), mock.patch.object(slack, "api", self.fake)]
+        for p in self.patches:
+            p.start()
+        slack._cache.clear()
+        slack._people.clear()
+
+    def tearDown(self) -> None:
+        for p in self.patches:
+            p.stop()
+
+    def test_save_by_name_messages_and_token_never_shown(self) -> None:
+        st = slack.save("xoxb-good-token-123", "#support")
+        self.assertEqual(st, {"configured": True, "team": "Acme", "channel": "support", "channelId": "C0SUPPORT1", "bot": "office-bot"})
+        self.assertEqual(oct((self.tmp / "slack.json").stat().st_mode & 0o777), "0o600")
+        self.assertNotIn("xoxb", json.dumps(slack.status()))
+        body = slack.messages()
+        self.assertEqual([m["name"] for m in body["messages"]], ["Alertes", "Léa"])  # oldest first, the join skipped
+        lea = body["messages"][1]
+        self.assertEqual(lea["text"], "Ping @Léa voir le ticket (https://x.io/a) & merci")
+        self.assertEqual((lea["replies"], lea["reactions"]), (2, [{"name": "eyes", "count": 3}]))
+        self.assertEqual(lea["link"], "https://acme.slack.com/archives/C0SUPPORT1/p1700000002000200")
+        self.assertNotIn("xoxb", json.dumps(body))
+        n = self.calls.count("conversations.history")
+        slack.messages()
+        self.assertEqual(self.calls.count("conversations.history"), n)  # cached
+
+    def test_refusals(self) -> None:
+        self.assertEqual(slack.safe(lambda: slack.save("bad", "#support"))[0], 502)  # not a token
+        self.assertIn("refusé", slack.safe(lambda: slack.save("xoxb-wrong-token-999", "#support"))[1]["error"])
+        self.assertEqual(slack.safe(slack.messages)[1]["error"], "Slack n'est pas relié (ChiefOS → Réglages)")
+        slack.save("xoxb-good-token-123", "C0SUPPORT1")
+        self.assertEqual(slack.save("", "C0SUPPORT1")["configured"], True)  # an empty token keeps the saved one
+        self.assertFalse(slack.forget()["configured"])

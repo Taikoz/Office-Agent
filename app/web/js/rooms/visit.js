@@ -103,7 +103,8 @@ class VisitView extends Room {
     // its team, in this room
     for (const m of here(v)) {
       const s = smoothed(`c:${v.pid}:${m.n}`, m, t), z = liftOf(m, s, t), sel = v.sel === m.n;
-      items.push({ pt: [s.x, s.y], draw: () => G.put(s.x, s.y, s.x, s.y, z, () => drawPerson(s.x, s.y, { ...m.look }, netPose(m, s, t, { smile: m.mood >= 50 })), personBox(s.x, s.y)) });
+      if (m.pet) { drawPet(m, s, t, G, items, over); continue; }
+      items.push({ pt: [s.x, s.y], draw: () => G.put(s.x, s.y, s.x, s.y, z, () => drawPerson(s.x, s.y, { ...m.look }, netPose(m, s, t, { smile: m.mood >= 50, talk: m.room !== "office" && !!m.b })), personBox(s.x, s.y)) });
       over.push(() => G.put(s.x, s.y, s.x, s.y, z, () => {
         const seated = !!s.pose?.seated;
         badge(s.x, s.y + (seated ? -3 : 2), m.n, sel ? "#fbaa08" : m.c || "#4090d7");
@@ -121,7 +122,7 @@ class VisitView extends Room {
     items.push({ pt: [v.x, v.y], draw: () => G.put(v.x, v.y, v.x, v.y, z, () => {
       const em = !walking && net.emote && t < net.emote.until ? net.emote.key : "";
       drawPerson(v.x, v.y, CHIEF_LOOK, emotePose(em, t, { tux: true, smile: true, hat: chiefHat(), dir: walking ? v.dir : pose.dir, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down",
-        frame: walking ? Math.floor(t / 180) : pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, step: walking ? stepOf(v, v.x, v.y) : null }));
+        frame: walking ? Math.floor(t / 180) : pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, step: walking ? stepOf(v, v.x, v.y) : null, talk: t < v.until }));
       if (pose.cup) { px(v.x + 4, v.y - 13, 2.5, 3, "#f4f2ea"); px(v.x + 4, v.y - 13, 2.5, 0.8, "#6d4a2e"); }
     }) });
     G.drawSorted(items);
@@ -140,6 +141,7 @@ class VisitView extends Room {
     if (door) { goThrough(door); return true; }
     const m = here(v).map(m => ({ m, s: smoothed(`c:${v.pid}:${m.n}`, m, t) })).sort((a, b) => b.s.y - a.s.y)
       .find(({ s }) => Math.abs(p.x - s.x) <= 8 && p.y >= s.y - 26 && p.y <= s.y + 4);
+    if (m?.m.pet) { sendAct(`pet:${m.m.n}`).catch(() => {}); say(`${m.m.pet === "cat" ? "🐱" : "🐶"} Qui c'est le plus beau ?`); return true; }  // pet them: their page answers
     if (m) { v.sel = m.m.n; card.mate(m.m); return true; }
     const it = [...(v.items || [])].filter(i => hub.defOf(i.type).kind !== "rug").sort((a, b) => (itemRect(b).y + itemRect(b).h) - (itemRect(a).y + itemRect(a).h))
       .find(i => { const r = itemRect(i); return p.x >= r.x - 1 && p.x <= r.x + r.w + 1 && p.y >= r.y - 1 && p.y <= r.y + r.h + 1; });
@@ -151,6 +153,22 @@ class VisitView extends Room {
   hit() { return null; }
 }
 new VisitView();
+
+// the visited office's cat and dog (world/share.js pets): walking (legs with the ground covered), sitting, asleep on a desk
+const petRot = d => d && Math.abs(d[0]) >= Math.abs(d[1]) ? (d[0] > 0 ? 1 : 3) : d && d[1] < 0 ? 2 : 0;
+function drawPet(m, s, t, G, items, over) {
+  const walking = s.v > 0.008 || m.pm === "walk", z = m.pm === "sleep" ? m.pose?.z || 0 : 0, fx = z ? m.fx : s.x, fy = z ? m.fy : s.y;
+  const frame = walking ? Math.floor(stepOf(s, s.x, s.y) * 1.6) % 2 : m.pm === "sit" ? (Math.floor(t / 180) % 23 === 0 ? 2 : Math.sin(t / 300) > 0 ? 1 : 0) : 0;
+  const rot = walking ? petRot(s.dir) : 0;
+  items.push({ pt: [fx, fy], z, draw: () => G.put(s.x, s.y, fx, fy, z, () => {
+    if (m.pet === "cat") ART.isocat.draw(s.x, s.y, { pose: m.pm === "sleep" ? "sleep" : walking ? "walk" : "sit", frame, rot });
+    else ART.isodog.draw(s.x, s.y, { frame, sit: !walking, rot });
+  }, { x: s.x - 10, y: s.y - 18, w: 20, h: 21, to: { x: s.x, y: s.y - 4 } }) });
+  over.push(() => G.put(s.x, s.y, fx, fy, z, () => {
+    if (m.pet === "dog") badge(s.x, s.y + 1, `🐶 ${m.n}`, "#c98b4f");
+    if (m.b) bubble(s.x, s.y - (m.pm === "sleep" ? 8 : 15), m.b, "#f4f2ea");
+  }));
+}
 
 function walkTo(x, y, then = null) {
   const v = net.visit; if (!v) return;
@@ -200,7 +218,7 @@ const card = {
   team() {
     const v = net.visit; if (!v) return;
     this.kind = "team"; this.target = null;
-    const crew = [...(v.crew || [])].sort((a, b) => score(b) - score(a));
+    const crew = (v.crew || []).filter(m => !m.pet).sort((a, b) => score(b) - score(a));
     const best = crew[0] && score(crew[0]) > 0 ? crew[0] : null;
     show(`<button class="x" data-vc="close" aria-label="Fermer">✕</button>
       <div class="vchead"><b>👥 L'équipe de ${esc(v.name)}</b><span class="muted">${crew.length} dev${crew.length > 1 ? "s" : ""}${best ? ` · 🏆 meilleur : ${esc(best.n)}` : ""}</span></div>
@@ -263,7 +281,7 @@ setInterval(() => {
   if (v && card.kind === "mate") { const m = (v.crew || []).find(x => x.n === card.target); if (m) card.mate(m); }
   if (key === barKey) return;
   barKey = key;
-  if (v) bar.innerHTML = `<b>🚪 Chez ${esc(v.name)}</b>${v.layout.rooms.filter(r => ROOM_FR[r]).map(r => `<button data-vroom="${r}" class="${r === v.room ? "on" : ""}">${ROOM_FR[r]}${(v.crew || []).some(m => m.room === r) ? ` <small>${(v.crew || []).filter(m => m.room === r).length}</small>` : ""}</button>`).join("")}<button data-vteam>👥 Équipe</button><button data-vbook>📖 Livre d'or</button><button data-vhome class="home">🏠 Rentrer à mon bureau</button>`;
+  if (v) bar.innerHTML = `<b>🚪 Chez ${esc(v.name)}</b>${v.layout.rooms.filter(r => ROOM_FR[r]).map(r => `<button data-vroom="${r}" class="${r === v.room ? "on" : ""}">${ROOM_FR[r]}${(v.crew || []).some(m => m.room === r && !m.pet) ? ` <small>${(v.crew || []).filter(m => m.room === r && !m.pet).length}</small>` : ""}</button>`).join("")}<button data-vteam>👥 Équipe</button><button data-vbook>📖 Livre d'or</button><button data-vhome class="home">🏠 Rentrer à mon bureau</button>`;
 }, 500);
 bar.addEventListener("click", ev => {
   const r = ev.target.closest("[data-vroom]"); if (r) { card.close(); const v = net.visit; return visitRoom(r.dataset.vroom, v && entryOf(v.room, r.dataset.vroom, v.layout)); }

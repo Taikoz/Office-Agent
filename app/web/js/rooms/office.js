@@ -43,7 +43,7 @@ class OfficeRoom extends Room {
     const gaming = chief.at === "console" && !chief.path.length, asleep = gaming && ch?.idle > 900;
     if (layer !== "over") {
       const waving = onPodium && !ch?.question && (t < chief.wave || (ch && !ch.finished && ch.idle < 20));
-      if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), step: walking ? stepOf(chief, chief.x, chief.y) : null, smile: !asleep,
+      if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), step: walking ? stepOf(chief, chief.x, chief.y) : null, talk: t < (chief.until || 0), smile: !asleep,
         arms: waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length ? "up" : "down", back: gaming || (walking && chief.path[0].y < chief.y), seated: gaming,
         dir: walking ? [chief.path[0].x - chief.x, chief.path[0].y - chief.y] : null });
       if (chief.cup) { px(chief.x + 4, chief.y - 13, 2.5, 3, "#f4f2ea"); px(chief.x + 4, chief.y - 13, 2.5, 0.8, "#6d4a2e"); }

@@ -291,7 +291,10 @@ export function smoothed(key, p, t) {
   const vx = (nx - s.x) / dt, vy = (ny - s.y) / dt;
   s.vx = s.vx * 0.75 + vx * 0.25; s.vy = s.vy * 0.75 + vy * 0.25; s.v = Math.hypot(s.vx, s.vy);
   s.x = nx; s.y = ny;
-  if (s.v > 0.006) s.dir = [s.vx, s.vy];
+  if (s.v > 0.006) {  // turned along the way it goes; on a diagonal, it keeps its side until the other one clearly wins
+    const ax = Math.abs(s.vx), ay = Math.abs(s.vy), horiz = s.horiz == null ? ax >= ay : s.horiz ? ax * 1.4 >= ay : ax >= ay * 1.4;
+    s.horiz = horiz; s.dir = horiz ? [Math.sign(s.vx), 0] : [0, Math.sign(s.vy)];
+  }
   s.pose = s.v > 0.01 ? A.pose : B.pose;
   return s;
 }
@@ -314,7 +317,7 @@ export function emotePose(key, t, o) {
 }
 export function drawPeer(p, t, x, y, s) {
   const said = net.said.get(p.name), em = EMOTE_INFO[p.emote], text = em ? `${em[0]} ${em[1]}` : said && t < said.until ? said.text : p.bubble;
-  drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, emotePose(p.emote, t, netPose(p, s, t, { tux: true, smile: true, hat: p.look?.hat })));
+  drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, emotePose(p.emote, t, netPose(p, s, t, { tux: true, smile: true, hat: p.look?.hat, talk: !!text && !em })));
   badge(x, y + ((s.pose || p.pose)?.seated ? -3 : 2), `${PRESENCE_INFO[p.status]?.[0] || "🌐"} ${p.name}`, p.host ? "#fbaa08" : "#3bc4ff");
   if (text) bubble(x, y - 24 - headroom(), text.slice(0, 80), em ? "#fff3c4" : "#d5eeff", "#081746");
 }
