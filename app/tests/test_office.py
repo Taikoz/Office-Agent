@@ -635,3 +635,35 @@ class NetMessagesTests(unittest.TestCase):
         self.assertEqual(texts(b), ["à tous", "rien que pour B", "invite"])
         self.assertEqual(texts(c), ["à tous"])
         self.assertEqual(texts(a), ["à tous", "rien que pour B", "invite"])
+
+
+class NetCrewTests(unittest.TestCase):
+    def setUp(self) -> None:
+        net.HUB.reset()
+
+    def test_visitors_see_the_cleaned_team_and_act_only_where_they_are(self) -> None:
+        _, a = net.HUB.hello({"name": "A"}, host=True)
+        _, b = net.HUB.hello({"name": "B"})
+        crew = [{"n": "Alice", "room": "office", "x": 120, "y": 140, "look": {"skin": "#f1c7a3", "beardColor": "#222222", "evil": "<script>"},
+                 "pose": {"seated": True, "arms": "type", "dir": [0, -1], "z": 3, "hack": 1}, "b": "💻 au travail", "st": "work",
+                 "ticket": "APP-1234", "cmd": "rm -rf /", "sk": [["💻 Développement", 4]], "mood": 80},
+                {"n": "Bob", "room": "nowhere", "x": 1, "y": 1}]
+        self.assertTrue(net.act("crew", {"sid": a["sid"], "crew": crew})[0])
+        net.act("sync", {"sid": b["sid"], "room": "office", "x": 50, "y": 110, "visiting": a["pid"], "pose": {"seated": True, "arms": "nope"}})
+        ok, snap = net.HUB.snapshot(b["sid"], 0)
+        self.assertEqual([m["n"] for m in snap["crew"]], ["Alice"])  # the unknown room is dropped
+        alice = snap["crew"][0]
+        self.assertNotIn("ticket", alice)
+        self.assertNotIn("cmd", alice)
+        self.assertEqual(alice["look"], {"skin": "#f1c7a3", "beardColor": "#222222"})
+        self.assertEqual(alice["pose"], {"seated": True, "arms": "type", "dir": [0.0, -1.0], "z": 3.0})
+        self.assertNotIn("crew", net.HUB.snapshot(a["sid"], 0)[1])  # the host visits nobody
+        self.assertEqual(next(p for p in net.HUB.snapshot(a["sid"], 0)[1]["peers"] if p["pid"] == b["pid"])["pose"], {"seated": True})
+        # acts: to the office we are in, of a known kind only
+        self.assertTrue(net.act("chat", {"sid": b["sid"], "kind": "act", "to": a["pid"], "text": "cheer:Alice"})[0])
+        self.assertTrue(net.act("chat", {"sid": b["sid"], "kind": "act", "to": a["pid"], "text": "use:42:lamp"})[0])
+        self.assertFalse(net.act("chat", {"sid": b["sid"], "kind": "act", "to": a["pid"], "text": "use:42:print"})[0])
+        self.assertFalse(net.act("chat", {"sid": b["sid"], "kind": "act", "to": a["pid"], "text": "launch:agent"})[0])
+        self.assertFalse(net.act("chat", {"sid": a["sid"], "kind": "act", "to": b["pid"], "text": "cheer:Bob"})[0])  # A is not visiting B
+        acts = [m["text"] for m in net.HUB.snapshot(a["sid"], 0)[1]["chat"] if m["kind"] == "act"]
+        self.assertEqual(acts, ["cheer:Alice", "use:42:lamp"])

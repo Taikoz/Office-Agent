@@ -215,3 +215,21 @@
   #phone .ring .acts { display: flex; gap: 20px; margin-top: 30px; } #phone .ring .acts button { font-size: 16px; padding: 8px 16px; }
   #phone .ring .no { background: #c0303a; } #phone .ring .yes { background: #2f8a4a; }
   @media (prefers-reduced-motion: reduce) { #phonebtn.ringing, #phone .ring .pulse { animation: none; } }
+  /* visiting another office: the card of a dev, an object, the team (rooms/visit.js) */
+  #visitcard { position: fixed; z-index: 13; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); max-height: 46vh; overflow: auto;
+    padding: 10px 14px; background: var(--glass-2); border: 1px solid #3bc4ff; border-radius: 14px; box-shadow: 0 10px 28px #000a; backdrop-filter: blur(8px); }
+  #visitcard[hidden] { display: none; }
+  #visitcard .x { position: absolute; right: 8px; top: 6px; background: transparent; border: 0; color: var(--text); font-size: 15px; cursor: pointer; }
+  #visitcard .vchead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding-right: 22px; margin-bottom: 6px; }
+  #visitcard .vchead b { font-weight: normal; font-size: 18px; color: #3bc4ff; }
+  #visitcard .vcskills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  #visitcard .vcskills .chip b { font-weight: normal; color: var(--accent); }
+  #visitcard .vcacts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #visitcard .vcacts button { font: inherit; font-size: 14px; padding: 3px 11px; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+  #visitcard .vcacts button:hover { border-color: #3bc4ff; color: #3bc4ff; }
+  #visitcard .vcteam { display: grid; gap: 4px; }
+  #visitcard .vcteam button { display: grid; grid-template-columns: 22px auto 1fr auto auto; align-items: baseline; gap: 8px; text-align: left; font: inherit; font-size: 14px;
+    padding: 4px 8px; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  #visitcard .vcteam button:hover { border-color: #3bc4ff; }
+  #visitcard .vcteam .rk { color: var(--accent); } #visitcard .vcteam .sk { color: #9fd8ff; font-size: 13px; }
+  #visitbar button small { color: var(--accent); }
