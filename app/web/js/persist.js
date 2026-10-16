@@ -4,7 +4,7 @@
 // save wins (index.html restores it before the game starts). Menu: save now, export to a file, import a file.
 
 const SAVE_SKIP = new Set(["office-saved-at"]);
-let lastSaveSig = "", lastSaveAt = +(localStorage.getItem("office-saved-at") || 0) || 0;
+let saveRefused = false, lastSaveSig = "", lastSaveAt = +(localStorage.getItem("office-saved-at") || 0) || 0;
 function collectSave() {
   save("office-moodlets", moodlets); save("office-wantslist", wantsOf);  // in-memory parts of the game
   const keys = {};
@@ -16,10 +16,18 @@ async function saveToFile(manual = false, keepalive = false) {
   const keys = collectSave(), sig = JSON.stringify(keys);
   if (!manual && sig === lastSaveSig) return;
   const savedAt = Date.now();
+  // this browser holds the newest progress from now on: a reload must not restore an older file over it (the save sent
+  // while the page closes can arrive after the next page has read the file)
+  try { localStorage.setItem("office-saved-at", String(savedAt)); } catch (_) { /* storage blocked */ }
   try {
     const res = await fetch("/api/save", { method: "POST", keepalive, headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify({ savedAt, keys }) });
     const out = await res.json().catch(() => ({}));
+    if (res.status === 403) {  // a stale tab (token of another server run) or a server from before 0.5.0
+      if (!saveRefused) { saveRefused = true; toast("SAUVEGARDE REFUSÉE (403)", "Le serveur ne reconnaît pas cette page", "Recharge la page (Ctrl+Maj+R). Si ça persiste, redémarre le serveur : office.py stop puis /office."); }
+      return;
+    }
     if (!res.ok || !out.ok) throw new Error(out.output || `HTTP ${res.status}`);
+    saveRefused = false;
     lastSaveSig = sig; lastSaveAt = savedAt;
     try { localStorage.setItem("office-saved-at", String(savedAt)); } catch (_) { /* storage blocked */ }
     if (manual) toast("SAUVEGARDE 💾", "Partie sauvegardée", out.output);

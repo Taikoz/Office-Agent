@@ -95,7 +95,27 @@ def excluded(text: str) -> bool:
 PROJECTS = HOME_CLAUDE / "projects"
 CLEAR_MARK = STATE_DIR / "clear"
 QUESTIONS = STATE_DIR / "questions"
-TOKEN = secrets.token_urlsafe(24)
+def load_token() -> str:
+    """Secret of the page's POSTs (answers, launches, saves…), kept in STATE_DIR (0600) so a restarted server accepts the
+    tabs already open: a fresh token per run made every save of an open tab fail with 403 after a restart."""
+    path = STATE_DIR / "token"
+    try:
+        token = path.read_text(encoding="utf-8").strip()
+        if len(token) >= 24:
+            return token
+    except OSError:
+        pass
+    token = secrets.token_urlsafe(24)
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_text(token, encoding="utf-8")
+        os.chmod(path, 0o600)
+    except OSError:
+        pass  # read-only home: one token for this run
+    return token
+
+
+TOKEN = load_token()
 YT_TOOLS: Path | None = CFG["youtrack_tools"]
 GL_TOOLS: Path | None = CFG["gitlab_tools"]
 MMX: Path | None = CFG["mmx"] if CFG["mmx"] and (CFG["mmx"] / "INDEX.json").exists() else None
