@@ -179,7 +179,8 @@ export function setView(v) {
   document.getElementById("loungebtn").innerHTML = v === "lounge" ? `🏢<span class="lbl"> RETOUR AU BUREAU</span>` : `☕<span class="lbl"> SALLE DE REPOS</span> (${loungers.size})`;
 }
 
-export function drawLounger(l, t) {
+// how a dev of the break room stands now (drawPerson options): also what the visitors of the office see (world/share.js)
+export function loungerPose(l, t) {
   const walking = l.path.length > 0, act = !walking && l.spot?.act, f = Math.floor(t / (walking ? 180 : 260));
   let opts = { frame: walking ? f : 0, back: walking && l.path[0].y < l.y, smile: mate(l.name).moral >= 50, dir: walking ? [l.path[0].x - l.x, l.path[0].y - l.y] : l.spot?.face };
   if (act) {
@@ -188,6 +189,10 @@ export function drawLounger(l, t) {
     if (l.spot.back) opts.back = true;
   }
   if (l.gesture && t < l.gesture.until) opts = { ...opts, ...l.gesture.pose, frame: f };  // social gestures (social.js)
+  return opts;
+}
+export function drawLounger(l, t) {
+  const opts = loungerPose(l, t), act = !l.path.length && l.spot?.act;
   drawPerson(l.x, l.y, l.look, opts);
   act?.after?.(l, t);  // a cup, a book, a mic
   l.seated = !!opts.seated;

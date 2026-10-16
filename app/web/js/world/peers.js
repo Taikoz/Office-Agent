@@ -10,9 +10,10 @@ import { CHIEF_LOOK } from "./chief.js";
 import { chiefHat } from "./chiefedit.js";
 import { toast } from "../sims/progress.js";
 import { bubble, drawPerson, headroom } from "./scene.js";
-import { anchored } from "../iso/engine.js";
 import { decor } from "./decor.js";
 import { setView, view } from "./lounge.js";
+import { OFFICE_SPOTS } from "./place.js";
+import { applyAct, crewSnapshot } from "./share.js";
 
 export const net = { mode: "", addr: "", code: "", sid: "", pid: "", peers: [], chat: [], since: 0, error: "", status: null, said: new Map(), quiet: false, visit: null,
   convs: new Map(), open: "", ringing: null };  // convs: "all" or a chief's pid → { msgs, unread } — in memory only, never saved
@@ -27,14 +28,29 @@ async function call(action, body = {}) {
   const out = await r.json().catch(() => ({})); if (!r.ok) throw new Error(out.error || `HTTP ${r.status}`); return out;
 }
 const me = () => ({ name: CHIEF_NAME, look: { ...CHIEF_LOOK, hat: chiefHat() || undefined } });
-// where our chief is: in our office, or in the office we visit (our avatar there)
-const where = () => net.visit ? { room: net.visit.room, x: net.visit.x, y: net.visit.y, visiting: net.visit.pid }
-  : chief.room === "lounge" ? { room: "lounge", x: chief.lx, y: chief.ly, visiting: "" } : { room: chief.room || "office", x: chief.x, y: chief.y, visiting: "" };
+// where our chief is and how he stands: in our office, or in the office we visit (our avatar there)
+const toward = (p, x, y) => [Math.round(p.x - x), Math.round(p.y - y)];
+function chiefPose() {
+  if (chief.room === "lounge") {
+    const walking = chief.lpath.length > 0, act = !walking && chief.lspot?.act, pose = act?.pose || {};
+    return { walk: walking, seated: !!pose.seated, arms: pose.arms || "down", back: walking ? chief.lpath[0].y < chief.ly : !!(act && chief.lspot.back),
+      dir: walking ? toward(chief.lpath[0], chief.lx, chief.ly) : chief.lspot?.face || null, z: walking ? 0 : chief.lspot?.lift || 0 };
+  }
+  const walking = chief.path.length > 0, at = walking ? "" : chief.at, seated = ["console", "pc", "chiefos"].includes(at);
+  return { walk: walking, seated, back: walking ? chief.path[0].y < chief.y : at === "console", arms: at === "console" ? "type" : at === "coffee" ? "up" : "down",
+    dir: walking ? toward(chief.path[0], chief.x, chief.y) : null, z: at === "podium" && OFFICE_SPOTS.podium ? 5 : 0 };
+}
+function where() {
+  const v = net.visit;
+  if (v) return { room: v.room, x: v.x, y: v.y, visiting: v.pid, pose: v.dir ? { walk: true, dir: v.dir.map(Math.round) } : v.pose || {} };
+  if (chief.room === "lounge") return { room: "lounge", x: chief.lx, y: chief.ly, visiting: "", pose: chiefPose() };
+  return { room: chief.room || "office", x: chief.x, y: chief.y, visiting: "", pose: chiefPose() };
+}
 
 /* ---------- hosting, joining, leaving ---------- */
-export async function host() {
+export async function host(port = 0) {
   if (demo()) throw new Error("pas en mode démo");
-  const r = await fetch("/api/net", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify({ action: "host" }) });
+  const r = await fetch("/api/net", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify({ action: "host", ...(port ? { port } : {}) }) });
   const st = await r.json(); if (!st.ok) throw new Error(st.error || "impossible d'ouvrir le réseau");
   net.status = st; net.mode = "host"; await join0();
   return st;
@@ -75,6 +91,7 @@ export const unread = () => [...net.convs.values()].reduce((s, c) => s + c.unrea
 function received(m, t) {
   const mineMsg = m.from === net.pid, other = mineMsg ? m.to : m.from;
   if (m.kind === "system") { conv("all").msgs.push(m); if (!net.quiet) toast("RÉSEAU 🌐", m.text, ""); return; }
+  if (m.kind === "act") { if (!net.quiet && !mineMsg && m.to === net.pid) applyAct(m, t); return; }  // a visitor here (world/share.js)
   if (m.kind === "text") {
     const c = conv(m.to ? other : "all"); c.msgs.push(m); c.msgs.splice(0, c.msgs.length - 100);
     if (net.quiet || mineMsg) return;
@@ -89,6 +106,8 @@ function received(m, t) {
   else if (m.kind === "accept") toast("📱 TÉLÉPHONE", `${m.name} accepte`, "Il arrive dans ton bureau.");
   else if (m.kind === "decline") toast("📱 TÉLÉPHONE", `${m.name} ne peut pas venir`, "Il a refusé l'invitation.");
 }
+// what we do in the office we visit: to a dev ("cheer:Alice") or an object ("use:12:lamp"); its page decides
+export async function sendAct(text) { if (net.visit) await call("chat", { sid: net.sid, kind: "act", to: net.visit.pid, text }); }
 export async function invite(pid) { await call("chat", { sid: net.sid, kind: "invite", to: pid }); }
 export async function answerCall(yes) {
   const r = net.ringing; if (!r) return;
@@ -128,7 +147,7 @@ export function endVisit(home = true) {
 export const visitRoom = room => { if (net.visit?.layout.rooms.includes(room)) Object.assign(net.visit, { room, x: 50, y: 110, tx: 50, ty: 110 }); };
 
 /* ---------- four times a second: where we are, who is there, what was said ---------- */
-let busy = false, lastLayout = 0;
+let busy = false, lastLayout = 0, lastCrew = 0;
 setInterval(async () => {
   if (!net.sid || busy) return;
   if (net.visit && view !== "visit") endVisit(false);  // another room picked on the bar: back home
@@ -144,6 +163,9 @@ setInterval(async () => {
     net.chat = net.chat.slice(-80); net.quiet = false;
     if (net.mode === "host") net.status = { ...net.status, peers: net.peers.length + 1 };
     if (t - lastLayout > 3000) { lastLayout = t; publishLayout().catch(() => {}); }
+    // our team, for those who visit us (twice a second, only while someone is here)
+    if (net.peers.some(p => p.visiting === net.pid) && t - lastCrew > 450) { lastCrew = t; call("crew", { sid: net.sid, crew: crewSnapshot(t) }).catch(() => {}); }
+    if (v && net.visit === v) { v.crew = out.crew || []; v.crewAt = t; }
     if (v && net.visit === v) {  // the office we visit: still there, its layout refreshed now and then
       if (!net.peers.some(p => p.pid === v.pid)) { toast("RÉSEAU 🌐", `${v.name} s'est déconnecté`, "Retour à ton bureau."); endVisit(); }
       else if (t - v.fetched > 8000) { v.fetched = t; call("layout", { sid: net.sid, pid: v.pid }).then(o => { if (net.visit === v && o.layout) v.layout = { ...o.layout, rooms: Array.isArray(o.layout.rooms) ? o.layout.rooms : v.layout.rooms }; }).catch(() => {}); }
@@ -154,27 +176,38 @@ setInterval(async () => {
   } finally { busy = false; }
 }, 250);
 
-/* ---------- the others, smoothed between two updates ---------- */
-const shown = new Map();  // pid → { x, y, t, room }
-export function smoothed(p, t) {
-  const s = shown.get(p.pid);
-  if (!s || s.room !== p.room || Math.hypot(p.x - s.x, p.y - s.y) > 90) { const n = { x: p.x, y: p.y, t, room: p.room }; shown.set(p.pid, n); return n; }
-  const k = Math.min(1, (t - s.t) / 140); s.x += (p.x - s.x) * k; s.y += (p.y - s.y) * k; s.t = t;
+/* ---------- the others (chiefs and, in the office we visit, its team), smoothed between two updates ---------- */
+// a walk shows when they move: turned where they go, legs going; standing still, the pose they sent
+const shown = new Map();  // key → { x, y, t, room, moving, dir }
+export function smoothed(key, p, t) {
+  let s = shown.get(key);
+  if (!s || s.room !== p.room || Math.hypot(p.x - s.x, p.y - s.y) > 90) { s = { x: p.x, y: p.y, t, room: p.room, moving: 0, dir: null }; shown.set(key, s); return s; }
+  const k = Math.min(1, (t - s.t) / 140), dx = (p.x - s.x) * k, dy = (p.y - s.y) * k;
+  s.x += dx; s.y += dy; s.t = t;
+  if (Math.hypot(p.x - s.x, p.y - s.y) > 0.6) { s.moving = t; s.dir = [p.x - s.x, p.y - s.y]; }
   return s;
 }
-export function drawPeer(p, t, x, y) {
+// the drawPerson options of someone shown from the network: walking (moving now, or said so) or its pose
+export function netPose(p, s, t, extra = {}) {
+  const pose = p.pose || {}, walking = t - s.moving < 220 || (pose.walk && t - s.moving < 600);
+  if (walking) { const d = s.dir || pose.dir; return { ...extra, frame: Math.floor(t / 180), dir: d, back: !!d && d[1] < 0 && Math.abs(d[1]) >= Math.abs(d[0]) }; }
+  return { ...extra, frame: pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", dir: pose.dir || (pose.seated ? null : s.dir) };  // still: turned where it went
+}
+export const liftOf = (p, s, t) => t - s.moving < 220 ? 0 : p.pose?.z || 0;
+export function drawPeer(p, t, x, y, s) {
   const said = net.said.get(p.name), text = said && t < said.until ? said.text : p.bubble;
-  drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, { tux: true, smile: true, hat: p.look?.hat, frame: Math.floor(t / 400) });
-  badge(x, y + 2, `🌐 ${p.name}`, p.host ? "#fbaa08" : "#3bc4ff");
+  drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, netPose(p, s, t, { tux: true, smile: true, hat: p.look?.hat }));
+  badge(x, y + (p.pose?.seated ? -3 : 2), `🌐 ${p.name}`, p.host ? "#fbaa08" : "#3bc4ff");
   if (text) bubble(x, y - 24 - headroom(), text.slice(0, 80), "#d5eeff", "#081746");
 }
+export const personBox = (x, y) => ({ x: x - 9, y: y - 34, w: 18, h: 37, to: { x, y: y - 8 } });
 // at home: only who visits us, in the room they are in (iso/rooms.js isoItems)
 export function peerItems(room, t, G, items) {
   if (net.visit || !net.pid) return;
   for (const p of net.peers) {
     if (p.visiting !== net.pid || p.room !== room) continue;
-    const s = smoothed(p, t);
-    items.push({ pt: [s.x, s.y], draw: () => anchored(s.x, s.y, () => drawPeer(p, t, s.x, s.y)) });
+    const s = smoothed(p.pid, p, t);
+    items.push({ pt: [s.x, s.y], draw: () => G.put(s.x, s.y, s.x, s.y, liftOf(p, s, t), () => drawPeer(p, t, s.x, s.y, s), personBox(s.x, s.y)) });
   }
 }
 
