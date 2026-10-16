@@ -183,7 +183,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else 400_000 if self.path in ("/api/claudefile", "/api/term/input") else 400_000 if self.path == "/api/blueprint/publish" else 500_000 if self.path == "/api/team" else 16_000
+                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else net.LAYOUT_MAX + 1000 if self.path == "/api/net" else 400_000 if self.path in ("/api/claudefile", "/api/term/input") else 400_000 if self.path == "/api/blueprint/publish" else 500_000 if self.path == "/api/team" else 16_000
                 data = json.loads(self.rfile.read(min(size, limit)))
                 if self.path in tools:
                     code, body = 200, {}

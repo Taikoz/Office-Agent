@@ -5,7 +5,8 @@ import { hub, provide } from "../hub.js";
 export const W = 400, H = 232;
 // the size of each room's floor in the scene's units: x from 0 to w, y from the wall's foot (70) to h; the screen
 // shows W × H of it at a time, the isometric view's camera moves over the rest (iso/engine.js)
-export const ROOM = { office: { w: 560, h: 300 }, lounge: { w: 560, h: 300 }, terrace: { w: 600, h: 320 }, meeting: { w: 400, h: 232 }, gym: { w: 420, h: 270 }, library: { w: 400, h: 270 } };
+export const ROOM = { office: { w: 560, h: 300 }, lounge: { w: 560, h: 300 }, terrace: { w: 600, h: 320 }, meeting: { w: 400, h: 232 }, gym: { w: 420, h: 270 }, library: { w: 400, h: 270 },
+  visit: { w: 560, h: 300 } };  // visit: the room of another chief's office being visited (rooms/visit.js), sized each frame
 export const roomSize = id => ROOM[id] || ROOM.meeting;
 // a room resized (world/construct.js): the office's door stays at the right end of its back wall
 export function setRoomSize(id, w, h) { if (!ROOM[id]) return; Object.assign(ROOM[id], { w, h }); if (id === "office") DOOR.x = w - 54; }
