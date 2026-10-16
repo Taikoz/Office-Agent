@@ -13,6 +13,7 @@ let loopErrors = 0;
 // one bad frame must not freeze the office: log it (once in a while) and keep animating
 function loop(t) {
   requestAnimationFrame(loop);
+  if (hub.frameSkip?.(t)) return;  // 30 frames a second when the office is not in use (ui/quality.js)
   try { step(Math.min(64, t - last), t); last = t; render(t); }
   catch (err) { last = t; if (loopErrors++ % 300 === 0) console.error("[office] frame", err); }
 }
