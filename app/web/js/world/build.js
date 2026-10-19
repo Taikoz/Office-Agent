@@ -212,6 +212,13 @@ function thumbUrl(def, st) {
   thumbs.set(key, url);
   return url;
 }
+// the shop's picture of an object turned: from behind (a back view) for the two far quarters, mirrored for the odd ones
+function rotUrl(def, st, rot) {
+  if (!rot || def.thumb || def.parts || def.thumbArt || !ART[def.art]) return thumbUrl(def, st);
+  const key = `${def.type}|${st.id}|r${rot >= 2 ? 1 : 0}`;
+  if (!thumbs.has(key)) thumbs.set(key, ART[def.art].url({ ...def.artFor(st, def.thumbState()), ...(rot >= 2 ? { back: true } : {}) }) || thumbUrl(def, st));
+  return thumbs.get(key);
+}
 const PAINT = { murs: { key: "wall", color: "wallColor", price: 400, label: "Murs" }, sols: { key: "floor", color: "floorColor", price: 600, label: "Sol" } };
 function paintGrid(cat, room) {
   const P2 = PAINT[cat], cur = decor[room] || {};
@@ -220,42 +227,99 @@ function paintGrid(cat, room) {
     return `<div class="bitem paint"><b>${esc(label)}</b><div class="pswatches">${colors.map(c => `<button class="psw${cur[P2.key] === type && cur[P2.color] === c ? " on" : ""}" data-paint="${cat}|${type}|${c}" title="${esc(label)} · ${c} · ${fmtSim(P2.price)}"><img alt="" src="${decorSwatch(P2.key === "wall" ? "wall" : "floor", type, c)}"></button>`).join("")}</div></div>`;
   }).join("");
 }
+// the categories in families (the rail on the left), each family's categories as tabs over the grid
+export const BUY_GROUPS = [["travail", "💼", "Travail", ["bureau", "chaises", "electronique", "rangement"]], ["salon", "🛋️", "Salon", ["fauteuils", "canapes", "poufs", "tables", "tapis"]],
+  ["cuisine", "🍳", "Cuisine", ["cafe", "cuisine"]], ["loisirs", "🎮", "Loisirs", ["loisirs", "sport", "bibliotheque"]], ["deco", "🖼️", "Déco", ["plantes", "deco", "tableaux", "cadres", "neons", "horloges", "lumiere"]],
+  ["dehors", "🌿", "Dehors", ["exterieur"]], ["piece", "🏗️", "La pièce", ["murs", "sols", "fenetres", "construction"]], ["plus", "🐾", "Plus", ["animaux", "garde"]], ["envies", "♡", "Envies", ["envies"]]];
+const groupOf = cat => BUY_GROUPS.find(g => g[3].includes(cat)) || BUY_GROUPS[0];
+const catLabel = id => id === "envies" ? ["envies", "♡", "Mes envies"] : BUY_CATS.find(c => c[0] === id) || [id, "", id];
+const fold = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const TIER = /^(\S+ [^·]+?) · /;  // "💸 Pauvre · …": the range, said in the description
+const SORTS = [["", "Ordre du magasin"], ["up", "Prix croissant"], ["down", "Prix décroissant"], ["name", "Nom"]];
+Object.assign(buy, { q: "", sort: "", afford: false });
+const ROOM_FR = { office: "le bureau", lounge: "la salle de repos", meeting: "la réunion", terrace: "la terrasse", gym: "la salle de sport", library: "la bibliothèque" };
+const roomsOf = d => d.room === "any" ? "toutes les pièces" : [].concat(d.room).map(r => ROOM_FR[r] || r).join(", ");
+// a card of the grid: the object on its pedestal, its name, its price, how many are already in this room
+function cardHtml(d, room, showCat) {
+  const ok = d.okIn(room), lock = hub.lockedFor?.(d), n = itemsIn(room).filter(it => it.type === d.type).length, poor = !lock && wallet.funds < d.price;
+  const badge = lock ? `<span class="bbadge lock">🔒 niv. ${hub.unlockOf(d)}</span>` : !ok ? `<span class="bbadge no">pas ici</span>` : n ? `<span class="bbadge own">×${n} ici</span>` : "";
+  return `<button class="bcard${buy.sel === d.type ? " on" : ""}${lock ? " locked" : ""}${!ok ? " nothere" : ""}${poor ? " poor" : ""}" data-sel="${d.type}" title="${esc(d.name)}">
+    <span class="bpic"><img alt="" loading="lazy" src="${thumbUrl(d, d.styles[0])}"></span>${badge}${wished(d.type) ? `<span class="bheart" title="Dans tes envies">♥</span>` : ""}
+    <span class="bname">${esc(d.name)}</span><span class="bprice">${fmtSim(d.price)}${d.styles.length > 1 ? `<i class="bnsty" title="${d.styles.length} coloris">${d.styles.slice(0, 4).map(st => `<s style="--sw:${st.sw}"></s>`).join("")}</i>` : ""}</span>
+    ${showCat ? `<span class="bcat">${catLabel(d.cat)[1]} ${esc(catLabel(d.cat)[2])}</span>` : ""}</button>`;
+}
+// the card on the right: the selected object, big, its colours, what it is, where it goes; or what this room holds
+function detailHtml(room) {
+  const d = buy.sel && defOf(buy.sel);
+  if (!d) {
+    const here = itemsIn(room), worth = here.reduce((v, it) => v + (defOf(it.type)?.price || 0), 0);
+    return `<aside class="bdetail empty"><span class="bbig">🛋️</span><b>Choisis un objet</b><span class="muted">pour voir ses coloris et le placer dans ${ROOM_FR[room] || "la pièce"}.</span>
+      <span class="bstat">${here.length} objet${here.length > 1 ? "s" : ""} ici · ${fmtSim(worth)}</span><span class="muted small">Clic sur un objet de la pièce : style, tourner, déplacer, vendre.</span></aside>`;
+  }
+  const st = d.styles.find(s => s.id === buy.style) || d.styles[0], lock = hub.lockedFor?.(d), ok = d.okIn(room), off = !ok || wallet.funds < d.price || lock;
+  const tier = TIER.exec(d.desc || ""), desc = tier ? d.desc.slice(tier[0].length) : d.desc || "", n = itemsIn(room).filter(it => it.type === d.type).length;
+  const why = lock ? `🔒 Débloqué au niveau ${hub.unlockOf(d)} du bureau (tu es niveau ${hub.officeLevel()}) : réussis des défis de la semaine.` : !ok ? `Ne va pas dans ${ROOM_FR[room] || "cette pièce"} : ${roomsOf(d)}.` : wallet.funds < d.price ? `Il te manque ${fmtSim(d.price - wallet.funds)}.` : "";
+  const rots = d.kind === "floor" || d.kind === "top" ? d.rots || 4 : 1, rot = buy.rot % rots;
+  return `<aside class="bdetail"><span class="bpic big"><img alt="" src="${rotUrl(d, st, rot)}"${rot % 2 ? ' class="flip"' : ""}>
+      <span class="bpicacts">${rots > 1 ? `<button data-rot title="Le tourner avant de le placer (R)">↻</button>` : ""}<button data-wish="${d.type}" class="${wished(d.type) ? "on" : ""}" title="${wished(d.type) ? "Retirer de mes envies" : "Garder dans mes envies"}">${wished(d.type) ? "♥" : "♡"}</button></span></span>
+    <div class="bdhead"><b>${esc(d.name)}</b><span class="bprice">${fmtSim(d.price)}</span></div>
+    ${tier ? `<span class="btier">${esc(tier[1])}</span>` : ""}<p class="bdesc">${esc(desc)}</p>
+    ${d.styles.length > 1 ? `<div class="bstyles"><span class="muted">Coloris : <b>${esc(st.name)}</b></span><div class="swatches">${d.styles.map(s => `<button data-style="${s.id}" class="${s.id === st.id ? "on" : ""}" title="${esc(s.name)}" style="--sw:${s.sw}"></button>`).join("")}</div></div>` : ""}
+    <dl class="bspecs"><dt>Va dans</dt><dd>${esc(roomsOf(d))}</dd>${d.kind === "wall" ? `<dt>Se pose</dt><dd>au mur</dd>` : d.kind === "top" ? `<dt>Se pose</dt><dd>sur une table, un bureau</dd>` : d.kind === "rug" ? `<dt>Se pose</dt><dd>au sol, sous les meubles</dd>` : `<dt>Taille</dt><dd>${Math.round(d.w)} × ${Math.round(d.d)}</dd>`}${n ? `<dt>Déjà ici</dt><dd>${n}</dd>` : ""}</dl>
+    ${why ? `<span class="lockmsg">${esc(why)}</span>` : ""}
+    <div class="bacts"><button class="primary" data-place="hand"${off ? " disabled" : ""} title="Le placer à la main (double clic sur une carte aussi)">🖐 Placer</button><button data-place="auto"${off || d.kind === "top" ? " disabled" : ""} title="Le poser à la première place libre">✨ Auto</button></div></aside>`;
+}
 export function renderBuy() {
   if (!buy.on) return;
-  const room = hub.curRoom();
-  const cats = BUY_CATS.map(([id, ic, label]) => `<button data-cat="${id}" class="${buy.cat === id ? "on" : ""}" title="${label}"><span class="ic">${ic}</span><span class="lbl">${label}</span></button>`).join("");
-  let grid = "", detail = "";
-  if (PAINT[buy.cat]) grid = paintGrid(buy.cat, room) + `<p class="muted">${PAINT[buy.cat].label} de cette pièce : ${fmtSim(PAINT[buy.cat].price)} le changement.</p>`;
-  else if (buy.cat === "garde") {
+  const room = hub.curRoom(), focused = document.activeElement?.id === "bsearch", caret = focused ? document.activeElement.selectionStart : 0;
+  const head = `<div class="bhead"><b>🛒 Mode achat</b><span class="tabs">${["office", "lounge", ...hub.con.rooms].map(r => `<button data-room="${r}" class="${room === r ? "on" : ""}">${hub.Room.get(r).label}</button>`).join("")}</span>
+    ${lastAct ? `<button class="bundo" data-buy="undo" title="Ctrl+Z">↶ Annuler ${UNDO_FR[lastAct.kind]}</button>` : ""}<span class="bfunds">💰 ${fmtSim(wallet.funds)}</span><button class="x" data-buy="close" title="Quitter le mode achat (Échap)" aria-label="Quitter le mode achat">×</button></div>`;
+  // placing or moving: a slim bar, the room stays in view
+  if (buy.placing || buy.moving) {
+    const d = defOf((buy.placing || buy.moving).type);
+    buyBox.classList.add("slim");
+    buyBox.innerHTML = `<div class="bhead"><b>🖐 ${buy.moving ? "Déplacer" : "Placer"} : ${esc(d?.name || "")}</b><span class="bkeys"><kbd>clic</kbd> poser (vert = ça rentre) <kbd>R</kbd> ou <kbd>clic droit</kbd> tourner <kbd>Échap</kbd> annuler</span>
+      <span class="bfunds">💰 ${fmtSim(wallet.funds)}</span><button data-buy="cancel">Annuler</button></div>`;
+    return;
+  }
+  buyBox.classList.remove("slim");
+  const [gid] = groupOf(buy.cat), q = fold(buy.q.trim());
+  const rail = BUY_GROUPS.map(([id, ic, label, cats]) => `<button data-group="${id}" class="${!q && id === gid ? "on" : ""}"><span class="ic">${ic}</span><span class="lbl">${label}</span><span class="n">${id === "envies" ? wishes().length || "" : cats.reduce((n, c) => n + CATALOG.filter(d => d.cat === c).length, 0) || ""}</span></button>`).join("");
+  const tabs = q ? `<span class="bresults">Résultats pour « ${esc(buy.q.trim())} »</span>` : groupOf(buy.cat)[3].map(c => { const [, ic, label] = catLabel(c), n = CATALOG.filter(d => d.cat === c).length;
+    return `<button data-cat="${c}" class="${buy.cat === c ? "on" : ""}">${ic} ${label}${n ? ` <span class="n">${n}</span>` : ""}</button>`; }).join("")
+    + (buy.cat === "envies" ? `<span class="bresults">Les objets marqués ♡ dans leur fiche</span>` : "");
+  const tools = `<span class="btools"><label class="bchk"><input type="checkbox" data-afford${buy.afford ? " checked" : ""}> à ma portée</label>
+    <select data-sort aria-label="Trier">${SORTS.map(([id, label]) => `<option value="${id}"${buy.sort === id ? " selected" : ""}>${label}</option>`).join("")}</select></span>`;
+  let grid = "", special = !q && (PAINT[buy.cat] || ["garde", "animaux", "construction"].includes(buy.cat));
+  if (!q && PAINT[buy.cat]) grid = `<p class="bnote">${PAINT[buy.cat].label} de ${ROOM_FR[room] || "cette pièce"} : ${fmtSim(PAINT[buy.cat].price)} le changement.</p>` + paintGrid(buy.cat, room);
+  else if (!q && buy.cat === "garde") {
     grid = SHOP.map(it => { const own = shop.owned.includes(it.id);
       return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
         <button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (itemOn(it) ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
   } else {
-    const defs = CATALOG.filter(d => d.cat === buy.cat);
-    grid = (buy.cat === "animaux" ? hub.petsGridHtml() : "") + (buy.cat === "construction" ? hub.constructGridHtml() : "") + defs.map(d => { const ok = d.okIn(room), st = d.styles[0];
-      const lock = hub.lockedFor?.(d);  // the office's level unlocks the dearest (sims/weekly.js)
-      return `<button class="bitem${buy.sel === d.type ? " on" : ""}${lock ? " locked" : ""}" data-sel="${d.type}"${ok ? "" : ` disabled title="Pas dans cette pièce"`}${lock ? ` title="Niveau du bureau ${hub.unlockOf(d)} requis"` : ""}>
-        <img class="bthumb" alt="" src="${thumbUrl(d, st)}"><b>${esc(d.name)}</b><span class="price">${lock ? `🔒 niv. ${hub.unlockOf(d)}` : fmtSim(d.price)}</span></button>`; }).join("")
-      || `<p class="muted">Rien ici.</p>`;
-    const d = buy.sel && defOf(buy.sel);
-    if (d) {
-      const st = d.styles.find(s => s.id === buy.style) || d.styles[0], lock = hub.lockedFor?.(d), off = !d.okIn(room) || wallet.funds < d.price || lock;
-      detail = `<div class="bdetail"><img class="bthumb big" alt="" src="${thumbUrl(d, st)}"><div class="bdesc"><b>${esc(d.name)} · ${esc(st.name)}</b><span class="muted">${esc(d.desc)}</span>${lock ? `<span class="lockmsg">🔒 Débloqué au niveau ${hub.unlockOf(d)} du bureau (tu es niveau ${hub.officeLevel()}) : réussis des défis de la semaine.</span>` : ""}
-        ${d.styles.length > 1 ? `<div class="swatches">${d.styles.map(s => `<button data-style="${s.id}" class="${s.id === st.id ? "on" : ""}" title="${esc(s.name)}" style="--sw:${s.sw}"></button>`).join("")}</div>` : ""}
-        <div class="bacts"><button data-place="hand"${off ? " disabled" : ""}>🖐 Placer · ${fmtSim(d.price)}</button><button data-place="auto"${off || d.kind === "top" ? " disabled" : ""}>✨ Placement auto</button></div></div></div>`;
-    }
+    let defs = q ? CATALOG.filter(d => fold(`${d.name} ${d.desc} ${catLabel(d.cat)[2]}`).includes(q)) : buy.cat === "envies" ? wishes().map(defOf).filter(Boolean) : CATALOG.filter(d => d.cat === buy.cat);
+    if (buy.afford) defs = defs.filter(d => d.price <= wallet.funds && !hub.lockedFor?.(d));
+    if (buy.sort) defs = [...defs].sort(buy.sort === "name" ? (a, b) => a.name.localeCompare(b.name, "fr") : buy.sort === "up" ? (a, b) => a.price - b.price : (a, b) => b.price - a.price);
+    defs = [...defs].sort((a, b) => (b.okIn(room) ? 1 : 0) - (a.okIn(room) ? 1 : 0));  // what goes here first
+    grid = (!q && buy.cat === "animaux" ? hub.petsGridHtml() : "") + (!q && buy.cat === "construction" ? hub.constructGridHtml() : "") + defs.map(d => cardHtml(d, room, !!q || buy.cat === "envies")).join("")
+      || `<p class="bnote">${q ? "Aucun objet ne correspond." : buy.cat === "envies" ? "Aucune envie pour l'instant : ouvre la fiche d'un objet et touche ♡ pour le garder ici." : buy.afford ? "Rien à ta portée ici pour l'instant." : "Rien ici."}</p>`;
   }
-  buyBox.innerHTML = `<div class="bhead"><b>🛒 MODE ACHAT</b><span class="tabs">${["office", "lounge", ...hub.con.rooms].map(r => `<button data-room="${r}" class="${room === r ? "on" : ""}">${hub.Room.get(r).label}</button>`).join("")}</span>
-    <span class="bfunds">💰 ${fmtSim(wallet.funds)}</span><button class="x" data-buy="close" title="Quitter le mode achat (Échap)">×</button></div>
-    <div class="bbody"><nav class="bcats">${cats}</nav><div class="bgrid">${grid}</div>${detail}</div>
-    <p class="bhint muted">${buy.placing || buy.moving ? "Clic pour poser (vert = ça rentre) · R ou clic droit… : tourner · Échap : annuler" : "Clic sur un objet de la pièce : style, tourner, déplacer, vendre. Glisser : se déplacer, molette : zoomer."}</p>`;
+  buyBox.innerHTML = head + `<div class="bbody"><nav class="brail" aria-label="Familles">${rail}</nav>
+    <div class="bmain"><div class="bbar"><label class="bsearch">🔎<input id="bsearch" type="search" placeholder="Chercher un objet…" value="${esc(buy.q)}" autocomplete="off"></label><div class="bcats">${tabs}</div>${special ? "" : tools}</div>
+    <div class="bgrid${special ? " special" : ""}">${grid}</div></div>${special ? "" : detailHtml(room)}</div>`;
+  if (focused) { const i = document.getElementById("bsearch"); i.focus(); i.setSelectionRange(caret, caret); }
 }
 buyBox.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b || b.disabled) return;
   if (b.dataset.buy === "close") return toggleBuy(false);
+  if (b.dataset.buy === "cancel") { buy.placing = buy.moving = null; return renderBuy(); }
+  if (b.dataset.buy === "undo") return undoLast();
+  if (b.dataset.wish) return toggleWish(b.dataset.wish);
+  if (b.dataset.rot !== undefined) { const d = defOf(buy.sel); buy.rot = (buy.rot + 1) % (d?.rots || 4); return renderBuy(); }
   if (b.dataset.room) { setView(b.dataset.room); buy.placing = buy.moving = buy.pick = null; buyTool.hidden = true; return renderBuy(); }
+  if (b.dataset.group) { const g = BUY_GROUPS.find(x => x[0] === b.dataset.group); buy.q = ""; if (!g[3].includes(buy.cat)) { buy.cat = g[3][0]; buy.sel = null; } return renderBuy(); }  // ♡ Envies: one tab, the wish list
   if (b.dataset.cat) { buy.cat = b.dataset.cat; buy.sel = null; return renderBuy(); }
-  if (b.dataset.sel) { buy.sel = b.dataset.sel; buy.style = defOf(buy.sel).styles[0].id; return renderBuy(); }
+  if (b.dataset.sel) { if (buy.sel !== b.dataset.sel) buy.rot = 0; buy.sel = b.dataset.sel; buy.style = defOf(buy.sel).styles[0].id; return renderBuy(); }
   if (b.dataset.style) { buy.style = b.dataset.style; return renderBuy(); }
   if (b.dataset.project) return hub.buyProject(b.dataset.project);
   if (b.dataset.paint) return buyPaint(...b.dataset.paint.split("|"));
@@ -263,6 +327,39 @@ buyBox.addEventListener("click", ev => {
   if (b.dataset.place === "hand") { buy.placing = { type: buy.sel, style: buy.style }; buy.pick = null; buyTool.hidden = true; return renderBuy(); }
   if (b.dataset.place === "auto") return autoPlace(buy.sel, buy.style);
 });
+// a double click on a card: straight to placing it
+buyBox.addEventListener("dblclick", ev => {
+  const type = ev.target.closest("[data-sel]")?.dataset.sel || (ev.target.closest(".bgrid") && buy.sel);  // the card may have been redrawn by the first click
+  const d = type && defOf(type); if (!d || !d.okIn(hub.curRoom()) || wallet.funds < d.price || hub.lockedFor?.(d)) return;
+  buy.placing = { type: d.type, style: buy.style || d.styles[0].id }; buy.pick = null; buyTool.hidden = true; renderBuy();
+});
+buyBox.addEventListener("input", ev => { if (ev.target.id === "bsearch") { buy.q = ev.target.value; renderBuy(); } });
+buyBox.addEventListener("change", ev => {
+  if (ev.target.matches("[data-sort]")) { buy.sort = ev.target.value; renderBuy(); }
+  if (ev.target.matches("[data-afford]")) { buy.afford = ev.target.checked; renderBuy(); }
+});
+buyBox.addEventListener("keydown", ev => { if (ev.target.id === "bsearch" && ev.key === "Escape") { ev.stopPropagation(); if (buy.q) { buy.q = ""; renderBuy(); document.getElementById("bsearch")?.focus(); } else ev.target.blur(); } });
+/* ---------- undo the last action (↶ in the header, Ctrl+Z) ---------- */
+let lastAct = null;
+const UNDO_FR = { buy: "l'achat", sell: "la vente", move: "le déplacement" };
+function undoLast() {
+  const a = lastAct; if (!a) return;
+  if (a.kind === "buy") {  // refunded in full: it was a mistake
+    const it = itemByUid(a.uid); if (!it) { lastAct = null; return renderBuy(); }
+    furni.items = furni.items.filter(o => o !== it && o.on_ !== it.uid);
+    earn(a.price); wallet.log.unshift({ key: `undo:${Date.now()}`, t: Date.now(), who: CHIEF_NAME, spend: true, label: `Achat annulé : ${a.name}`, total: a.price }); saveWallet();
+  } else if (a.kind === "sell") {  // bought back at the price it was sold
+    if (!spend(a.price, `Rachat : ${a.name}`)) return;
+    furni.items.push(...a.items.map(o => ({ ...o })));
+  } else for (const was of a.items) { const it = itemByUid(was.uid); if (it) { for (const k of ["side", "on_"]) delete it[k]; Object.assign(it, was); } }
+  lastAct = null; saveBuild(); sfx("commit"); buy.pick = null; buyTool.hidden = true;
+  toast("MODE ACHAT", `${UNDO_FR[a.kind][0].toUpperCase()}${UNDO_FR[a.kind].slice(1)} est annulé`, `${a.name}${a.kind === "buy" ? ` · remboursé ${fmtSim(a.price)}` : a.kind === "sell" ? ` · racheté ${fmtSim(a.price)}` : " · remis à sa place"}`);
+  renderBuy();
+}
+/* ---------- the wish list (♡): objects kept for later ---------- */
+const wishSlot = new SaveSlot("office-wishlist", { types: [] }), wishes = () => wishSlot.data.types;
+const wished = type => wishes().includes(type);
+function toggleWish(type) { const l = wishes(), i = l.indexOf(type); if (i >= 0) l.splice(i, 1); else l.push(type); wishSlot.save(); renderBuy(); }
 function buyPaint(cat, type, color) {
   const P2 = PAINT[cat], room = hub.curRoom(), cur = decor[room] || {};
   if (cur[P2.key] === type && cur[P2.color] === color) return;
@@ -340,6 +437,7 @@ function placeAt(type, style, spot, room, rot) {
   if (!spend(d.price, d.name)) return false;
   const it = { uid: ++furni.seq, type, style, room, rot: d.kind === "wall" ? 0 : rot, ...spot };  // a lamp: automatic (on in the evening, items/lamp.js)
   furni.items.push(it); saveBuild(); sfx("achievement");
+  lastAct = { kind: "buy", uid: it.uid, price: d.price, name: d.name };
   dustAt(it);
   if (d.workstation && it.slot != null) { const n = TEAM[it.slot]; crewAdd(n, { moral: 15 }); toast("MODE ACHAT", `${n} a un bureau`, "Ajoute un ordinateur dessus et une chaise devant."); }
   return true;
@@ -412,9 +510,10 @@ function buyClick(p) {
     if (!sp) { sfx("fail"); return; }
     if (buy.placing) placeAt(type, buy.placing.style, sp, room, buy.rot);
     else {
-      const it = buy.moving, was = { x: it.x, y: it.y, rot: it.rot || 0 };
+      const it = buy.moving, was = { x: it.x, y: it.y, rot: it.rot || 0 }, movedFrom = { ...it }, tops0 = furni.items.filter(o => o.on_ === it.uid).map(o => ({ ...o }));
       delete it.side; delete it.on_;
       Object.assign(it, sp, { room, rot: sp.rot ?? (defOf(it.type).kind === "wall" ? 0 : buy.rot) });
+      lastAct = { kind: "move", name: defOf(it.type).name, items: [movedFrom, ...tops0] };  // where they were: undone, they go back
       carryTop(it, was);  // what stands on it moves (and turns) with it
       saveBuild(); dustAt(it); sfx("commit");
     }
@@ -430,7 +529,7 @@ function renderTool() {
   const d = defOf(it.type), rect = cv.getBoundingClientRect();
   buyTool.innerHTML = `<b>${esc(d.name)}</b><span class="muted">${esc(styleOf(it).name)}${d.workstation && it.slot != null ? ` · bureau de ${esc(TEAM[it.slot])}` : ""}</span>
     ${d.styles.length > 1 ? `<div class="swatches">${d.styles.map(s => `<button data-restyle="${s.id}" class="${s.id === it.style ? "on" : ""}" title="${esc(s.name)}" style="--sw:${s.sw}"></button>`).join("")}</div>` : ""}
-    <div class="bacts">${d.kind !== "wall" && d.rots > 1 ? `<button data-tool="turn">↻ Tourner</button>` : ""}<button data-tool="move">✋ Déplacer</button><button data-tool="sell">💲 Vendre +${fmtSim(sellPrice(it))}</button></div>`;
+    <div class="bacts">${d.kind !== "wall" && d.rots > 1 ? `<button data-tool="turn">↻ Tourner</button>` : ""}<button data-tool="move">✋ Déplacer</button>${d.unique ? "" : `<button data-tool="copy" title="En placer un autre pareil (même coloris, même sens) · ${fmtSim(d.price)}">⧉ Dupliquer</button>`}<button data-tool="sell">💲 Vendre +${fmtSim(sellPrice(it))}</button></div>`;
   const q = hub.ISO.toScreen(isoTopOf(it));  // where its top is on the screen, through the camera
   buyTool.style.left = `${Math.max(10, Math.min(innerWidth - 270, rect.left + q.x / W * rect.width - 130))}px`;
   buyTool.style.top = `${Math.max(64, rect.top + q.y / 232 * rect.height - 128)}px`;
@@ -461,10 +560,12 @@ buyTool.addEventListener("click", ev => {
   if (b.dataset.restyle) { it.style = b.dataset.restyle; saveBuild(); dustAt(it); sfx("commit"); return renderTool(); }
   if (b.dataset.tool === "turn") return turnItem(it);
   if (b.dataset.tool === "move") { const host = it.on_ && itemByUid(it.on_); buy.moving = it; buy.rot = ((it.rot || 0) - (host?.rot || 0) + 4) % (defOf(it.type).rots || 4); buy.pick = null; buyTool.hidden = true; return renderBuy(); }  // on a desk: turned from the desk's way
+  if (b.dataset.tool === "copy") { const host = it.on_ && itemByUid(it.on_); buy.placing = { type: it.type, style: it.style }; buy.sel = it.type; buy.style = it.style; buy.rot = ((it.rot || 0) - (host?.rot || 0) + 4) % (defOf(it.type).rots || 4); buy.pick = null; buyTool.hidden = true; return renderBuy(); }
   if (b.dataset.tool === "sell") sellItem(it);
 });
 function sellItem(it) {
   const tops = furni.items.filter(o => o.on_ === it.uid), v = [it, ...tops].reduce((s, o) => s + sellPrice(o), 0);
+  lastAct = { kind: "sell", name: defOf(it.type).name, items: [it, ...tops].map(o => ({ ...o })), price: v };
   furni.items = furni.items.filter(x => x !== it && !tops.includes(x)); saveBuild();
   earn(v); wallet.log.unshift({ key: `sell:${Date.now()}`, t: Date.now(), who: CHIEF_NAME, spend: true, label: `Vente : ${defOf(it.type).name}`, total: v }); saveWallet();
   if (it.type === "jukebox" && jukebox.uid === it.uid && jukebox.playing) toggleJukebox();
@@ -476,9 +577,11 @@ cv.addEventListener("mousemove", ev => { if (!buy.on) return; const p = canvasPo
 cv.addEventListener("contextmenu", ev => { if (buy.on && (buy.placing || buy.moving)) { ev.preventDefault(); buy.rot = (buy.rot + 1) % (defOf((buy.placing || buy.moving).type).rots || 4); } });
 addEventListener("keydown", ev => {
   if (!buy.on || ev.target.closest?.("input, textarea")) return;
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); ev.stopImmediatePropagation(); return undoLast(); }  // not the whiteboard's Ctrl+Z (rooms/built.js)
   if (ev.key === "r" || ev.key === "R") {  // R turns, in the buy mode (not the day's report)
     ev.preventDefault(); ev.stopImmediatePropagation();
     if (buy.placing || buy.moving) buy.rot = (buy.rot + 1) % (defOf((buy.placing || buy.moving).type).rots || 4); else if (buy.pick) turnItem(buy.pick);
+    else if (buy.sel) { buy.rot = (buy.rot + 1) % (defOf(buy.sel)?.rots || 4); renderBuy(); }
     return;
   }
   if (ev.key === "Delete" && buy.pick) return sellItem(buy.pick);

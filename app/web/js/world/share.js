@@ -70,8 +70,8 @@ function lounger(l, t) {
     if (s) return { ...base, room, x: s.x, y: s.y, st, what, pose: { seated: true, back: s.back ?? s.y > 150, dir: s.face || null, z: s.lift || 0 } };
   }
   if (room === "terrace" && !l.path.length) {
-    const spots = Room.get("terrace")?.constructor.SPOTS || [], s = spots[(l.partySpot || 0) % (spots.length || 1)];
-    if (s) return { ...base, room, x: s.x, y: s.y, st, what, pose: { arms: Math.floor(t / 500) % 2 ? "up" : "down" } };
+    const T = Room.get("terrace"), s = T?.partySpotOf?.(l), p = s ? T.poseOf(l, t) : {};  // on the furniture bought (rooms/built.js)
+    if (s) return { ...base, room, x: s.x, y: s.y, st, what, pose: { seated: !!p.seated, back: !!p.back, arms: p.arms || "down", dir: p.dir || null, z: s.lift || 0 } };
   }
   return null;
 }

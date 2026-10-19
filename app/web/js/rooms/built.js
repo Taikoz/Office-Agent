@@ -143,7 +143,7 @@ class MeetingRoom extends BuiltRoom {
       const max = Math.max(1, ...cols.map(c => c[1]));
       cols.forEach(([label, n, col], i) => { const cx = x + 6 + i * 24, bh = 20 * n / max; px(cx, y + 34 - bh, 14, bh || 0.6, col); text(String(n), cx + 7, y + 26 - bh, "#f7f7f7", 4.4, "center"); text(label, cx + 7, y + 35.6, "#c9ccd6", 3.4, "center"); });
     } else if (ch === "clock") {
-      const d = clockNow(), w8 = weather?.() || "clear";
+      const d = clockNow(), w8 = hub.weather?.() || weather?.() || "clear";
       px(x, y, w, h, "#081746"); text(d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), x + w / 2, y + 6, "#fbaa08", 16, "center");
       text(d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }), x + w / 2, y + 25, "#d5eeff", 4.4, "center");
       text(hub.WEATHER_FR[w8] || "", x + w / 2, y + 32, "#f7f7f7", 4.4, "center");
@@ -255,12 +255,71 @@ class MeetingRoom extends BuiltRoom {
 new MeetingRoom();
 provide({ get MEET_PIECES() { return { BOARD, TV, CLOCK }; } });
 
+// the weather on the deck: snow that settles while it snows (10 min to cover it) and melts after, puddles under the rain
+const deckWx = { snow: -1, wet: -1, at: 0 };
+const rndK = n => { const v = Math.sin(n * 127.1) * 43758.5; return v - Math.floor(v); };
+function stepDeckWx(t) {
+  const w = hub.weather?.() || "clear", dt = deckWx.at ? Math.min(2000, t - deckWx.at) : 0; deckWx.at = t;
+  if (deckWx.snow < 0) { deckWx.snow = w === "snow" ? 0.7 : 0; deckWx.wet = ["rain", "storm"].includes(w) ? 0.8 : 0; }  // on arrival: as if it had been going on
+  deckWx.snow = Math.max(0, Math.min(1, deckWx.snow + dt * (w === "snow" ? 1 / 600000 : -1 / 900000)));
+  deckWx.wet = Math.max(0, Math.min(1, deckWx.wet + dt * (["rain", "storm"].includes(w) ? 1 / 180000 : -1 / 600000)));
+  return w;
+}
+// on the deck's plane (2D floor units): drifts of snow, puddles with the rain's rings
+function drawDeckWx(R, t, raining) {
+  const { snow, wet } = deckWx, still = hub.focusMode;
+  if (snow > 0.01) {
+    ctx.globalAlpha = Math.min(0.85, snow * 0.9); px(0, 70, R.w, R.h - 70, "#f2f6fa");  // the layer, thicker as it falls
+    for (let i = 0; i < 220; i++) {  // drifts over it, bluish in their hollows
+      const x = rndK(i) * R.w, y = 72 + rndK(i + 500) * (R.h - 74), r = (6 + rndK(i + 900) * 14) * (0.5 + snow * 0.7);
+      ctx.globalAlpha = Math.min(1, snow * 1.2) * (i % 4 ? 0.7 : 0.35); ctx.fillStyle = i % 4 ? "#ffffff" : "#c9d6e6";
+      ctx.beginPath(); ctx.ellipse(x * S, y * S, r * S, r * 0.75 * S, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (wet > 0.01) {
+    for (let i = 0; i < 14; i++) {
+      const x = 20 + rndK(i + 40) * (R.w - 40), y = 84 + rndK(i + 80) * (R.h - 100), r = (6 + rndK(i + 120) * 14) * wet;
+      ctx.globalAlpha = 0.45 * wet; ctx.fillStyle = "#3a4a66"; ctx.beginPath(); ctx.ellipse(x * S, y * S, r * S, r * 0.6 * S, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.3 * wet; ctx.fillStyle = "#c9d8ee"; ctx.beginPath(); ctx.ellipse((x - r * 0.3) * S, (y - r * 0.2) * S, r * 0.35 * S, r * 0.12 * S, 0, 0, Math.PI * 2); ctx.fill();
+      if (raining && !still) {  // the rain's rings
+        const k = ((t / 700) + rndK(i + 160)) % 1; ctx.globalAlpha = 0.5 * (1 - k) * wet; ctx.strokeStyle = "#dfe9f7"; ctx.lineWidth = Math.max(1, 0.4 * S);
+        ctx.beginPath(); ctx.ellipse(x * S, y * S, r * 0.8 * k * S, r * 0.48 * k * S, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
 // the roof terrace: the city behind a glass railing, the stair kiosk, a pergola over the banquet table, the bar, the
 // grill, the fire pit, an outdoor lounge, deckchairs, planters, string lights; the Friday afterwork happens here
 class TerraceRoom extends BuiltRoom {
   // where the team stands during the afterwork: at the bar, around the fire pit, by the grill, at the banquet table
   static SPOTS = [[486, 152], [506, 154], [526, 152], [196, 190], [254, 196], [232, 238], [352, 140], [378, 142], [86, 150], [116, 152], [146, 150], [300, 170]].map(([x, y]) => ({ x, y }));
   constructor() { super("terrace", "🌿 Terrasse"); }
+  // where the team goes during the afterwork: the seats of the furniture bought (the hot tub's rim, the picnic benches,
+  // the swing…), the bar's counter, the grill, around the fire pit; with nothing bought, the old places
+  partySpots() {
+    const out = [];
+    for (const it of hub.itemsIn("terrace")) {
+      const d = hub.defOf(it.type), [x0, y0, x1, y1] = hub.footOf(it), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      if (d.visit === "terrace" || d.act === "read") out.push(...hub.spotsOf(it).map(sp => ({ ...sp, pose: { seated: true, ...(d.pose || {}) } })));
+      else if (it.type === "bar") for (const k of [0.25, 0.5, 0.75]) out.push(it.rot % 2 ? { x: x1 + 6, y: y0 + (y1 - y0) * k, face: [-1, 0], pose: { cup: true } } : { x: x0 + (x1 - x0) * k, y: y1 + 6, face: [0, -1], pose: { cup: true } });
+      else if (it.type === "grill") out.push({ x: cx, y: y1 + 6, face: [0, -1], pose: { arms: "reach" } });
+      else if (it.type === "firepit") for (const [dx, dy] of [[-1, 0], [1, 0], [0, 1]]) out.push({ x: cx + dx * ((x1 - x0) / 2 + 6), y: cy + dy * ((y1 - y0) / 2 + 6), face: [-dx, -dy], pose: { cup: true } });
+    }
+    const R = roomSize("terrace");
+    return (out.length ? out : TerraceRoom.SPOTS.map(sp => ({ ...sp, pose: { cup: true } }))).filter(sp => sp.x > 4 && sp.x < R.w - 4 && sp.y > 72 && sp.y < R.h - 2);
+  }
+  partySpotOf(l) { const all = this.partySpots(); return all.length ? all[(l.partySpot || 0) % all.length] : null; }
+  // how someone stands there (a visitor on a seat, social/visits.js; the afterwork, see partySpots)
+  poseOf(l, t) {
+    const sp = l.roomSpot || this.partySpotOf(l) || {}, p = sp.pose || {}, face = sp.face;
+    return { seated: !!p.seated, back: (face?.[1] ?? 0) < 0, dir: face || null, smile: true, frame: Math.floor(t / (p.arms === "reach" ? 300 : 500)),
+      arms: p.arms || (p.seated ? "down" : Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down"), hold: p.book ? "book" : "" };
+  }
+  // who is here: at the afterwork, or come for a moment (social/visits.js)
+  people() { return [...loungers.values()].filter(l => l.partyRoom === "terrace" && !l.path.length).map(l => ({ l, sp: l.roomSpot || this.partySpotOf(l) })).filter(o => o.sp); }
   // a string of lights hanging between two points: a wire, bulbs lit at dusk, at night and during the afterwork
   strand(x0, y0, x1, y1, sag, lit, t) {
     const n = Math.max(6, Math.round(Math.abs(x1 - x0) / 7));
@@ -273,7 +332,7 @@ class TerraceRoom extends BuiltRoom {
     }
   }
   render(t) {
-    const { phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow(), gloomy = ["rain", "storm"].includes(weather?.());
+    const { phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow(), gloomy = ["rain", "storm"].includes(hub.weather?.() || weather?.());
     const party = !!dayState.party, lit = dim || party || gloomy, still = focusMode;
     // sky: the hour and today's weather (svg/sky.js)
     drawTerraceSky(t);
@@ -347,8 +406,8 @@ class TerraceRoom extends BuiltRoom {
   // in isometric view: the sky and the city behind, the deck as a raised floor with its glass railing, the stairs'
   // kiosk (fixed); everything else is bought (build.js)
   renderIso(t, G) {
-    const { phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow(), gloomy = ["rain", "storm"].includes(weather?.());
-    const party = !!dayState.party, lit = dim || party || gloomy, still = focusMode, R = roomSize("terrace");
+    const { phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow(), gloomy = ["rain", "storm"].includes(hub.weather?.() || weather?.());
+    const party = !!dayState.party, lit = dim || party || gloomy, still = focusMode, R = roomSize("terrace"), raining = ["rain", "storm"].includes(stepDeckWx(t));
     G.back(() => {  // the back layer: the room's shell, what hangs on its walls, the rugs
       G.screen(() => {  // the sky and the city stay behind, whatever the camera
       px(0, 0, W, H, st[2]);
@@ -358,7 +417,7 @@ class TerraceRoom extends BuiltRoom {
       });
       drawRooftops(R, phase, gloomy, t);  // the neighbours' roofs below, our building under the deck
       G.shell({ floor: this.deckFloor(), walls: false });
-      G.onFloor(() => drawRoomItems("terrace", t, "rug"));
+      G.onFloor(() => { drawRoomItems("terrace", t, "rug"); drawDeckWx(R, t, raining); });
       // the glass railing along the two back edges
       const glass = (a, b) => { ctx.globalAlpha = 0.28; ctx.fillStyle = dark ? "#9fb3d9" : "#d5eeff"; ctx.beginPath(); for (const [i, q] of [P(a[0], a[1], 0), P(b[0], b[1], 0), P(b[0], b[1], 13), P(a[0], a[1], 13)].entries()) i ? ctx.lineTo(q.x * S, q.y * S) : ctx.moveTo(q.x * S, q.y * S); ctx.fill(); ctx.globalAlpha = 1; };
       for (let x = 0; x < R.w; x += 25) glass([x, 70], [x + 25, 70]);
@@ -372,17 +431,15 @@ class TerraceRoom extends BuiltRoom {
     const stand = (ax, ay, fn, box) => items.push({ pt: [ax, ay], draw: () => anchored(ax, ay, fn, box) });
     const k = P(4, 70); items.push({ fp: [4, 70, 48, 96], draw: () => { ART.isokiosk.draw(k.x, k.y, { night: dim }); G.boxRegion(4, 70, 48, 96, 40, { x: 24, y: 40 }); } });  // the stairs' kiosk (fixed): back to the office
     items.push({ pt: [26, 97], draw: () => G.put(0, 0, 15, 96, 35, () => text("← BUREAU", 0, 0, "#fbaa08", 3.6, "center")) });
-    for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
-      const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length], x = sp.x, y = sp.y;
-      stand(x, y, () => { drawPerson(x, y, l.look, { arms: Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down", frame: Math.floor(t / 300), smile: true }); px(x + 4, y - 13, 2.5, 3, "#f4c430"); });
-    }
+    const here = this.people();
+    for (const { l, sp } of here) items.push({ pt: [sp.x, sp.y], draw: () => G.put(sp.x, sp.y, sp.x, sp.y, sp.lift || 0, () => {
+      drawPerson(sp.x, sp.y, l.look, this.poseOf(l, t));
+      if (sp.pose?.cup) px(sp.x + 4, sp.y - 13, 2.5, 3, "#f4c430");  // a drink
+    }, { x: sp.x - 9, y: sp.y - 34, w: 18, h: 37, to: { x: sp.x, y: sp.y - 8 } }) });
     this.chiefItem(t, G, items);
     isoItems("terrace", t, G, items);
     G.drawSorted(items);
-    for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
-      const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length];
-      anchored(sp.x, sp.y, () => { badge(sp.x, sp.y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(sp.x, sp.y - 24 - headroom(), l.say, "#f7f7f7", "#081746", l.name); });
-    }
+    for (const { l, sp } of here) G.put(sp.x, sp.y, sp.x, sp.y, sp.lift || 0, () => { const seated = !!sp.pose?.seated; badge(sp.x, sp.y + (seated ? -3 : 2), nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(sp.x, sp.y - (seated ? 22 : 24) - headroom(), l.say, "#f7f7f7", "#081746", l.name); });
     // the weather (grey veil, snow; the rain over the screen), then the hour: darker at dusk and at night, then what shines
     terraceWeatherVeil(t);
     G.screen(() => terraceRain(t, false));

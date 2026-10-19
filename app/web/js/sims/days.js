@@ -60,12 +60,13 @@ setInterval(() => stepDays(performance.now()), 1000);
 
 function startParty(t) {
   const big = missionsThisWeek() >= 5 && dayState.partyWeek.week !== weekId();
-  dayState.party = { since: t, big, terrace: hub.hasRoom("terrace") };
+  const wet = ["rain", "storm"].includes(hub.weather?.());  // the weather the windows show (real or the tests'): rain sends it indoors
+  dayState.party = { since: t, big, terrace: hub.hasRoom("terrace") && !wet, rained: hub.hasRoom("terrace") && wet };
   if (big) {
     dayState.partyWeek.week = weekId(); SaveSlot.get("office-party").save(dayState.partyWeek);
     earn(500); wallet.log.unshift({ key: `party:${Date.now()}`, t: Date.now(), who: CHIEF_NAME, spend: true, label: "Prime d'équipe : belle semaine", total: 500 }); saveWallet();
   }
-  toast(big ? "FÊTE DE LA SEMAINE 🎉" : "AFTERWORK 🍻", big ? `${missionsThisWeek()} missions livrées cette semaine !` : "C'est vendredi !", `${dayState.party.terrace ? "Sur la terrasse" : "En salle de repos"}${big ? " · prime d'équipe +§ 500" : ""}`);
+  toast(big ? "FÊTE DE LA SEMAINE 🎉" : "AFTERWORK 🍻", big ? `${missionsThisWeek()} missions livrées cette semaine !` : "C'est vendredi !", `${dayState.party.terrace ? "Sur la terrasse" : dayState.party.rained ? "En salle de repos : il pleut sur la terrasse ☔" : "En salle de repos"}${big ? " · prime d'équipe +§ 500" : ""}`);
   sfx(big ? "level" : "achievement");
 }
 function stepParty(t) {

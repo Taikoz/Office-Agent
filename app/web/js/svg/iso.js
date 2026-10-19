@@ -914,7 +914,13 @@ reg(class extends IsoArt {  // an olive tree in a big pot (leaves by season)
 });
 reg(class extends IsoArt {  // a parasol: its foot, the pole, a striped canopy
   constructor() { super("isoparasol", 16, 16, 62, { mx: 16 }); }
-  body({ a = "#fbaa08", b = "#081746" }) {
+  body({ a = "#fbaa08", b = "#081746", closed = false }) {
+    if (closed) {  // folded: the stripes wrapped around the pole, a strap (rain, storm, night: items/furniture.js)
+      const [x, y] = ipt(8, 8, 0);
+      let g = ishadow(8, 8, 0) + ibox(4, 4, 8, 8, 0, 3, "#6f7488") + ibox(7.4, 7.4, 1.2, 1.2, 3, 56, "#c9ccd6");
+      for (let i = 0; i < 4; i++) g += `<path fill="${i % 2 ? a : b}" d="M${n2(x - 3.2 + i * 1.6)} ${n2(y - 22)}L${n2(x - 1.6 + i * 1.6)} ${n2(y - 22)}L${n2(x + 0.2 - (i - 1.5) * 0.3)} ${n2(y - 54)}Z"/>`;
+      return g + `<rect x="${n2(x - 2.4)}" y="${n2(y - 36)}" width="4.8" height="1.2" fill="#f4f2ea"/><circle cx="${n2(x)}" cy="${n2(y - 56.6)}" r="1.2" fill="#c9ccd6"/>`;
+    }
     let g = iell(8, 8, 0, 22, "#000", ' fill-opacity=".14"') + ibox(4, 4, 8, 8, 0, 3, "#6f7488") + ibox(7.4, 7.4, 1.2, 1.2, 3, 48, "#c9ccd6");
     const [x, y] = ipt(8, 8, 52), rx = 24, ry = 11;
     for (let i = 0; i < 8; i++) {

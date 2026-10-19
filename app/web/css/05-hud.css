@@ -95,38 +95,99 @@
   #mix .mixrow output { text-align: right; color: var(--muted); }
   #mix .mixnow { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: 15px; line-height: 1.3; color: var(--muted); }
   @media (max-width: 760px) { #mixbtn { right: 150px; bottom: 26px; width: 40px; height: 40px; font-size: 17px; } }
-  #buy { position: fixed; z-index: 18; left: 12px; right: 12px; bottom: 12px; max-height: min(270px, 40vh); display: flex; flex-direction: column; padding: 8px 12px 6px;
+  /* the buy mode (world/build.js): families on the left, their categories as tabs, a grid of cards on pedestals, the
+     selected object's card on the right; a slim bar while an object is being placed */
+  #buy { position: fixed; z-index: 18; left: 12px; right: 12px; bottom: 12px; height: min(400px, 52vh); display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
     background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--r); box-shadow: 0 -10px 34px #000b; backdrop-filter: blur(8px); }
   #buy[hidden] { display: none; }
-  #buy button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
+  #buy.slim { height: auto; padding: 8px 12px; }
+  #buy button, #buy select { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
   #buy button:hover:not([disabled]) { border-color: var(--text); } #buy button.on { border-color: var(--accent); color: var(--accent); }
   #buy button[disabled] { opacity: .45; cursor: not-allowed; }
-  #buy .bhead { display: flex; align-items: center; gap: 12px; } #buy .bhead > b { font-weight: normal; font-size: 22px; color: var(--accent); }
-  #buy .tabs { display: flex; gap: 4px; } #buy .tabs button { padding: 0 12px; border-radius: 999px; }
-  #buy .bfunds { margin-left: auto; padding: 0 12px; font-size: 20px; color: #9dffb5; background: #1f3326; border: 2px solid #4f8a5c; border-radius: 999px; }
-  #buy .x { padding: 0 9px; }
-  #buy .bbody { flex: 1; min-height: 0; display: flex; gap: 10px; margin-top: 8px; }
-  #buy .bcats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; flex: none; align-content: start; overflow: hidden auto; scrollbar-width: none; }
-  #buy .bcats button { display: flex; align-items: center; gap: 4px; padding: 1px 8px; font-size: 17px; text-align: left; white-space: nowrap; } #buy .bcats .ic { font-size: 20px; }
-  #buy .bgrid { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; overflow-y: auto; align-content: start; scrollbar-width: thin; }
-  #buy .bitem { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; text-align: center; font-size: 16px; line-height: 1.05; }
-  #buy .bitem b { font-weight: normal; } #buy .bitem .price { color: #9dffb5; font-size: 15px; } #buy .bitem.own .price { color: var(--accent); }
-  #buy .bitem > button { margin-top: 2px; padding: 0 8px; font-size: 15px; }
+  #buy .muted { color: var(--muted); } #buy .small { font-size: 15px; }
+  #buy .bhead { display: flex; align-items: center; gap: 12px; flex: none; min-width: 0; }
+  #buy .bhead > b { font-weight: normal; font-size: 24px; color: var(--accent); white-space: nowrap; }
+  #buy .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; } #buy .tabs button { padding: 0 12px; border-radius: 999px; white-space: nowrap; }
+  #buy .bkeys { color: var(--muted); font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #buy kbd { padding: 0 5px; margin: 0 2px 0 8px; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; }
+  #buy .bfunds { margin-left: auto; padding: 0 12px; font-size: 21px; color: #9dffb5; background: #1f3326; border: 2px solid #4f8a5c; border-radius: 999px; white-space: nowrap; }
+  #buy .x { width: 32px; height: 32px; padding: 0; font-size: 22px; line-height: 1; border-radius: 50%; }
+  #buy .bbody { flex: 1; min-height: 0; display: flex; gap: 10px; }
+  /* the families: a rail of big icons */
+  #buy .brail { flex: none; width: 128px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; scrollbar-width: none; }
+  #buy .brail button { flex: 1 1 0; min-height: 28px; max-height: 40px; display: flex; align-items: center; gap: 6px; padding: 0 8px; text-align: left; font-size: 18px; line-height: 1; white-space: nowrap; }
+  #buy .brail .ic { font-size: 18px; width: 22px; text-align: center; } #buy .brail .lbl { flex: 1; } #buy .brail .n { font-size: 14px; color: var(--dim); }
+  #buy .brail button.on { background: #fbaa0818; } #buy .brail button.on .n { color: var(--accent); }
+  #buy .bmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  #buy .bbar { display: flex; align-items: center; gap: 8px; flex: none; min-width: 0; }
+  #buy .bsearch { display: flex; align-items: center; gap: 4px; flex: none; width: 200px; padding: 0 8px; background: #0003; border: 2px solid var(--line); border-radius: 999px; }
+  #buy .bsearch:focus-within { border-color: var(--accent); }
+  #buy .bsearch input { flex: 1; min-width: 0; font: inherit; font-size: 18px; color: var(--text); background: none; border: 0; outline: none; }
+  #buy .bcats { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+  #buy .bcats button { flex: none; padding: 1px 12px; border-radius: 999px; font-size: 18px; white-space: nowrap; } #buy .bcats .n { font-size: 14px; color: var(--dim); }
+  #buy .bcats button.on .n { color: var(--accent); }
+  #buy .bresults { align-self: center; color: var(--muted); font-size: 18px; white-space: nowrap; }
+  #buy .btools { flex: none; display: flex; align-items: center; gap: 8px; font-size: 16px; } #buy .btools select { padding: 0 6px; font-size: 16px; }
+  #buy .bchk { display: flex; align-items: center; gap: 4px; color: var(--muted); cursor: pointer; white-space: nowrap; } #buy .bchk input { accent-color: var(--accent); }
+  /* the grid of cards */
+  #buy .bgrid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); grid-auto-rows: max-content; gap: 8px; overflow-y: auto; padding: 2px 4px 2px 2px; scrollbar-width: thin; }
+  #buy .bgrid.special { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  #buy .bcard { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 6px; text-align: left; background: var(--panel); }
+  #buy .bcard:hover:not([disabled]) { border-color: #ffffff88; transform: translateY(-1px); }
+  #buy .bcard.on { border-color: var(--accent); box-shadow: 0 0 0 2px #fbaa0844; color: var(--text); }
+  #buy .bpic { display: grid; place-items: center; height: 92px; border-radius: 7px; background: radial-gradient(70% 60% at 50% 62%, #f4f6fa, #c9d0dc); }
+  #buy .bpic img { max-width: 92%; max-height: 86px; object-fit: contain; image-rendering: pixelated; }
+  #buy .bpic.big { height: 120px; flex: none; } #buy .bpic.big img { max-height: 112px; }
+  #buy .bpic.big { position: relative; } #buy .bpic img.flip { transform: scaleX(-1); }
+  #buy .bpicacts { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
+  #buy .bpicacts button { width: 30px; height: 30px; padding: 0; font-size: 18px; line-height: 1; color: #1c1c24; background: #ffffffd0; border-color: #0002; border-radius: 50%; }
+  #buy .bpicacts button.on { color: #d6336c; border-color: #d6336c; }
+  #buy .bheart { position: absolute; top: 9px; left: 10px; color: #d6336c; font-size: 18px; line-height: 1; text-shadow: 0 1px 0 #fff; }
+  #buy .bundo { padding: 0 12px; border-radius: 999px; white-space: nowrap; color: #ffd8a8; border-color: #8a6a3a; background: #3a2e1e; }
+  #buy .bname { font-size: 18px; line-height: 1.05; min-height: 2.1em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #buy .bprice { display: flex; align-items: center; justify-content: space-between; gap: 4px; color: #9dffb5; font-size: 17px; }
+  #buy .bnsty { display: flex; gap: 2px; } #buy .bnsty s { width: 9px; height: 9px; border-radius: 50%; background: var(--sw); box-shadow: 0 0 0 1px #0006; }
+  #buy .bcat { color: var(--dim); font-size: 14px; }
+  #buy .bbadge { position: absolute; top: 9px; right: 9px; padding: 0 6px; font-size: 14px; border-radius: 999px; color: #1c1c24; background: #f7f7f7; box-shadow: 0 1px 3px #0005; }
+  #buy .bbadge.lock { background: #fbaa08; } #buy .bbadge.no { color: #f7f7f7; background: #6a6672; } #buy .bbadge.own { background: #9dffb5; }
+  #buy .bcard.nothere .bpic, #buy .bcard.locked .bpic { filter: grayscale(.85) brightness(.75); } #buy .bcard.nothere .bname, #buy .bcard.locked .bname { color: var(--muted); }
+  #buy .bcard.poor .bprice { color: #ff9a9a; } #buy .bcard.locked .bprice { color: var(--dim); }
+  #buy .bnote { grid-column: 1 / -1; margin: 4px 2px; color: var(--muted); font-size: 17px; }
+  /* the selected object */
+  #buy .bdetail { flex: none; width: 300px; display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #ffffff08; border: 2px solid var(--line); border-radius: var(--r-sm); overflow-y: auto; scrollbar-width: thin; }
+  #buy .bdetail.empty { align-items: center; justify-content: center; text-align: center; gap: 4px; } #buy .bdetail.empty b { font-weight: normal; font-size: 21px; color: var(--accent); }
+  #buy .bbig { font-size: 42px; } #buy .bstat { margin-top: 6px; color: #9dffb5; font-size: 18px; }
+  #buy .bdhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; } #buy .bdhead b { font-weight: normal; font-size: 22px; color: var(--accent); line-height: 1.05; }
+  #buy .bdhead .bprice { font-size: 21px; white-space: nowrap; }
+  #buy .btier { align-self: flex-start; padding: 0 8px; font-size: 15px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; }
+  #buy .bdesc { margin: 0; font-size: 17px; line-height: 1.15; color: var(--muted); }
+  #buy .bstyles b { font-weight: normal; color: var(--text); }
+  #buy .bspecs { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; margin: 0; font-size: 16px; } #buy .bspecs dt { color: var(--dim); } #buy .bspecs dd { margin: 0; }
+  #buy .bacts, #buytool .bacts { display: flex; flex-wrap: wrap; gap: 6px; } #buy .bacts button, #buytool .bacts button { padding: 2px 12px; }
+  #buy .bdetail .bacts { position: sticky; bottom: -8px; margin: auto -8px -8px; padding: 8px; background: var(--glass-2); border-top: 1px solid var(--line); } #buy .bacts .primary { flex: 1; color: #1c1c24; background: var(--accent); border-color: var(--accent); }
+  #buy .bacts button { white-space: nowrap; }
+  #buy .bacts .primary:hover:not([disabled]) { background: #ffc340; border-color: #ffc340; }
+  /* walls, floors, construction, pets, the wardrobe: the older cards */
+  #buy .bitem { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px; text-align: center; font-size: 17px; line-height: 1.05; }
+  #buy .bitem b { font-weight: normal; } #buy .bitem .price { color: #9dffb5; font-size: 16px; } #buy .bitem.own .price { color: var(--accent); }
+  #buy .bitem > button { margin-top: 2px; padding: 0 8px; font-size: 16px; }
   #buy div.bitem { background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); }
   .bthumb { width: 64px; height: 48px; object-fit: contain; image-rendering: pixelated; } .bthumb.big { width: 96px; height: 72px; font-size: 40px; line-height: 72px; text-align: center; }
-  #buy .bdetail { flex: none; width: min(360px, 38vw); display: flex; gap: 10px; padding: 8px; background: #ffffff08; border-radius: var(--r-sm); overflow-y: auto; }
-  #buy .bdesc { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 17px; } #buy .bdesc b { font-weight: normal; color: var(--accent); }
   .swatches { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0; }
-  .swatches button { width: 24px; height: 24px; padding: 0; border-radius: 50% !important; background: var(--sw) !important; border: 3px solid #ffffff55 !important; cursor: pointer; }
+  .swatches button { width: 26px; height: 26px; padding: 0; border-radius: 50% !important; background: var(--sw) !important; border: 3px solid #ffffff55 !important; cursor: pointer; }
   .swatches button.on { border-color: var(--accent) !important; box-shadow: 0 0 0 2px #fbaa0855; }
-  #buy .bacts, #buytool .bacts { display: flex; flex-wrap: wrap; gap: 6px; } #buy .bacts button, #buytool .bacts button { padding: 1px 10px; }
-  #buy .bhint { margin: 4px 0 0; font-size: 15px; }
+  @media (max-width: 1100px) { #buy .bdetail { width: 240px; } #buy .bpic.big { height: 96px; } #buy .brail { width: 108px; } #buy .btools .bchk { display: none; } }
+  @media (max-width: 760px) {
+    #buy { left: 6px; right: 6px; bottom: 6px; height: 60vh; } #buy .bbody { flex-direction: column; }
+    #buy .brail { width: auto; flex-direction: row; overflow-x: auto; } #buy .brail button { flex: none; } #buy .brail .lbl, #buy .brail .n { display: none; }
+    #buy .bdetail { width: auto; max-height: 40%; } #buy .bdetail.empty { display: none; } #buy .bsearch { width: 130px; } #buy .btools { display: none; } #buybtn .lbl { display: none; }
+    #buy .bhead > b, #buy .bkeys { display: none; }
+  }
   #buytool { position: fixed; z-index: 19; width: 260px; display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; font-size: 17px;
     background: var(--glass-2); border: 2px solid var(--sims); border-radius: var(--r); box-shadow: 0 10px 28px #000c; }
   #buytool[hidden] { display: none; } #buytool b { font-weight: normal; font-size: 20px; color: var(--accent); }
   #buytool button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
   #buytool button:hover { border-color: var(--accent); }
-  @media (max-width: 760px) { #buy .bdetail { display: none; } #buy .bcats .lbl, #buybtn .lbl { display: none; } }
   .card .top .sk { color: var(--accent); font-size: 15px; white-space: nowrap; }
   #sims .skill + .skill { margin-top: 3px; } #sims .skill.muted { display: flex; gap: 6px; font-size: 15px; }
 
