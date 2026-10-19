@@ -101,6 +101,7 @@ function byFamily(def) {
   const t = def.type;
   if (def.chair || def.cat === "chaises" || def.cat === "poufs") return [["sit", "🪑", "S'asseoir", { sit: def.spots ? true : t === "barstool" ? 10 : t === "stool" ? 6 : 2, line: "Je m'assois deux minutes.", fx: { fatigue: -4 } }]];
   if (def.cat === "fauteuils" || def.cat === "canapes") return [["sit", "🛋️", "S'installer", { sit: def.spots ? true : 5, line: "Ah, ça fait du bien de s'asseoir. 😌", fx: { fatigue: -6 } }]];
+  if (def.cat === "cloisons") return [["knock", "🧱", "Chercher un passage secret", { pose: { arms: "reach" }, line: () => pick(["Toc toc… rien. 🧱", "Cette brique bouge ! …ah non. 🧱", "Trois briques à gauche, deux vers le haut… toujours rien. 🧱", "J'entends un courant d'air… 🧱"]), fx: { ennui: -2 } }]];
   if (def.kind === "rug") return [["vacuum", "🧹", "Passer l'aspirateur", { pose: { arms: "reach" }, line: "Vrrrrr… 🧹 Propre !", fx: { ennui: -2 } }]];
   if (def.cat === "horloges" || t === "wallclock") return [["time", "🕐", "Regarder l'heure", { line: hourLine }]];
   if (def.cat === "fenetres" || t === "window") return [["out", "🪟", "Regarder dehors", { line: skyLine, fx: { ennui: -2 } }]];

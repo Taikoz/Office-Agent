@@ -35,7 +35,16 @@ export const saveBuild = () => { SaveSlot.get(BUILD_KEY).save(furni); syncAll();
 export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "Chaises"], ["fauteuils", "🛋️", "Fauteuils"], ["canapes", "🛋️", "Canapés"], ["poufs", "🫘", "Poufs"], ["sport", "🏋️", "Sport"], ["bibliotheque", "📖", "Bibliothèque"], ["tables", "🍽️", "Tables"], ["electronique", "🖥️", "Électronique"],
   ["tableaux", "🖼️", "Tableaux"], ["cadres", "🖼️", "Posters"], ["neons", "🌈", "Néons"], ["horloges", "🕰️", "Horloges"], ["rangement", "📚", "Rangement"], ["cafe", "☕", "Café"], ["cuisine", "🍳", "Cuisine"], ["bar", "🍸", "Bar"], ["loisirs", "🎮", "Loisirs"],
   ["plantes", "🪴", "Plantes"], ["deco", "🐠", "Déco"], ["lumiere", "💡", "Lumière"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"],
-  ["murs", "🧱", "Murs"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["garde", "🎩", "Garde-robe"]];
+  ["murs", "🧱", "Murs"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["cloisons", "🧱", "Cloisons"], ["garde", "🎩", "Garde-robe"]];
+// themed collections (the rail's 🎭 Thèmes): an object of a theme has theme: <id> and keeps its own category; inside a
+// theme, its objects by shelf (an object's shelf, else its category's), then the chief's clothes of the wardrobe
+export const THEMES = [{ id: "magie", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef." }];
+for (const t of THEMES) BUY_CATS.push([`theme:${t.id}`, t.icon, t.name]);
+const SHELVES = [["murs", "🧱", "Murs à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
+  ["tables", "🍽️", "Tables"], ["bureaux", "🗄️", "Bureaux"], ["deco", "✨", "Déco et objets magiques"], ["garde", "🎩", "Garde-robe du chef"]];
+const shelfOf = d => d.shelf || ({ fenetres: "fenetres", tapis: "tapis", lumiere: "lumiere", chaises: "chaises", fauteuils: "chaises", canapes: "chaises", tables: "tables", bureau: "bureaux" }[d.cat]) || "deco";
+const themeOf = c => c?.startsWith("theme:") ? c.slice(6) : null;
+const catCount = c => themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length : CATALOG.filter(d => d.cat === c).length;
 export const defOf = type => CATALOG.find(d => d.type === type);
 const styleOf = it => { const d = defOf(it.type); return d.styles.find(s => s.id === it.style) || d.styles[0]; };
 export const itemsIn = room => (furni.items || []).filter(it => it.room === room && defOf(it.type));
@@ -230,9 +239,9 @@ function paintGrid(cat, room) {
   }).join("");
 }
 // the categories in families (the rail on the left), each family's categories as tabs over the grid
-export const BUY_GROUPS = [["travail", "💼", "Travail", ["bureau", "chaises", "electronique", "rangement"]], ["salon", "🛋️", "Salon", ["fauteuils", "canapes", "poufs", "tables", "tapis"]],
+export const BUY_GROUPS = [["themes", "🎭", "Thèmes", THEMES.map(t => `theme:${t.id}`)], ["travail", "💼", "Travail", ["bureau", "chaises", "electronique", "rangement"]], ["salon", "🛋️", "Salon", ["fauteuils", "canapes", "poufs", "tables", "tapis"]],
   ["cuisine", "🍳", "Cuisine", ["cafe", "cuisine"]], ["bar", "🍸", "Bar", ["bar"]], ["loisirs", "🎮", "Loisirs", ["loisirs", "sport", "bibliotheque"]], ["deco", "🖼️", "Déco", ["plantes", "deco", "tableaux", "cadres", "neons", "horloges", "lumiere"]],
-  ["dehors", "🌿", "Dehors", ["exterieur"]], ["piece", "🏗️", "La pièce", ["murs", "sols", "fenetres", "construction"]], ["plus", "🐾", "Plus", ["animaux", "garde"]], ["envies", "♡", "Envies", ["envies"]]];
+  ["dehors", "🌿", "Dehors", ["exterieur"]], ["piece", "🏗️", "La pièce", ["murs", "sols", "cloisons", "fenetres", "construction"]], ["plus", "🐾", "Plus", ["animaux", "garde"]], ["envies", "♡", "Envies", ["envies"]]];
 const groupOf = cat => BUY_GROUPS.find(g => g[3].includes(cat)) || BUY_GROUPS[0];
 const catLabel = id => id === "envies" ? ["envies", "♡", "Mes envies"] : BUY_CATS.find(c => c[0] === id) || [id, "", id];
 const fold = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -271,6 +280,24 @@ function detailHtml(room) {
     ${why ? `<span class="lockmsg">${esc(why)}</span>` : ""}
     <div class="bacts"><button class="primary" data-place="hand"${off ? " disabled" : ""} title="Le placer à la main (double clic sur une carte aussi)">🖐 Placer</button><button data-place="auto"${off || d.kind === "top" ? " disabled" : ""} title="Le poser à la première place libre">✨ Auto</button></div></aside>`;
 }
+// a theme: its banner, then its objects shelf by shelf, then the chief's clothes (bought and worn from here)
+function themeGrid(id, room) {
+  const t = THEMES.find(x => x.id === id), mine = CATALOG.filter(d => d.theme === id && (!buy.afford || (d.price <= wallet.funds && !hub.lockedFor?.(d))));
+  let out = `<div class="btheme"><span class="ic">${t.icon}</span><b>${esc(t.name)}</b><span class="muted">${esc(t.desc)}</span></div>`;
+  for (const [sid, ic, label] of SHELVES) {
+    if (sid === "garde") {
+      const clothes = SHOP.filter(i => i.theme === id); if (!clothes.length) continue;
+      out += `<h5 class="bsec">${ic} ${label}</h5>` + clothes.map(it => { const own = shop.owned.includes(it.id), on = own && itemOn(it);
+        const look = it.chief ? { ...CHIEF_LOOK, ...it.chief } : CHIEF_LOOK, hat = it.chief?.hat || (it.hat ? it.id.slice(4) : "");
+        return `<div class="bitem${own ? " own" : ""}"><img class="bthumb big" alt="" src="${ART.person.url({ look, tux: true, smile: true, hat, frame: 0 })}"><b>${esc(it.name)}</b><span class="muted small">${esc(it.desc)}</span>
+          <span class="price">${own ? (on ? "✓ porté" : "possédé") : fmtSim(it.price)}</span><button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (on ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
+      continue;
+    }
+    const here = mine.filter(d => shelfOf(d) === sid); if (!here.length) continue;
+    out += `<h5 class="bsec">${ic} ${label}</h5>` + here.map(d => cardHtml(d, room, false)).join("");
+  }
+  return out;
+}
 export function renderBuy() {
   if (!buy.on) return;
   const room = hub.curRoom(), focused = document.activeElement?.id === "bsearch", caret = focused ? document.activeElement.selectionStart : 0;
@@ -286,8 +313,8 @@ export function renderBuy() {
   }
   buyBox.classList.remove("slim");
   const [gid] = groupOf(buy.cat), q = fold(buy.q.trim());
-  const rail = BUY_GROUPS.map(([id, ic, label, cats]) => `<button data-group="${id}" class="${!q && id === gid ? "on" : ""}"><span class="ic">${ic}</span><span class="lbl">${label}</span><span class="n">${id === "envies" ? wishes().length || "" : cats.reduce((n, c) => n + CATALOG.filter(d => d.cat === c).length, 0) || ""}</span></button>`).join("");
-  const tabs = q ? `<span class="bresults">Résultats pour « ${esc(buy.q.trim())} »</span>` : groupOf(buy.cat)[3].map(c => { const [, ic, label] = catLabel(c), n = CATALOG.filter(d => d.cat === c).length;
+  const rail = BUY_GROUPS.map(([id, ic, label, cats]) => `<button data-group="${id}" class="${!q && id === gid ? "on" : ""}"><span class="ic">${ic}</span><span class="lbl">${label}</span><span class="n">${id === "envies" ? wishes().length || "" : cats.reduce((n, c) => n + catCount(c), 0) || ""}</span></button>`).join("");
+  const tabs = q ? `<span class="bresults">Résultats pour « ${esc(buy.q.trim())} »</span>` : groupOf(buy.cat)[3].map(c => { const [, ic, label] = catLabel(c), n = catCount(c);
     return `<button data-cat="${c}" class="${buy.cat === c ? "on" : ""}">${ic} ${label}${n ? ` <span class="n">${n}</span>` : ""}</button>`; }).join("")
     + (buy.cat === "envies" ? `<span class="bresults">Les objets marqués ♡ dans leur fiche</span>` : "");
   const tools = `<span class="btools"><label class="bchk"><input type="checkbox" data-afford${buy.afford ? " checked" : ""}> à ma portée</label>
@@ -299,11 +326,12 @@ export function renderBuy() {
       return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
         <button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (itemOn(it) ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
   } else {
-    let defs = q ? CATALOG.filter(d => fold(`${d.name} ${d.desc} ${catLabel(d.cat)[2]}`).includes(q)) : buy.cat === "envies" ? wishes().map(defOf).filter(Boolean) : CATALOG.filter(d => d.cat === buy.cat);
+    let defs = !q && themeOf(buy.cat) ? CATALOG.filter(d => d.theme === themeOf(buy.cat)) : q ? CATALOG.filter(d => fold(`${d.name} ${d.desc} ${catLabel(d.cat)[2]} ${d.theme ? catLabel(`theme:${d.theme}`)[2] : ""}`).includes(q)) : buy.cat === "envies" ? wishes().map(defOf).filter(Boolean) : CATALOG.filter(d => d.cat === buy.cat);
     if (buy.afford) defs = defs.filter(d => d.price <= wallet.funds && !hub.lockedFor?.(d));
     if (buy.sort) defs = [...defs].sort(buy.sort === "name" ? (a, b) => a.name.localeCompare(b.name, "fr") : buy.sort === "up" ? (a, b) => a.price - b.price : (a, b) => b.price - a.price);
     defs = [...defs].sort((a, b) => (b.okIn(room) ? 1 : 0) - (a.okIn(room) ? 1 : 0));  // what goes here first
-    grid = (!q && buy.cat === "animaux" ? hub.petsGridHtml() : "") + (!q && buy.cat === "construction" ? hub.constructGridHtml() : "") + defs.map(d => cardHtml(d, room, !!q || buy.cat === "envies")).join("")
+    if (!q && themeOf(buy.cat)) grid = themeGrid(themeOf(buy.cat), room);
+    else grid = (!q && buy.cat === "animaux" ? hub.petsGridHtml() : "") + (!q && buy.cat === "construction" ? hub.constructGridHtml() : "") + defs.map(d => cardHtml(d, room, !!q || buy.cat === "envies")).join("")
       || `<p class="bnote">${q ? "Aucun objet ne correspond." : buy.cat === "envies" ? "Aucune envie pour l'instant : ouvre la fiche d'un objet et touche ♡ pour le garder ici." : buy.afford ? "Rien à ta portée ici pour l'instant." : "Rien ici."}</p>`;
   }
   buyBox.innerHTML = head + `<div class="bbody"><nav class="brail" aria-label="Familles">${rail}</nav>

@@ -14,7 +14,15 @@ export const SHOP = [
   { id: "hat:beanie", name: "Bonnet", price: 750, desc: "Pour toute l'équipe.", hat: true },
   { id: "hat:party", name: "Chapeau de fête", price: 1250, desc: "Pour toute l'équipe.", hat: true },
   { id: "crown", name: "Couronne du chef", price: 2500, desc: `Pour ${CHIEF_NAME}.` },
+  // the chief's clothes (theme: the buy mode's 🎭 Thèmes): chief: what it changes on his look (its first key tells if it is worn)
+  { id: "hat:wizard", name: "Chapeaux pointus pour l'équipe", price: 1500, desc: "Toute l'équipe coiffée d'un chapeau de sorcier.", hat: true, theme: "magie", icon: "🎩" },
+  { id: "chief:robe", name: "Robe de sorcier", price: 1500, desc: `Pour ${CHIEF_NAME} : une longue robe nuit, liseré et fermoir dorés (couleurs dans « Créer ton chef »).`, chief: { outfit: "robe", shirt: "#2a2350", tie: "#d4a640" }, theme: "magie", icon: "🧙" },
+  { id: "chief:wizard", name: "Chapeau pointu", price: 900, desc: `Pour ${CHIEF_NAME} : large bord, ruban doré, pointe pliée, une étoile.`, chief: { hat: "wizard" }, theme: "magie", icon: "🎩" },
+  { id: "chief:scarf", name: "Écharpe rayée", price: 400, desc: `Pour ${CHIEF_NAME} : quatre coloris de maison au choix dans « Créer ton chef ».`, chief: { scarf: "#8f2b2b,#d4a640" }, theme: "magie", icon: "🧣" },
+  { id: "chief:wand", name: "Baguette magique", price: 600, desc: `Pour ${CHIEF_NAME} : en bois de houx, une étincelle au bout. Il la lève en dirigeant l'équipe.`, chief: { wand: "1" }, theme: "magie", icon: "🪄" },
 ];
+const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "" };  // taken off: back to the default
+const chiefWorn = it => { const [k, v] = Object.entries(it.chief)[0]; return hub.CHIEF_LOOK?.[k] === v || (k === "scarf" && !!hub.CHIEF_LOOK?.scarf); };
 const earnedXp = () => hub.game ? Object.values(hub.game.xp || {}).reduce((n, g) => n + (g.xp || 0), 0) : null;
 const has = id => shop.owned.includes(id) && !shop.off.includes(id);
 export function shopAction(act, id) {
@@ -24,15 +32,17 @@ export function shopAction(act, id) {
     shop.owned.push(id); hub.sfx("achievement"); hub.toast("BOUTIQUE", `${it.name} acheté`, `−${hub.fmtSim(it.price)}`);
     if (it.hat) shop.hat = id.slice(4);
     if (id === "crown") shop.crown = true;
+    if (it.chief) hub.wearChief(it.chief);
   } else if (act === "toggle") {
-    if (it.hat) shop.hat = shop.hat === id.slice(4) ? "" : id.slice(4);
+    if (it.chief) { const [k] = Object.keys(it.chief); hub.wearChief(chiefWorn(it) ? { [k]: CHIEF_OFF[k] } : it.chief); }
+    else if (it.hat) shop.hat = shop.hat === id.slice(4) ? "" : id.slice(4);
     else if (id === "crown") shop.crown = !shop.crown;
     else shop.off = shop.off.includes(id) ? shop.off.filter(x => x !== id) : [...shop.off, id];
     if (id === "jukebox" && !has("jukebox")) jukebox.playing = false;
   }
   SaveSlot.get("office-shop").save(shop); renderShop();
 }
-export function itemOn(it) { return it.hat ? shop.hat === it.id.slice(4) : it.id === "crown" ? shop.crown : has(it.id); }
+export function itemOn(it) { return it.chief ? chiefWorn(it) : it.hat ? shop.hat === it.id.slice(4) : it.id === "crown" ? shop.crown : has(it.id); }
 export function renderShop() {
   const bal = hub.wallet.funds;
   document.getElementById("p-game").innerHTML = `<div class="emp">Argent du foyer : <b>${hub.fmtSim(bal)}</b> <span class="muted">(chaque mission livrée rapporte un salaire, d'autant plus gros qu'elle est complexe)</span></div>`
