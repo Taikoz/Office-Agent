@@ -173,4 +173,5 @@ import "./agents/officelife.js";
 import "./core/setup.js";
 import "./save/file.js";
 import "./ui/quality.js";
+import "./ui/morning.js";
 import "./main.js";

@@ -96,7 +96,7 @@ function ambiance(s, t) {
   level(A.beds.wind, (base.wind || 0) + (s.w === "storm" ? 0.05 : s.w === "snow" ? 0.03 : 0) * wet);
   level(A.beds.rain, (s.w === "rain" ? 0.05 : s.w === "storm" ? 0.09 : 0) * wet, 2);
   // keyboards: one typist per agent at work (up to 5), a burst of keys then a pause
-  const near = s.room === "office" ? 1 : 0.15, n = Math.min(s.typing, 5);
+  const n = Math.min(s.typing, 5), near = (s.room === "office" ? 1 : 0.15) / Math.sqrt(Math.max(1, n));  // five keyboards are not five times louder
   for (let i = 0; i < n; i++) {
     if (A.keys[i] > t) continue;
     let at = Math.max(t, A.keys[i] || 0) + 0.05; const pan = n > 1 ? (i / (n - 1)) * 1.2 - 0.6 : 0;
@@ -194,6 +194,8 @@ function music(s, t) {
 }
 
 const warned = new Set();
+// a voice speaks (world/sounds.js): the music steps back a little for that long
+export const duck = sec => { if (A) A.duckUntil = Math.max(A.duckUntil || 0, A.ctx.currentTime + sec); };
 export const onTick = [];  // world/sounds.js: (scene, time) each 100 ms while the sound plays
 setInterval(() => {
   if (!A || A.ctx.state !== "running") return;
@@ -202,7 +204,7 @@ setInterval(() => {
   if (!live) { A.song = null; return; }
   const sp = jukebox.playing && hub.spatial ? hub.spatial(jukebox.type) : { gain: 1, pan: 0 };
   level(A.amb, mix.amb * (hub.focusMode ? 0.5 : 1), 0.3); level(A.vox, mix.voice ?? 0.7, 0.3);
-  level(A.mus, musicOn() ? Math.max(mix.music, jukebox.playing ? 0.3 : 0) * sp.gain : 0, 0.8);
+  level(A.mus, musicOn() ? Math.max(mix.music, jukebox.playing ? 0.3 : 0) * sp.gain * ((A.duckUntil || 0) > t ? 0.55 : 1) : 0, (A.duckUntil || 0) > t ? 0.15 : 0.8);
   if (A.pan && A.pan._v !== sp.pan) { A.pan._v = sp.pan; A.pan.pan.setTargetAtTime(sp.pan, t, 0.5); }
   let s; try { s = scene(); } catch (_) { return; }  // a frame without the world ready
   for (const fn of [ambiance, music, ...onTick]) try { fn(s, t); } catch (err) { if (!warned.has(fn)) { warned.add(fn); console.warn("[son]", err); } }  // one part failing leaves the others

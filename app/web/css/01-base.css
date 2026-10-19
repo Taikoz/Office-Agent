@@ -30,6 +30,7 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; background: var(--glass-2); border: 2px solid var(--line); border-radius: var(--r);
     box-shadow: 0 14px 34px #000b; backdrop-filter: blur(8px); transform-origin: top right; animation: menuin .16s ease-out; }
   header .tools[hidden] { display: none; }
+  header .tools h5 { grid-column: 1 / -1; margin: 6px 2px 0; font-weight: normal; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); } header .tools h5:first-child { margin-top: 0; }
   header .tools button { text-align: left; padding: 6px 12px; border-radius: var(--r-sm); background: var(--panel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @keyframes menuin { from { opacity: 0; transform: translateY(-6px) scale(.97); } }
   @media (prefers-reduced-motion: reduce) { header .tools { animation: none; } }

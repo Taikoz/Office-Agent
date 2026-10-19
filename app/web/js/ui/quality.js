@@ -5,7 +5,8 @@
 //    if the frames really came faster (a browser held at 30 frames a second, on battery, gains nothing: back up, and
 //    no new try for 10 minutes); back up after a minute of smooth frames.
 //  - The frame rate: 30 frames a second instead of 60 when the window is not the one in use, after 2 minutes without
-//    touching anything, or in "économie" (where the panels lose their blur too: it is redone at every frame).
+//    touching anything, or in "économie" (where the panels lose their blur too: it is redone at every frame); 10 a
+//    second ("veille") when the window is behind and nobody touched it for 10 minutes: the office left open all day.
 // Kept in this browser.
 
 import { hub, provide } from "../hub.js";
@@ -14,6 +15,7 @@ import { resize } from "../core/core.js";
 const BUDGET = 2_500_000;     // pixels per layer, at most
 const MIN = 0.8;              // the lowest resolution in auto (pixels per CSS pixel)
 const IDLE = 120_000;         // ms without input: a slower pace
+const NAP = 600_000;          // ms without input, the window behind: the slowest pace
 export const quality = { mode: "auto", r: 0, fps: 0, capped: false, why: "" };
 try { const m = localStorage.getItem("office-quality"); if (["auto", "high", "eco"].includes(m)) quality.mode = m; } catch (_) { /* storage blocked */ }
 
@@ -41,10 +43,10 @@ let lastInput = performance.now(), lastDrawn = 0, winStart = 0, winFrames = 0, w
 let trial = null, lockUntil = 0;  // trial: a step down being checked { from, fps, at, n }
 for (const ev of ["pointermove", "pointerdown", "keydown", "wheel"]) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
 function frameSkip(t) {
-  const idle = t - lastInput > IDLE, away = !document.hasFocus();
+  const idle = t - lastInput > IDLE, away = !document.hasFocus(), nap = away && t - lastInput > NAP;
   quality.capped = quality.mode === "eco" || idle || away;
-  quality.why = quality.mode === "eco" ? "économie" : away ? "fenêtre en arrière-plan" : idle ? "inactif" : "";
-  if (quality.capped && t - lastDrawn < 31) return true;  // 30 frames a second
+  quality.why = nap ? "veille" : quality.mode === "eco" ? "économie" : away ? "fenêtre en arrière-plan" : idle ? "inactif" : "";
+  if (quality.capped && t - lastDrawn < (nap ? 99 : 31)) return true;  // 30 frames a second, 10 in "veille"
   const gap = t - lastDrawn; lastDrawn = t;
   if (gap < 250) { winFrames++; winSum += gap; winSq += gap * gap; }  // a gap of seconds: the tab was hidden
   if (t - winStart < 2000) return false;

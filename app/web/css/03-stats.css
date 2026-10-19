@@ -3,6 +3,11 @@
   #perf[hidden] { display: none; }
   .overlay { position: fixed; inset: 66px 12px 96px; z-index: 16; overflow: auto; padding: 12px 16px; background: #17161df2; border: 2px solid var(--accent); border-radius: var(--r); box-shadow: 0 14px 40px #000c; }
   .overlay[hidden] { display: none; }
+  /* while you were away (ui/morning.js) */
+  #morning .mhello { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 12px; padding: 12px 14px; background: linear-gradient(90deg, #fbaa0822, transparent); border-left: 4px solid var(--accent); border-radius: var(--r-sm); font-size: 18px; }
+  #morning .mhello b { font-weight: normal; font-size: 24px; color: var(--accent); flex-basis: 100%; } #morning .mhello span { flex: 1 1 320px; }
+  #morning .mhello .go, #morning .mhello .pill { font: inherit; font-size: 17px; padding: 4px 14px; cursor: pointer; border-radius: 999px; border: 2px solid var(--accent); }
+  #morning .mhello .go { color: #081746; background: var(--accent); } #morning .mhello .pill { color: var(--text); background: transparent; }
   .overlay .perfhead { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
   .overlay .perfhead .x { color: var(--text); background: none; border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
   .overlay .perfhead .x:first-of-type { margin-left: auto; }
