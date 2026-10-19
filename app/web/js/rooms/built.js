@@ -1,15 +1,15 @@
 // The rooms built in construction mode (construct.js): a meeting room and a terrace, on the room bar once built.
 
 import { hub, provide } from "../hub.js";
-import { H, S, W, badge, clip, ctx, curSession, cv, data, fillScreen, hash, px, roomSize, specialty, text } from "../core/core.js";
+import { H, S, W, badge, chief, clip, ctx, curSession, cv, data, fillScreen, hash, px, roomSize, specialty, text } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { ART } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
-import { CLOUD_TONES, SKY, skyPhase } from "../svg/sky.js";
+import { SKY, drawTerraceSky, skyPhase, terraceWeatherVeil } from "../svg/sky.js";
 import { BOARD_INK } from "../svg/meeting.js";
 import { FLOOR_Y, bubble, drawPerson, headroom } from "../world/scene.js";
 import { crew } from "../sims/crew.js";
-import { CHIEF_LOOK } from "../world/chief.js";
+import { CHIEF_LOOK, chiefLoungeWalk, chiefToRoom, drawChiefLounge, drawChiefLoungeOver } from "../world/chief.js";
 import { loungers, view } from "../world/lounge.js";
 import { nameTag } from "../world/shop.js";
 import { doorSprite, drawWall, roomFloorCanvas } from "../world/decor.js";
@@ -19,6 +19,7 @@ import { weather } from "../agents/events2.js";
 import { focusMode } from "../ui/ux.js";
 import { buy, drawBuyOverlay, drawBuyOverlayIso, drawRoomItems, hitItem, roomDepthItems } from "../world/build.js";
 import { P, anchored } from "../iso/engine.js";
+import { drawRooftops, streetHaze } from "../iso/rooftops.js";
 import { isoItems, lampsOver, leftWallDecor } from "../iso/rooms.js";
 import { clockNow, dayState, drawPartyOver } from "../sims/days.js";
 import { Room } from "./base.js";
@@ -31,6 +32,15 @@ export class BuiltRoom extends Room {
     if (x >= 8 && x <= 40 && y >= 10 && y <= 72) return "office";
     return hitItem(x, y, this.id);
   }
+  // a click on the floor: the chief walks there; from another room he comes first (world/chief.js chiefToRoom)
+  floorClick(p) {
+    if (!(p.y > 72)) return;
+    if (chief.room === this.id) chiefLoungeWalk(p); else chiefToRoom(this.id, p);
+  }
+  // the chief, when he is here (not at the head of the table: a meeting draws him there)
+  chiefHere() { return chief.room === this.id && !(this.id === "meeting" && hub.meeting.on); }
+  chiefItem(t, G, items) { if (this.chiefHere()) items.push({ pt: [chief.lx, chief.ly], draw: () => G.put(chief.lx, chief.ly, chief.lx, chief.ly, 0, () => drawChiefLounge(t), { x: chief.lx - 9, y: chief.ly - 34, w: 18, h: 37, to: { x: chief.lx, y: chief.ly - 8 } }) }); }
+  chiefOver(t) { if (this.chiefHere()) anchored(chief.lx, chief.ly, () => drawChiefLoungeOver(t)); }
   // the wall and floor of its decor, a baseboard, its title, the door back to the office, the rugs and wall objects
   shell(t, title) {
     drawWall(this.id);
@@ -210,10 +220,12 @@ class MeetingRoom extends BuiltRoom {
     hub.meeting.who.forEach((n, i) => { const l = loungers.get(n), s = hub.MEET_SEATS[i]; if (l && s && hub.meeting.on) items.push({ pt: [s.x, s.y], draw: () => G.put(s.x, s.y, s.x, s.y, s.lift, () => this.drawMate(l, s, i, t)) }); });
     const table = hub.itemsIn("meeting").find(it => hub.defOf(it.type).role === "conftable"), head = table ? (() => { const [x0, y0, , y1] = hub.footOf(table); return { x: x0 - 14, y: (y0 + y1) / 2 }; })() : { x: 110, y: 151 };
     if (hub.meeting.on) items.push({ pt: [head.x, head.y], draw: () => anchored(head.x, head.y, () => this.drawChief(t, head)) });
+    this.chiefItem(t, G, items);
     isoItems("meeting", t, G, items);
     G.drawSorted(items);
     lampsOver("meeting");
     this.drawOver(t);
+    this.chiefOver(t);
     drawBuyOverlayIso("meeting", t, G);
   }
   // the board (drawn with the pointer), its tray (markers, eraser, sponge), the TV: taken here, not by the floor
@@ -261,20 +273,10 @@ class TerraceRoom extends BuiltRoom {
     }
   }
   render(t) {
-    const { h, phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow();
-    const party = !!dayState.party, lit = dim || party, still = focusMode;
-    // sky: gradient, sun or moon and stars, clouds drifting, birds by day
-    ART.terracesky.draw(0, 0, { stops: st });
-    if (dark) {
-      for (let i = 0; i < 40; i++) if ((Math.floor(t / 600) + i) % 7) px((i * 53) % W, (i * 17) % 34, i % 5 ? 0.7 : 1, i % 5 ? 0.7 : 1, "#f4f2ff");
-      ART.terracemoon.draw(318, 6, { bg: st[0] });
-    } else {
-      const k = Math.max(0, Math.min(1, (h - 6) / 15));
-      ART.sun.draw(20 + k * 350, 30 - Math.sin(k * Math.PI) * 26, { color: phase === "day" ? "#ffe066" : "#ff9f43" });
-    }
-    const tone = CLOUD_TONES[phase];
-    for (let i = 0; i < 5; i++) { const kind = "abc"[i % 3], cw = ART.cloud.width(kind), x = ((still ? 0 : t / (700 + i * 160)) + i * 97) % (W + cw + 20) - cw - 10; ART.cloud.draw(x, 4 + (i * 7) % 18, { kind, tone }); }
-    if (phase === "day" && !still) for (let i = 0; i < 3; i++) { const bx = ((t / 60 + i * 40) % (W + 40)) - 20, by = 18 + i * 5 + Math.sin(t / 300 + i) * 2, up = Math.floor(t / 200 + i) % 2; px(bx, by, 1.2, 0.6, "#2a2a33"); px(bx + 1.2, by + (up ? -0.6 : 0.4), 1.2, 0.6, "#2a2a33"); px(bx - 1.2, by + (up ? -0.6 : 0.4), 1.2, 0.6, "#2a2a33"); }
+    const { phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow(), gloomy = ["rain", "storm"].includes(weather?.());
+    const party = !!dayState.party, lit = dim || party || gloomy, still = focusMode;
+    // sky: the hour and today's weather (svg/sky.js)
+    drawTerraceSky(t);
     // the city, the railing, the deck
     ART.city.draw(0, 22, { phase, blink: Math.floor(t / 700) % 2 });
     ART.deck.draw(0, 72);
@@ -318,6 +320,7 @@ class TerraceRoom extends BuiltRoom {
     items.push(...roomDepthItems("terrace", t));
     items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
     // the hour: darker at dusk and at night, then what shines
+    terraceWeatherVeil(t);
     if (dim) { ctx.fillStyle = dark ? "rgba(8, 12, 40, .38)" : "rgba(40, 20, 60, .16)"; ctx.fillRect(0, Math.round(56 * S), cv.width, cv.height); }
     this.strand(44, 16, 52, 72, 6, lit, t);
     this.strand(174, 72, 304, 76, 18, lit, t);
@@ -344,24 +347,16 @@ class TerraceRoom extends BuiltRoom {
   // in isometric view: the sky and the city behind, the deck as a raised floor with its glass railing, the stairs'
   // kiosk (fixed); everything else is bought (build.js)
   renderIso(t, G) {
-    const { h, phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow();
-    const party = !!dayState.party, lit = dim || party, still = focusMode, R = roomSize("terrace");
+    const { phase } = skyPhase(), st = SKY[phase], dark = phase === "night", dim = dark || phase === "dusk", season = hub.seasonNow(), gloomy = ["rain", "storm"].includes(weather?.());
+    const party = !!dayState.party, lit = dim || party || gloomy, still = focusMode, R = roomSize("terrace");
     G.back(() => {  // the back layer: the room's shell, what hangs on its walls, the rugs
       G.screen(() => {  // the sky and the city stay behind, whatever the camera
       px(0, 0, W, H, st[2]);
-      ART.terracesky.draw(0, 0, { stops: st });
-      if (dark) {
-        for (let i = 0; i < 40; i++) if ((Math.floor(t / 600) + i) % 7) px((i * 53) % W, (i * 17) % 34, i % 5 ? 0.7 : 1, i % 5 ? 0.7 : 1, "#f4f2ff");
-        ART.terracemoon.draw(318, 6, { bg: st[0] });
-      } else { const k = Math.max(0, Math.min(1, (h - 6) / 15)); ART.sun.draw(20 + k * 350, 30 - Math.sin(k * Math.PI) * 26, { color: phase === "day" ? "#ffe066" : "#ff9f43" }); }
-      const tone = CLOUD_TONES[phase];
-      for (let i = 0; i < 5; i++) { const kind = "abc"[i % 3], cw = ART.cloud.width(kind), x = ((still ? 0 : t / (700 + i * 160)) + i * 97) % (W + cw + 20) - cw - 10; ART.cloud.draw(x, 4 + (i * 7) % 18, { kind, tone }); }
+      drawTerraceSky(t);  // the hour and today's weather (svg/sky.js)
+      streetHaze(phase, gloomy);  // the street far below, under the skyline (iso/rooftops.js)
       ART.city.draw(0, 22, { phase, blink: Math.floor(t / 700) % 2 });
-      const roofs = ctx.createLinearGradient(0, 72 * S, 0, H * S);  // the roofs below, fading into the haze
-      roofs.addColorStop(0, dark ? "#1a2244" : "#5d6a8c"); roofs.addColorStop(1, dark ? "#080b1c" : "#2a3350");
-      ctx.fillStyle = roofs; ctx.fillRect(0, 72 * S, W * S, (H - 72) * S);
-      for (let i = 0; i < 14; i++) { const x = (i * 61) % W, y = 80 + (i * 37) % 140, w = 18 + (i % 4) * 8; px(x, y, w, 6, dark ? "#121935" : "#46527a"); px(x, y, w, 1, dark ? "#2a3460" : "#7381a6"); if (dark && i % 3 === 0) px(x + 4, y + 2, 2, 1.4, "#ffd27a"); }
       });
+      drawRooftops(R, phase, gloomy, t);  // the neighbours' roofs below, our building under the deck
       G.shell({ floor: this.deckFloor(), walls: false });
       G.onFloor(() => drawRoomItems("terrace", t, "rug"));
       // the glass railing along the two back edges
@@ -381,13 +376,16 @@ class TerraceRoom extends BuiltRoom {
       const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length], x = sp.x, y = sp.y;
       stand(x, y, () => { drawPerson(x, y, l.look, { arms: Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down", frame: Math.floor(t / 300), smile: true }); px(x + 4, y - 13, 2.5, 3, "#f4c430"); });
     }
+    this.chiefItem(t, G, items);
     isoItems("terrace", t, G, items);
     G.drawSorted(items);
     for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
       const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length];
       anchored(sp.x, sp.y, () => { badge(sp.x, sp.y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(sp.x, sp.y - 24 - headroom(), l.say, "#f7f7f7", "#081746", l.name); });
     }
-    // the hour: darker at dusk and at night, then what shines
+    // the weather (grey veil, snow; the rain over the screen), then the hour: darker at dusk and at night, then what shines
+    terraceWeatherVeil(t);
+    G.screen(() => terraceRain(t, false));
     if (dim) fillScreen(dark ? "rgba(8, 12, 40, .38)" : "rgba(40, 20, 60, .16)");
     const sp = (a, b, sag) => { const p = P(...a), q = P(...b); this.strand(p.x, p.y, q.x, q.y, sag, lit, t); };
     sp([0, R.h, 14], [0, 70, 14], 4);
@@ -399,6 +397,7 @@ class TerraceRoom extends BuiltRoom {
       if (it.type === "firepit" && (lit || season === "hiver")) glow(P(c.x, c.y, 8), 12, "#ff9f43", 0.14 + (still ? 0 : Math.sin(t / 120) * 0.03));
     }
     lampsOver("terrace");
+    this.chiefOver(t);
     hub.drawSeasonTerrace(t);
     const D = R.h - 70;  // the garland along the railing
     drawPartyOver("terrace", t, u => { const L = D / (D + R.w); return u < L ? P(0, R.h - D * u / L, 13) : P(R.w * (u - L) / (1 - L), 70, 13); });

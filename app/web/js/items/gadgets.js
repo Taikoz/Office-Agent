@@ -40,7 +40,7 @@ export function chiefVisit(it, fn) {
   const sp = hub.frontOf(it), done = () => { fn(); hub.saveBuild?.(); };
   if (it.room === "office") {
     const go = () => chiefGo(sp, done);
-    if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
+    if (chief.room !== "office") { chief.pendingOffice = go; chiefToOffice(); } else go();
   } else if (it.room === "lounge") {
     const go = () => { chief.lpath = [{ x: sp.x, y: sp.y, on: done }]; };
     if (chief.room === "lounge") go(); else { chief.loungeNext = go; chiefToLounge(); }

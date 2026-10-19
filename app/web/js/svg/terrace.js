@@ -4,7 +4,7 @@
 
 import { ART, R, SvgArt, shade } from "./base.js";
 
-const TERRACE_TONES = {  // the city by the hour: far buildings, near buildings, their shade, lit windows
+export const TERRACE_TONES = {  // the city by the hour: far buildings, near buildings, their shade, lit windows
   day: { far: "#9fb4cf", near: "#5d6f8c", side: "#4a5a75", win: "#a9cdf0", lit: "#fff3c4" },
   dawn: { far: "#b39ab3", near: "#6c5d7f", side: "#55496a", win: "#e7b9a3", lit: "#ffe0a6" },
   dusk: { far: "#7d5f8a", near: "#3e3558", side: "#2f2845", win: "#6a5a85", lit: "#ffcf6e" },

@@ -18,8 +18,14 @@ const CHIEF_SPOTS = {
   get podium() { return OFFICE_SPOTS.podium || { x: 282, y: 90 }; }, get coffee() { return COFFEE; },
   get console() { return OFFICE_SPOTS.console || { x: 221, y: 93 }; }, get door() { return { x: DOOR.x, y: DOOR.y }; },
 };
-chief.room = "office";  // "office" or "lounge"
-Object.assign(chief, { lx: 23, ly: 72, lpath: [], lspot: null });  // break-room position (LD, the door, is defined in lounge.js)
+chief.room = "office";  // "office", "lounge" or a room built in construction mode (ANNEX)
+Object.assign(chief, { lx: 23, ly: 72, lpath: [], lspot: null });  // position out of the office (LD, the break room's door, is defined in lounge.js)
+// the rooms built in construction mode (rooms/built.js, rooms/extra.js): he goes in through the break room's door (meeting
+// room, terrace) or its door back to the office (gym, library), walks there where you click, and leaves by its door
+const ANNEX = ["meeting", "terrace", "gym", "library"];
+const LOUNGE_DOOR_X = { meeting: 281, terrace: 330 };  // the middle of their door in the break room (rooms/lounge.js DOORS)
+const exitOf = room => room === "terrace" ? { x: 26, y: 102 } : room === "lounge" ? { ...hub.LD } : { x: 23, y: 76 };  // the terrace: before the stairs' kiosk
+const busyLine = () => { chief.bubble = "Pas maintenant, l'équipe a besoin de moi !"; chief.until = performance.now() + 3000; };
 
 // a walk in the office: straight to the goal, its legs routed around the furniture as he walks (world/route.js)
 export const OFFICE_ROWS = [LANE, 168, 254];
@@ -37,13 +43,22 @@ export function chiefGo(dest, onArrive) {
 }
 export function chiefWalk(p) {
   if (hub.chiefBusyNow()) { chief.bubble = "Pas maintenant, l'équipe a besoin de moi !"; chief.until = performance.now() + 3000; return; }
-  if (chief.room === "lounge") return;
+  if (chief.room !== "office") return;
   chiefGo(standable(p.x, p.y));
 }
 
 // office ⇄ break room through the door; the view follows him
 export function chiefToLounge() {
   if (chief.room === "lounge") return hub.setView("lounge");
+  if (chief.room !== "office") {  // from a built room: out by its door, in by its door of the break room (or the office's)
+    const from = chief.room, dx = LOUNGE_DOOR_X[from];
+    chief.lspot = null;
+    chief.lpath = [{ ...exitOf(from), on: c => {
+      c.room = "lounge"; c.at = "lounge"; c.lx = dx ?? hub.LD.x; c.ly = hub.LD.y; c.lpath = [{ x: c.lx, y: hub.LOUNGE_CORRIDOR }];
+      if (hub.view === from) hub.setView("lounge");
+    } }];
+    return;
+  }
   if (hub.chiefBusyNow()) { chief.bubble = "Pas maintenant, l'équipe a besoin de moi !"; chief.until = performance.now() + 3000; return; }
   chief.cup = false; chief.coffeeUntil = 0;
   chiefGo("door", c => {
@@ -53,18 +68,39 @@ export function chiefToLounge() {
   });
 }
 export function chiefToOffice(next = "podium") {
-  if (chief.room !== "lounge") return;
-  const via = chief.lspot?.via ? [{ ...chief.lspot.via }] : [];
-  chief.lspot = null;
-  chief.lpath = [...via, { x: via[0]?.x ?? chief.lx, y: hub.LOUNGE_CORRIDOR }, { x: hub.LD.x, y: hub.LOUNGE_CORRIDOR }, { ...hub.LD, on: () => {
+  if (chief.room === "office") return;
+  const via = chief.lspot?.via ? [{ ...chief.lspot.via }] : [], from = chief.room;
+  const arrive = () => {
     chief.room = "office"; chief.x = DOOR.x; chief.y = DOOR.y + 2; chief.lpath = [];
     chiefGo(next, next === "coffee" ? c => { c.coffeeUntil = performance.now() + 6000; hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.usedCoffee?.(); } : undefined);
-    if (hub.view === "lounge") hub.setView("office");
-  } }];
+    if (hub.view === from) hub.setView("office");
+  };
+  chief.lspot = null;
+  if (from !== "lounge") { chief.lpath = [{ ...exitOf(from), on: arrive }]; return; }  // a built room: its door back to the office
+  chief.lpath = [...via, { x: via[0]?.x ?? chief.lx, y: hub.LOUNGE_CORRIDOR }, { x: hub.LD.x, y: hub.LOUNGE_CORRIDOR }, { ...hub.LD, on: arrive }];
+}
+// to a room built in construction mode: from the office through the break room, from the break room through its door,
+// from another built room out through its door; he comes in by its door and steps in (or walks to `then`, a point
+// clicked on its floor); the view follows him
+export function chiefToRoom(room, then = null) {
+  if (!ANNEX.includes(room)) return;
+  if (chief.room === room) { hub.setView(room); if (then) chiefLoungeWalk(then); return; }
+  if (hub.chiefBusyNow()) return busyLine();
+  if (chief.room === "office") { chief.loungeNext = () => chiefToRoom(room, then); return chiefToLounge(); }
+  const from = chief.room, e = exitOf(room), via = chief.lspot?.via ? [{ ...chief.lspot.via }] : [];
+  const enter = c => {
+    c.room = room; c.at = room; c.lx = e.x; c.ly = e.y; c.lspot = null;
+    c.lpath = [then ? { x: then.x, y: then.y } : { x: e.x + 16, y: e.y + 10 }];
+    if (hub.view === from || hub.view === room) hub.setView(room);
+  };
+  chief.lspot = null;
+  const dx = from === "lounge" ? LOUNGE_DOOR_X[room] : null;
+  if (dx != null) chief.lpath = [...via, { x: via[0]?.x ?? chief.lx, y: hub.LOUNGE_CORRIDOR }, { x: dx, y: hub.LOUNGE_CORRIDOR }, { x: dx, y: 72, on: enter }];
+  else chief.lpath = [...via, { ...exitOf(from), on: enter }];
 }
 // in the break room: walk anywhere, or settle on an activity (its spot and pose, like the team)
 export function chiefLoungeWalk(p) {
-  const { w, h } = roomSize("lounge"), x = Math.max(12, Math.min(w - 12, p.x)), y = Math.max(74, Math.min(h - 10, p.y));
+  const { w, h } = roomSize(chief.room === "office" ? "lounge" : chief.room), x = Math.max(12, Math.min(w - 12, p.x)), y = Math.max(74, Math.min(h - 10, p.y));
   const via = chief.lspot?.via ? [{ ...chief.lspot.via }] : [];
   chief.lspot = null;
   chief.lpath = [...via, { x, y }];
@@ -91,14 +127,14 @@ export function chiefUseItem(it) {
 function stepChief(dt, t) {
   // the team needs him: back to the podium, from the break room if need be
   if (hub.chiefBusyNow() || hub.focusMode) {
-    if (chief.room === "lounge") { if (!chief.lpath.length || chief.lpath.at(-1)?.on === undefined) chiefToOffice(); }
+    if (chief.room !== "office") { if (!chief.lpath.length || chief.lpath.at(-1)?.on === undefined) chiefToOffice(); }
     else if (chief.at !== "podium") { chief.cup = false; chief.coffeeUntil = 0; chiefGo("podium"); }
   }
-  if (chief.room === "lounge") {
-    if (!chief.lpath.length && chief.loungeNext) { const fn = chief.loungeNext; chief.loungeNext = null; fn(); }  // what he came for (chiefUseItem)
+  if (chief.room !== "office") {  // the break room or a built room
+    if (!chief.lpath.length && chief.loungeNext && chief.room === "lounge") { const fn = chief.loungeNext; chief.loungeNext = null; fn(); }  // what he came for (chiefUseItem, chiefToRoom)
     if (!chief.lpath.length) return;
-    hub.routeAhead(chief.lpath, chief.lx, chief.ly, "lounge");
-    const tgt = walkStep(chief, chief.lpath, dt, 0.05, "lounge", "lx", "ly");  // with some weight (world/motion.js)
+    hub.routeAhead(chief.lpath, chief.lx, chief.ly, chief.room);
+    const tgt = walkStep(chief, chief.lpath, dt, 0.05, chief.room, "lx", "ly");  // with some weight (world/motion.js)
     if (tgt?.on) tgt.on(chief);
     return;
   }
@@ -143,4 +179,4 @@ export function drawConsoleScreen(t) {
 export const consolePlaying = () => chief.at === "console" && !chief.path.length && !(curSession()?.chief?.idle > 900);
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get chiefUseItem() { return chiefUseItem; }, get CHIEF_LOOK() { return CHIEF_LOOK; }, get stepChief() { return stepChief; } });
+provide({ get chiefToRoom() { return chiefToRoom; }, get chiefUseItem() { return chiefUseItem; }, get CHIEF_LOOK() { return CHIEF_LOOK; }, get stepChief() { return stepChief; } });

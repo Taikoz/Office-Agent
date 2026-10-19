@@ -32,7 +32,7 @@ function cancelChiefTask() {
   if (eaters.has(CHIEF_NAME)) eaters.delete(CHIEF_NAME);
   for (let i = convos.length - 1; i >= 0; i--) if (convos[i].a === CHIEF_NAME) release(convos.splice(i, 1)[0]);
   chief.pendingSocial = null;
-  if (chief.room === "lounge") { chief.lpath = []; chief.lspot = null; } else { chief.path = []; chief.at = "free"; }
+  if (chief.room !== "office") { chief.lpath = []; chief.lspot = null; } else { chief.path = []; chief.at = "free"; }
   chief.task = null;
 }
 export function cancelAction(id) {
@@ -47,12 +47,13 @@ export function chiefActivity() {
     const cv2 = convos.find(x => x.a === CHIEF_NAME), cp = cv2 ? Math.min(1, (performance.now() - cv2.start) / CONVO_MS) : null;
     return { id: chief.task.id, icon: chief.task.icon, label: chief.task.label, progress: c ?? ep ?? cp };
   }
-  const walking = chief.room === "lounge" ? chief.lpath.length : chief.path.length;
+  const walking = chief.room !== "office" ? chief.lpath.length : chief.path.length;
   if (walking) return { icon: "🚶", label: "Se déplace" };
   if (chief.room === "lounge") {
     const a = chief.lspot?.act;
     return a?.task ? { icon: a.icon, label: a.task } : { icon: "🛋️", label: "Se détend en salle de repos" };
   }
+  if (chief.room !== "office") return { meeting: { icon: "🤝", label: "En salle de réunion" }, terrace: { icon: "🌿", label: "Prend l'air sur la terrasse" }, gym: { icon: "🏋️", label: "En salle de sport" }, library: { icon: "📚", label: "À la bibliothèque" } }[chief.room] || { icon: "🧍", label: "Fait un tour" };
   if (chief.svc) return { icon: "🧰", label: "Entretien" };
   return { coffee: { icon: "☕", label: "Pause café" }, console: { icon: "🎮", label: "Joue à la console" }, pc: { icon: "💻", label: "Joue sur l'ordinateur" }, chiefos: { icon: "🖥️", label: "Sur ChiefOS" }, podium: { icon: "👑", label: "Dirige l'équipe" } }[chief.at] || { icon: "🧍", label: "Fait un tour" };
 }

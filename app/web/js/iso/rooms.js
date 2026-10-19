@@ -170,6 +170,7 @@ function peopleIn(room) {
   const out = [];
   if (room === "office") { for (const e of ents.values()) if (!e.leaving && !e.queued) out.push([e.x, e.y]); if (chief.room === "office") out.push([chief.x, chief.y]); }
   if (room === "lounge") { for (const l of hub.loungers?.values() || []) if (!l.partyRoom) out.push([l.x, l.y]); if (chief.room === "lounge") out.push([chief.lx, chief.ly]); }
+  if (room !== "office" && room !== "lounge" && chief.room === room) out.push([chief.lx, chief.ly]);  // a built room (world/chief.js)
   return out;
 }
 export function floorShade(room, t) {

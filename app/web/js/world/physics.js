@@ -29,6 +29,7 @@ function people(room) {
   const out = [];
   if (room === "office") { for (const e of ents.values()) if (!e.leaving && !e.queued) out.push({ x: e.x, y: e.y, seated: !!e.seated && !e.path?.length, busy: e.pose === "work" || e.pose === "type" || !!e.working }); if (chief.room === "office") out.push({ x: chief.x, y: chief.y, seated: chief.at === "pc" && !chief.path.length }); }
   if (room === "lounge") { for (const l of hub.loungers?.values() || []) if (!l.partyRoom) out.push({ x: l.x, y: l.y, seated: !l.path?.length }); if (chief.room === "lounge") out.push({ x: chief.lx, y: chief.ly, seated: !chief.lpath?.length }); }
+  if (room !== "office" && room !== "lounge" && chief.room === room) out.push({ x: chief.lx, y: chief.ly, seated: false });  // a built room (world/chief.js)
   return out;
 }
 
@@ -204,15 +205,15 @@ function wallFx(room, t) {
 }
 
 /* ---------- the terrace in the rain (rooms/built.js, 2D) ---------- */
-export function terraceRain(t) {
+export function terraceRain(t, rings = true) {  // rings: false in isometric view (the deck is not where the 2D one is)
   const w = wx(); if (hub.focusMode || (w !== "rain" && w !== "storm")) return;
-  const many = w === "storm" ? 90 : 55;
+  const many = w === "storm" ? 90 : 55, tall = Math.max(240, ctx.canvas.height / S);
   ctx.save(); ctx.strokeStyle = "rgba(200,220,255,.45)"; ctx.lineWidth = Math.max(1, 0.3 * S);
   for (let i = 0; i < many; i++) {  // streaks
-    const x = rnd(i) * W, y = ((t * (0.18 + rnd(i * 3) * 0.08)) + rnd(i * 7) * 240) % 240, l = 4 + rnd(i * 11) * 3;
+    const x = rnd(i) * W, y = ((t * (0.18 + rnd(i * 3) * 0.08)) + rnd(i * 7) * tall) % tall, l = 4 + rnd(i * 11) * 3;
     ctx.beginPath(); ctx.moveTo(x * S, y * S); ctx.lineTo((x - 1) * S, (y + l) * S); ctx.stroke();
   }
-  for (let i = 0; i < many / 3; i++) {  // rings on the deck
+  for (let i = 0; rings && i < many / 3; i++) {  // rings on the deck
     const period = 900 + rnd(i * 5) * 600, k = ((t + rnd(i * 9) * period) % period) / period, x = rnd(i * 17 + 1) * W, y = 80 + rnd(i * 23 + 2) * 150;
     ctx.strokeStyle = `rgba(210,228,255,${0.45 * (1 - k)})`; ctx.beginPath(); ctx.ellipse(x * S, y * S, (0.5 + k * 3.5) * S, (0.25 + k * 1.4) * S, 0, 0, Math.PI * 2); ctx.stroke();
   }

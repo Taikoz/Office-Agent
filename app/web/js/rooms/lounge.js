@@ -38,7 +38,7 @@ class LoungeRoom extends Room {
   }
   click(p) {
     const d = this.doorAt(p); if (!d) return false;
-    if (hub.con.rooms.includes(d.room)) setView(d.room);
+    if (hub.con.rooms.includes(d.room)) { if (chief.room === "lounge") hub.chiefToRoom(d.room); else setView(d.room); }  // he goes through; the view follows
     else {
       if (!buy.on) toggleBuy(true);
       buy.cat = "construction"; renderBuy();

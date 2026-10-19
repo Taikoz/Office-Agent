@@ -149,7 +149,7 @@ function chiefToPc(slot) {
     chief.manual = true;
   };
   if (hub.chiefBusyNow()) return say(CHIEF_NAME, "Pas maintenant, l'équipe a besoin de moi !");
-  if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
+  if (chief.room !== "office") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }
 // the lamps of a save from before the automatic ones (items/lamp.js): all on automatic, once
 function lampsAuto() {

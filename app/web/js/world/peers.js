@@ -44,7 +44,7 @@ const me = () => ({ name: CHIEF_NAME, look: { ...CHIEF_LOOK, hat: chiefHat() || 
 // where our chief is and how he stands: in our office, or in the office we visit (our avatar there)
 const toward = (p, x, y) => [Math.round(p.x - x), Math.round(p.y - y)];
 function chiefPose() {
-  if (chief.room === "lounge") {
+  if (chief.room !== "office") {
     const walking = chief.lpath.length > 0, act = !walking && chief.lspot?.act, pose = act?.pose || {};
     return { walk: walking, seated: !!pose.seated, arms: pose.arms || "down", back: walking ? chief.lpath[0].y < chief.ly : !!(act && chief.lspot.back),
       dir: walking ? toward(chief.lpath[0], chief.lx, chief.ly) : chief.lspot?.face || null, z: walking ? 0 : chief.lspot?.lift || 0 };
@@ -56,7 +56,7 @@ function chiefPose() {
 function where() {
   const v = net.visit;
   if (v) return { room: v.room, x: v.x, y: v.y, visiting: v.pid, pose: v.dir ? { walk: true, dir: v.dir.map(Math.round) } : v.pose ? { seated: v.pose.seated, arms: v.pose.arms, back: v.pose.back, dir: v.pose.dir, z: v.pose.z } : {} };
-  if (chief.room === "lounge") return { room: "lounge", x: chief.lx, y: chief.ly, visiting: "", pose: chiefPose() };
+  if (chief.room !== "office") return { room: chief.room, x: chief.lx, y: chief.ly, visiting: "", pose: chiefPose() };
   return { room: chief.room || "office", x: chief.x, y: chief.y, visiting: "", pose: chiefPose() };
 }
 

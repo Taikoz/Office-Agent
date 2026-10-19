@@ -18,7 +18,7 @@ function chiefToDesk() {
   const it = chiefDesk(); if (!it) return openChiefOs();
   const sp = hub.spotsOf(it)[0], go = () => chiefGo({ x: sp.x, y: sp.y }, c => { c.at = "chiefos"; openChiefOs(); });
   if (hub.chiefBusyNow()) { openChiefOs(); return; }  // the team waits: the screen opens at once
-  if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
+  if (chief.room !== "office") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }
 
 /* ---------- ChiefOS ---------- */

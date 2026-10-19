@@ -118,7 +118,7 @@ function chiefBusyNow() { const ch = curSession()?.chief; return !!(ch?.question
 function chiefOrder(where) {
   const t = performance.now();
   if (where !== "podium" && chiefBusyNow()) { chief.bubble = "Pas maintenant, l'équipe a besoin de moi !"; chief.until = t + 3000; return; }
-  if (chief.room === "lounge") return chiefToOffice(where);  // from the break room: back through the door first
+  if (chief.room !== "office") return chiefToOffice(where);  // from the break room or a built room: back through the door first
   if (where === "coffee" && !COFFEE.ok) { chief.bubble = "Il faudrait acheter une machine à café…"; chief.until = t + 3000; return; }
   if (where === "console" && !hub.OFFICE_SPOTS.console) { chief.bubble = "Pas de console ici : elle s'achète."; chief.until = t + 3000; return; }
   if (where === "coffee") {
@@ -182,6 +182,7 @@ export function simPortrait(name) {
 function simStatus(name) {
   if (name === CHIEF_NAME) {
     if (chief.room === "lounge") return `salle de repos · ${chief.lpath.length ? "se déplace" : chief.lspot?.act.label || "se pose"}`;
+    if (chief.room !== "office") return `${{ meeting: "salle de réunion", terrace: "terrasse", gym: "salle de sport", library: "bibliothèque" }[chief.room] || chief.room} · ${chief.lpath.length ? "se déplace" : "se pose"}`;
     return chief.path.length ? "se déplace" : { podium: "au podium", coffee: "à la machine à café", console: "joue à la console", free: "fait un tour" }[chief.at] || "au bureau";
   }
   const e = [...ents.values()].find(x => x.who === name && !x.leaving), l = loungers.get(name);

@@ -65,7 +65,7 @@ class ClientVisit extends Happening {
       toast("VISITE CLIENT", `Client conquis : +${fmtSim(bonus)}`, "Il a adoré la démo.");
       sfx("achievement");
     });
-    enqueue("🤝", "Accueillir le client", () => { if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go(); }, true);
+    enqueue("🤝", "Accueillir le client", () => { if (chief.room !== "office") { chief.pendingOffice = go; chiefToOffice(); } else go(); }, true);
   }
 }
 new ClientVisit();
