@@ -13,7 +13,7 @@ export class Lamp extends Item {
     const lit = lampLit(it);
     return [["lamp", lit ? "🌑" : "💡", lit ? "Éteindre" : "Allumer"], ...(it.on != null ? [["lampauto", "🌗", "Automatique (le soir)"]] : [])];
   }
-  act(it, id) {
+  perform(it, id) {
     if (id === "lamp") it.on = !lampLit(it);
     else if (id === "lampauto") delete it.on;
     else return false;

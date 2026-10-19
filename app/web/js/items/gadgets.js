@@ -52,9 +52,9 @@ export class Gadget extends Colored {
     const own = (this.actions || []).filter(a => !a[4] || a[4](it)).map(([id, icon, label, , , lock]) => [id, icon, label, lock?.(it) || ""]);
     return [...own, ...super.pie(it)];
   }
-  act(it, id) {
+  perform(it, id) {
     const a = (this.actions || []).find(x => x[0] === id);
-    if (!a) return super.act(it, id);
+    if (!a) return super.perform(it, id);
     if (this.walk === false) a[3](it); else enqueue(a[1], a[2], () => chiefVisit(it, () => a[3](it)));
     return true;
   }

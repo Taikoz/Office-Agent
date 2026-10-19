@@ -30,7 +30,7 @@ export class Item {
   isoState(_it, _t) { return {}; }          // more state in the room (frames of an animation…)
   over(_it, _t, _G) {}                      // drawn over it in the room (live screens, notes…)
   pie(_it) { return []; }                   // its actions in the pie menu: [id, icon, label, lock?]
-  act(_it, _id) { return false; }           // runs one of them; true when handled
+  perform(_it, _id) { return false; }           // runs one of them; true when handled
   center(_it) { return ""; }                // more lines in the middle of the pie menu
   artFor(style, on) { return { on, map: style.map || null, ...this.artState(style) }; }
   okIn(room) { return this.room === "any" || [].concat(this.room).includes(room); }

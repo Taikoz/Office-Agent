@@ -24,7 +24,7 @@ export class Furniture extends Item {
     if (a.duel) out.push(["duel", "⚔️", "Défier quelqu'un"]);
     return out;
   }
-  act(it, id) {
+  perform(it, id) {
     const a = this.act && hub.Activity.get(this.act);
     if (!a) return false;
     if (id === "use") { enqueue(a.icon, a.task, () => hub.chiefUseItem(it)); return true; }
@@ -50,7 +50,7 @@ const addC = def => new Colored(def);
 export class Computer extends Colored {
   // a game on it (ui/pcgames.js): the chief sits at this desk and plays
   pie(it) { const g = hub.PC_GAMES?.[hub.GAME_OF?.[it.type]]; const desk = it.on_ && hub.itemByUid(it.on_); return g && desk?.slot != null ? [["play", g.icon, `Jouer à ${g.name}`]] : []; }
-  act(it, id) { if (id !== "play") return false; const desk = hub.itemByUid(it.on_); enqueue("🎮", "Jouer sur l'ordinateur", () => hub.chiefToPc(desk.slot)); return true; }
+  perform(it, id) { if (id !== "play") return false; const desk = hub.itemByUid(it.on_); enqueue("🎮", "Jouer sur l'ordinateur", () => hub.chiefToPc(desk.slot)); return true; }
   // the screen(s): the work of the dev of this desk (or the chief's game), painted live on the monitor; screens:
   // [{ x, y, z, w, h }] where each is on the model (its front plane at y), tint: a CRT's phosphor (the style's)
   over(it, t, G) {

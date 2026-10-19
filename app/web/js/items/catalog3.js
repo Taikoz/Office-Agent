@@ -87,8 +87,8 @@ const RIPE_MS = 3 * 3600_000, ripe = it => Date.now() - (it.picked || 0) > RIPE_
 class VegPatch extends Plant {
   isoState(it) { return { ...super.isoState(it), ripe: ripe(it) }; }
   pie(it) { return [...super.pie(it), ["harvest", "🍅", ripe(it) ? "Récolter (tomates, légumes)" : "Pas encore mûr", ripe(it) ? "" : `dans ${Math.ceil((RIPE_MS - (Date.now() - it.picked)) / 60000)} min`]]; }
-  act(it, id) {
-    if (id !== "harvest") return super.act(it, id);
+  perform(it, id) {
+    if (id !== "harvest") return super.perform(it, id);
     if (!ripe(it)) return true;
     it.picked = Date.now(); pantry.tomates = (pantry.tomates || 0) + 2; pantry.legumes = (pantry.legumes || 0) + 1; savePantry(); hub.saveBuild?.();
     crewAdd(CHIEF_NAME, { ennui: -4, moral: 2 }); say(CHIEF_NAME, "🍅🍅🥕 Tout droit au frigo de la cuisine !"); sfx("achievement");

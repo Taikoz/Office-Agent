@@ -136,7 +136,7 @@ function itemPieAction(uid, id) {
   if (id === "podium") return hub.chiefOrder("podium");
   if (id === "meet") return hub.startMeeting();
   if (hub.upkeepAct?.(it, id)) return;
-  defOf(it.type).act(it, id);  // js/items/
+  defOf(it.type).perform(it, id);  // js/items/
 }
 // the chief on a free computer: he walks to the desk, sits and plays a while, then goes back to his podium
 function chiefToPc(slot) {

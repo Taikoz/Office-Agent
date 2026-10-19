@@ -122,7 +122,7 @@ export function applyAct(m, t = performance.now()) {
   if (verb === "use") {
     const it = hub.itemByUid?.(a), def = it && hub.defOf(it.type);
     if (!it || !SAFE.includes(b) || !def.pie(it).some(x => x[0] === b)) return;
-    def.act(it, b);
+    def.perform(it, b);
     toast("🌐 VISITE", `${from} ${b === "music" ? "touche à la musique" : b === "blind" ? (it.closed ? "ferme le store" : "ouvre le store") : "joue avec la lumière"}`, def.name || "");
     return;
   }

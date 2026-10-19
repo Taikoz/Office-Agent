@@ -71,7 +71,7 @@ win("windowloft", "Verrière d'atelier", 1100, 72, 46, { x: 2, y: 2, w: 68, h: 4
 // the window with a venetian blind: a click opens or closes the slats
 class Blind extends Win {
   pie(it) { return [["blind", it.closed ? "🔆" : "🌗", it.closed ? "Ouvrir le store" : "Fermer le store"]]; }
-  act(it, id) { if (id !== "blind") return false; it.closed = !it.closed; hub.saveBuild(); sfx("commit"); return true; }
+  perform(it, id) { if (id !== "blind") return false; it.closed = !it.closed; hub.saveBuild(); sfx("commit"); return true; }
   state(it) { return !!it.closed; }
 }
 win("windowblind", "Fenêtre à store vénitien", 480, 58, 41, { x: 4, y: 4, w: 50, h: 33 },
@@ -98,7 +98,7 @@ class Sconce extends Item {
   artState(st) { return all(st); }
   thumbState() { return true; }
   pie(it) { return [["lamp", it.off ? "💡" : "🌑", it.off ? "Allumer" : "Éteindre"]]; }
-  act(it, id) { if (id !== "lamp") return false; it.off = !it.off; hub.saveBuild(); sfx("commit"); return true; }
+  perform(it, id) { if (id !== "lamp") return false; it.off = !it.off; hub.saveBuild(); sfx("commit"); return true; }
   state(it) { return !it.off; }
 }
 new Sconce({ type: "sconce", cat: "lumiere", name: "Applique murale", price: 140, room: "any", kind: "wall", w: 10, h: 14, hang: 20, glow: true, desc: "Au mur, une lumière douce le soir. Clic : allumer, éteindre.",

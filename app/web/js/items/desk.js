@@ -15,7 +15,7 @@ class Desk extends Item {
     const busy = [...ents.values()].some(e => e.desk === DESKS[it.slot] && !e.leaving);
     return [["launch", "🚀", "Lancer un agent ici", busy ? "occupé" : ""], ["usepc", "💻", "Utiliser l'ordinateur", busy ? "occupé" : ""]];
   }
-  act(it, id) {
+  perform(it, id) {
     if (id === "launch") openPanel(`launch:${it.slot}`);
     else if (id === "usepc") enqueue("💻", "Jouer sur l'ordinateur", () => hub.chiefToPc(it.slot));
     else return false;
