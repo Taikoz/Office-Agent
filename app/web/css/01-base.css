@@ -82,6 +82,9 @@
   .launch code { color: var(--text); }
   .card.stuck { border-color: #ff9f43; background: #2a1a06; }
   .card .warnline { color: #ff9f43; font-size: 17px; }
+  .card.perm { border-color: #ffd43b; animation: permblink 1.2s steps(2) infinite; }
+  .card .permline { color: #ffd43b; font-size: 17px; overflow-wrap: anywhere; }
+  @keyframes permblink { 50% { border-color: var(--line); } }
   .card.over { border-color: var(--err); }
   .card .overline { color: var(--err); font-size: 17px; }
   .card .review { color: var(--accent); font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

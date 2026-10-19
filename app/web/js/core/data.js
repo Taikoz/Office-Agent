@@ -50,18 +50,20 @@ export function renderHud() {
   hub.refreshCollisions();
   // one card per agent, busiest first: who, what, status, current action, counters
   const order = { asking: 0, blocked: 1, working: 2, done: 3, gone: 4 };
-  const agents = (s?.agents || []).slice().reverse().sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5));
+  const rank = a => a.permission && a.status === "working" ? -1 : order[a.status] ?? 5;  // waiting for your go comes first
+  const agents = (s?.agents || []).slice().reverse().sort((a, b) => rank(a) - rank(b));
   document.getElementById("rows").innerHTML = agents.map(a => {
     const yt = data.tickets[a.ticket];
     const started = a.started ? Math.round((Date.now() - Date.parse(a.started)) / 1000) : null;
     const now = a.status === "blocked" ? a.lastError : a.status === "asking" ? `? ${a.question?.question || ""}` : a.status === "done" ? "Mission livrée" : a.action;
     const g = a.game || {}, stuck = isStuck(a), over = hub.overBudget(a), review = awaitingReview(a, s), sum = a.status === "done" ? missionSummary(a) : g.mr ? missionSummary(a) : "";
     const nowS = data.now || Date.now() / 1000;
-    return `<div class="card${a.id === selected ? " sel" : ""}${stuck ? " stuck" : ""}${over ? " over" : ""}" data-id="${esc(a.id)}" style="--c:${typeColor(a.type)}" title="${esc(a.description)}">
+    return `<div class="card${a.id === selected ? " sel" : ""}${a.permission && a.status === "working" ? " perm" : ""}${stuck ? " stuck" : ""}${over ? " over" : ""}" data-id="${esc(a.id)}" style="--c:${typeColor(a.type)}" title="${esc(a.description)}">
       <div class="top"><b>${esc(crew.ids[a.id] || specialty(a.type))}</b>${crew.ids[a.id] ? `<small class="sk" title="compétence pour ce travail">${hub.skillTag(crew.ids[a.id], a.type)}</small>` : ""}<span class="s-${a.status}">${STATUS_FR[a.status] || a.status}</span>
         <span class="tag" style="background:${typeColor(a.type)}" title="${esc(a.type)}">${esc(specialty(a.type))}</span></div>
       <div class="what">${a.ticket ? `${ticketLink(a.ticket)}${yt?.state ? ` · ${esc(yt.state)}` : ""} — ` : ""}${esc(a.description)}</div>
       <div class="act">${esc(now || "démarre…")}</div>
+      ${a.permission && a.status === "working" ? `<div class="permline">🔐 attend ta permission dans son terminal : ${esc(a.permission.detail || a.permission.tool)} · ${ago(Math.round(nowS - a.permission.created))}</div>` : ""}
       ${stuck ? `<div class="warnline">🌀 tourne en rond ? ${g.sinceProgress} outils sans modif ni test depuis ${ago(Math.round(nowS - (g.progressT || g.first)))}</div>` : ""}
       ${hub.collisionLine(a)}
       ${over ? `<div class="overline">💸 budget dépassé : ${money(g.cost)} pour ${money(hub.budgetOf(a.type))}</div>` : ""}

@@ -80,7 +80,7 @@ class OfficeRoom extends Room {
         const celebrate = st === "done" && a.idle < 20;
         if (layer === "all") px(e.x - 6, e.y - 6, 12, 3, "#3a3a48");
         const party = t < (e.fxUntil || 0) && ["pass", "mr", "boss", "verify"].includes(e.fxKind);
-        drawPerson(e.x + shake, e.y, e.look, { seated: true, back: true, dir: e.desk?.face || [0, -1], arms: celebrate || party || pulling ? "up" : st === "working" ? "type" : "down", frame: f });
+        drawPerson(e.x + shake, e.y, e.look, { seated: true, back: true, dir: e.desk?.face || [0, -1], arms: celebrate || party || pulling || (a.permission && st === "working") ? "up" : st === "working" ? "type" : "down", frame: f });
         if (a.game?.boss) drawBoss(e.desk.x - 28 + (t - (e.bossHitAt || 0) < 180 ? 2 : 0), e.desk.y + 10, a.game.boss, t, t - (e.bossHitAt || 0) < 500);
       }
       if (!over) return;
@@ -93,10 +93,11 @@ class OfficeRoom extends Room {
       else if (st === "done") { msg = "Livré ✓"; bg = "#51cf66"; }
       if (stuck) { msg = Math.floor(t / 5000) % 2 ? "🤯 ça tourne en rond…" : clip(a.action, 30); bg = "#ff9f43"; }
       else if (collisionMap.has(a.id) && Math.floor(t / 4000) % 2 === 0) { const c = collisionMap.get(a.id); msg = `😠 ${crew.ids[c.other.id] || "quelqu'un"} touche à ${clip(shortFile(c.file), 18)} !`; bg = "#ff9f43"; }
+      else if (a.permission && st === "working") { msg = Math.floor(t / 3000) % 2 ? "🔐 j'attends ta permission !" : `🔐 ${clip(a.permission.detail || a.permission.tool, 26)}`; bg = "#ffd43b"; }
       else if (ciFailed(a) && Math.floor(t / 5000) % 2 === 0) { msg = "😩 la CI a cassé"; bg = "#ff6b6b"; fg = "#fff"; }
       else if (overBudget(a) && st === "working" && Math.floor(t / 6000) % 3 === 0) { msg = `💸 ${money(a.game.cost)} : budget dépassé`; bg = "#ff6b6b"; fg = "#fff"; }
       const waitsReview = awaitingReview(a, session);
-      const mood = st !== "blocked" && !stuck && !waitsReview && moodLine(e, t);
+      const mood = st !== "blocked" && !stuck && !waitsReview && !a.permission && moodLine(e, t);
       if (mood) { msg = mood; bg = "#d5eeff"; }
       if (t < (e.fxUntil || 0)) { msg = e.fxMsg; bg = FX_BG[e.fxKind] || bg; fg = e.fxKind === "fail" ? "#fff" : "#1c1c24"; }
       if (waitsReview) hub.drawReviewSign(e.desk.x + 12, e.desk.y - 20, t);

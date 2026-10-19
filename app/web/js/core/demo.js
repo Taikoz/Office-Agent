@@ -111,6 +111,8 @@ function demo() {
   });
   const q = { id: "demo-q1", question: "Le filtre doit-il inclure les MR en Draft ?", options: ["Oui, toutes", "Non, seulement les MR prêtes", "Seulement les miennes"],
     context: "DEMO-103 — le ticket ne le précise pas, ça change la requête GitLab.", from: "DEMO-103 review", created: demoStart / 1000 + 30 };
+  const d2 = agents.find(a => a.id === "d2");  // waits for a permission in its terminal, for a while
+  if (d2 && d2.status === "working" && t % 90 > 50) d2.permission = { tool: "Bash", detail: "python3 audit_log.py add DEMO-102", created: demoStart / 1000 + t - (t % 90) + 50 };
   const d4 = agents.find(a => a.id === "d4");
   const questions = [];
   if (d4 && t > 30 && !demoAnswered.has(q.id)) { d4.status = "asking"; d4.question = q; questions.push(q); }
