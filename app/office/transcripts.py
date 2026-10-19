@@ -9,6 +9,7 @@ from typing import Any
 
 from .config import ASK_RE, HEAD_BYTES, TAIL_BYTES, TICKET_RE
 from .questions import match_question
+from . import worktrees
 from .waiting import call_key
 
 LESSONS_MARK = "## Leçons des missions précédentes (Agent Office)"  # lessons.MARK (not imported: lessons.py imports this package)
@@ -77,7 +78,9 @@ def scan(path: Path, now: float) -> dict[str, Any]:
     open_calls: dict[str, str] = {}
     open_keys: dict[str, str] = {}  # the same calls' keys, to find the one waiting for a permission (waiting.py)
     seen: set[str] = set()
+    cwd = branch = ""
     for rec in tail:
+        cwd, branch = rec.get("cwd") or cwd, rec.get("gitBranch") or branch
         msg = rec.get("message") or {}
         content = msg.get("content")
         if rec.get("type") == "assistant":
@@ -119,6 +122,9 @@ def scan(path: Path, now: float) -> dict[str, Any]:
         "lastText": text_of((last.get("message") or {}).get("content"))[-160:] if finished else "",
         "asks": [cmd for cmd in open_calls.values() if ASK_RE.search(cmd)],
         "openKeys": list(open_keys.values()),
+        "branch": branch if branch and branch != "HEAD" else "",
+        "worktree": (worktrees.split(cwd) or ("", ""))[1],  # a worktree of its own: no file shared with the others
+        "worktreePath": worktrees.root(cwd),  # where a relaunch picks the work up again
     }
 
 

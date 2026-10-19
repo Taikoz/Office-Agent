@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from . import worktrees
 from .config import PROJECTS, STATE_DIR
 from .launcher import launch_claude_in
 
@@ -45,6 +46,7 @@ def targets() -> list[dict[str, Any]]:
     for d in dirs:
         newest = max(d.glob("*.jsonl"), key=lambda f: f.stat().st_mtime, default=None)
         cwd = _cwd_of(newest) if newest else None
+        cwd = (worktrees.split(cwd) or (cwd,))[0] if cwd else None  # a session in a worktree: its repository
         if not cwd or cwd in seen or not Path(cwd).is_dir():
             continue
         seen.add(cwd)

@@ -111,6 +111,8 @@ function demo() {
   });
   const q = { id: "demo-q1", question: "Le filtre doit-il inclure les MR en Draft ?", options: ["Oui, toutes", "Non, seulement les MR prêtes", "Seulement les miennes"],
     context: "DEMO-103 — le ticket ne le précise pas, ça change la requête GitLab.", from: "DEMO-103 review", created: demoStart / 1000 + 30 };
+  const d1 = agents.find(a => a.id === "d1");  // works in a worktree of its own
+  if (d1) Object.assign(d1, { worktree: "DEMO-101-feature-builder", branch: "worktree-DEMO-101-feature-builder", worktreePath: "~/repos/demo/.claude/worktrees/DEMO-101-feature-builder" });
   const d2 = agents.find(a => a.id === "d2");  // waits for a permission in its terminal, for a while
   if (d2 && d2.status === "working" && t % 90 > 50) d2.permission = { tool: "Bash", detail: "python3 audit_log.py add DEMO-102", created: demoStart / 1000 + t - (t % 90) + 50 };
   const d4 = agents.find(a => a.id === "d4");

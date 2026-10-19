@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from . import game, waiting
+from . import game, waiting, worktrees
 from .config import AUDIT_LOG, CLEAR_MARK, EXCLUDED, PROJECTS
 from .mmx import mmx_storage
 from .questions import pending_questions
@@ -45,7 +45,7 @@ def sessions(window: float) -> list[dict[str, Any]]:
                     p["status"] = "working"
             out.append({
                 "id": main.stem,
-                "project": Path(first.get("cwd") or project.name).name,
+                "project": Path((worktrees.split(first.get("cwd") or "") or (first.get("cwd") or project.name,))[0]).name,
                 "cwd": first.get("cwd") or "",
                 "title": (first.get("slug") or prompt[:60] or main.stem[:8]),
                 "prompt": prompt[:200],

@@ -15,7 +15,7 @@ from . import blueprints, claudefiles, framecheck, gitlab, history, improve, ins
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
-from .launcher import agents, launch
+from .launcher import agents, home_dir, launch
 from .live import GAME, sessions
 from .mmx import mmx_storage, mmx_validate
 from .perf import perf
@@ -291,7 +291,11 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     self.reply(200, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/launch":
-                    ok, output = launch(str(data["agent"]), str(data["prompt"]))
+                    cwd = home_dir(str(data.get("cwd") or "")[:500])
+                    if data.get("cwd") and cwd is None:
+                        ok, output = False, "dossier introuvable ou hors de ton dossier personnel"
+                    else:
+                        ok, output = launch(str(data["agent"]), str(data["prompt"]), cwd, bool(data.get("worktree")))
                     self.reply(200 if ok else 409, "application/json", json.dumps({"ok": ok, "output": output}, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/mmx/validate":
