@@ -13,7 +13,7 @@ export class Plant extends Item {
   }
   isoState(it) { return { dry: hub.Incident.get("plant")?.on && hub.Incident.get("plant").uid === it.uid }; }  // thirsty (incidents/plant.js)
   pie() { return [["water", "💧", "Arroser"]]; }
-  act(it, id) { if (id !== "water") return false; it.wetUntil = performance.now() + 2500; crewAdd(CHIEF_NAME, { ennui: -2 }); return true; }
+  perform(it, id) { if (id !== "water") return false; it.wetUntil = performance.now() + 2500; crewAdd(CHIEF_NAME, { ennui: -2 }); return true; }
 }
 new Plant({ type: "plant", cat: "plantes", name: "Plante géante", price: 300, room: "any", w: 16, d: 16, art: "isobigplant", plant: true, desc: "Clic : l'arroser.",
   styles: [{ id: "verte", name: "Verte", sw: "#3f9e4f" }, { id: "automne", name: "Automne", sw: "#e07a2f", map: { "#3f9e4f": "#e07a2f", "#2f7a3a": "#c45a1f", "#5fbf6d": "#f2a65a" } },

@@ -10,7 +10,7 @@ const fishFoods = new Map();  // uid → the food falling in the water
 class Aquarium extends Item {
   isoState(_it, t) { return { frame: Math.floor(t / 500) % 8 }; }  // the fish swimming in the isometric view
   pie() { return [["feed", "🐟", "Nourrir les poissons"]]; }
-  act(it, id) {
+  perform(it, id) {
     if (id !== "feed") return false;
     const f = fishFoods.get(it.uid) || [];
     for (let k = 0; k < 6; k++) f.push({ x: it.x + 5 + Math.random() * 16, y: it.y + 1 });

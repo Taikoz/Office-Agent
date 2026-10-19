@@ -6,7 +6,7 @@ import { Item } from "./base.js";
 
 class ChiefDesk extends Item {
   pie() { return [["chiefos", "🖥️", "Ouvrir ChiefOS"]]; }
-  act(_it, id) { if (id !== "chiefos") return false; enqueue("🖥️", "ChiefOS", hub.chiefToDesk); return true; }
+  perform(_it, id) { if (id !== "chiefos") return false; enqueue("🖥️", "ChiefOS", hub.chiefToDesk); return true; }
 }
 new ChiefDesk({ type: "chiefdesk", cat: "bureau", name: "Bureau du chef", price: 1500, room: "office", unique: true, w: 34, d: 16, art: "isochiefdesk",
   spots: [{ x: 17, y: 24, face: [0, -1] }], desc: "Ton bureau, avec ChiefOS : questions, MR, tickets, rapport, comptes et équipe.",

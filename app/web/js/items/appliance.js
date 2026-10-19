@@ -15,7 +15,7 @@ export class Appliance extends Item {
   // names: { styleId: label } among COLORS
   static styles(names) { return Object.entries(names).map(([id, name]) => ({ id, name, sw: (Appliance.COLORS[id] || { "#f2f2ef": "#f2f2ef" })["#f2f2ef"], map: Appliance.COLORS[id] })); }
   // shared by the fridge and the stove: cook a recipe (social.js) or shop for one
-  act(it, id) {
+  perform(it, id) {
     if (id.startsWith("shop:")) { shopFor(RECIPES.find(r => r.id === id.slice(5))); return true; }
     if (id.startsWith("cook:")) {
       if (!hub.kitchenReady()) say(CHIEF_NAME, "Il faut un frigo et une gazinière.");

@@ -12,8 +12,8 @@ import { Appliance } from "./appliance.js";
 export class Fridge extends Appliance {
   state(it, t) { return t < (it.openUntil || 0); }  // open a moment after a snack or the groceries
   pie() { return [["snack", "🥪", "Encas · § 5"], ["s:shop", "🛒", "Faire les courses…"], ["s:cook", "🍳", "Cuisiner…"]]; }
-  act(it, id) {
-    if (id !== "snack") return super.act(it, id);
+  perform(it, id) {
+    if (id !== "snack") return super.perform(it, id);
     enqueue("🥪", "Encas du frigo", () => chiefDo(() => chiefTo(hub.frontOf(it), { id: "fridge", label: "fouille le frigo", pose: { back: true } }, () => {
       if (!spend(5, "Encas du frigo")) return;
       it.openUntil = performance.now() + 2200; crewAdd(CHIEF_NAME, { faim: 30 }); say(CHIEF_NAME, "🥪 Miam.", 2200);
