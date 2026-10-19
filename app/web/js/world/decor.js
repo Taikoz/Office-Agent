@@ -120,6 +120,16 @@ function paintFloor(p, w, h, type, base) {
 function paintRug(p, x0, y0, w, h, type, base) {
   const { rect, ellipse } = p, dark = shade(base, 0.7), light = shade(base, 1.3);
   if (type === "aucun") return;
+  if (type === "runes") {  // a circle of runes: rings, marks all around, a star at the heart
+    const cx = x0 + w / 2, cy = y0 + h / 2, gold = "#d9a441", rx = w / 2, ry = h / 2;
+    ellipse(cx + 1, cy + 1.5, rx, ry, "rgba(0,0,0,0.25)");
+    ellipse(cx, cy, rx, ry, dark); ellipse(cx, cy, rx - 2, ry - 2, base); ellipse(cx, cy, rx - 3, ry - 3, gold, 0.6);
+    ellipse(cx, cy, rx - 9, ry - 9, gold, 0.5);
+    for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8, x = cx + Math.cos(a) * (rx - 6.3), y = cy + Math.sin(a) * (ry - 6.3); rect(x - 0.4, y - 1, 0.8, 2, light); if (k % 2) rect(x - 0.9, y - 0.2, 1.8, 0.5, light); }
+    const r = Math.min(rx, ry) - 13;
+    p.poly(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.42 : r; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }), gold);
+    return;
+  }
   if (type === "rond") {
     const cx = x0 + w / 2, cy = y0 + h / 2;
     ellipse(cx + 1, cy + 1.5, w / 2, h / 2, "rgba(0,0,0,0.25)");
@@ -135,6 +145,14 @@ function paintRug(p, x0, y0, w, h, type, base) {
     for (let x = x0 + 6; x < x0 + w - 5; x += 6) for (let yy = y0 + 6; yy < y0 + h - 5; yy += 6) rect(x, yy, 0.6, 0.6, "rgba(255, 255, 255, 0.07)");
   } else if (type === "rayé") {
     for (let y = y0 + 4, k = 0; y < y0 + h - 4; y += 4, k++) rect(x0 + 1.5, y, w - 3, 2, k % 2 ? light : dark);
+  } else if (type === "etoiles") {  // a night sky: a gold border, stars of all sizes, a crescent moon, a comet
+    const gold = "#d9a441";
+    rect(x0 + 2.5, y0 + 2.5, w - 5, 0.6, gold); rect(x0 + 2.5, y0 + h - 3.1, w - 5, 0.6, gold); rect(x0 + 2.5, y0 + 2.5, 0.6, h - 5, gold); rect(x0 + w - 3.1, y0 + 2.5, 0.6, h - 5, gold);
+    for (let k = 0; k < Math.round(w * h / 40); k++) { const v = Math.sin(k * 91.7) * 43758.5453, f = v - Math.floor(v), g2 = Math.sin(k * 17.3) * 9631.1, f2 = g2 - Math.floor(g2); const sz = k % 7 ? 0.5 : 1.1;
+      rect(x0 + 5 + f * (w - 10), y0 + 5 + f2 * (h - 10), sz, sz, k % 5 ? "#f4efe2" : gold); }
+    const mx = x0 + w * 0.72, my = y0 + h * 0.34, mr = Math.min(w, h) * 0.13;
+    ellipse(mx, my, mr, mr, "#f4e7b0"); ellipse(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, mr * 0.85, base);
+    for (let k = 0; k < 6; k++) rect(x0 + w * 0.2 + k * 2, y0 + h * 0.66 - k * 1.1, 1.6 - k * 0.2, 0.6, k ? light : "#f4efe2");
   } else if (type === "persan") {
     const gold = "#d9a441", cx = x0 + w / 2, cy = y0 + h / 2;
     rect(x0 + 1.5, y0 + 1.5, w - 3, 4, dark); rect(x0 + 1.5, y0 + h - 5.5, w - 3, 4, dark);

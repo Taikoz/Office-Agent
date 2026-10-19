@@ -29,7 +29,7 @@ new Desk({ type: "desk", cat: "bureau", name: "Bureau", price: 350, room: "offic
     { id: "blanc", name: "Laqué blanc", sw: "#e6e2d8", wood: "#e6e2d8" }, { id: "gamer", name: "Gamer RGB", sw: "#2a2a33", wood: "#2a2a33", rgb: true }] });
 
 // the other desks: the colours of a style go to the art as they are (svg/iso.js)
-class StyledDesk extends Desk { artState(st) { const { id: _i, name: _n, sw: _s, ...art } = st; return art; } }
+export class StyledDesk extends Desk { artState(st) { const { id: _i, name: _n, sw: _s, ...art } = st; return art; } }
 const desk = (o, styles) => new StyledDesk({ cat: "bureau", room: "office", workstation: true, seat: [o.w / 2, o.d + 10], surface: { z: 12.6 }, ...o, styles });
 // older
 desk({ type: "deskschool", name: "Bureau d'écolier", price: 180, w: 32, d: 12, art: "isodeskschool", surface: { z: 12 }, desc: "Années 60 : pieds en tube, casier, plateau en formica. Petit prix." }, [

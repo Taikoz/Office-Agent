@@ -27,12 +27,12 @@ coffee("coffeepro", "Machine à levier de barista", 3500, 26, 9, "isocoffeepro",
   "Deux groupes à levier, un dôme, un manomètre : un vrai café de barista, et l'équipe le sent.", sty("c", [["chrome", "Chrome", "#c9ccd6"], ["cuivre", "Cuivre", "#c87a4a"], ["noir", "Noire", "#2a2a30"]]));
 
 /* ---------- windows: a frame (the glass left clear), the sky drawn behind the glass in its shape ---------- */
-class FrameArt extends SvgArt {
+export class FrameArt extends SvgArt {
   constructor(name, w, h, fn) { super(name, w, h); this.fn = fn; }
   body(o) { return this.fn(o); }
 }
 // glass: { x, y, w, h, shape: "rect" | "round" | "arch" } in the window's own units
-class Win extends Item {
+export class Win extends Item {
   artState(st) { return all(st); }
   behind(it, t) {
     const g = this.glass, x = (it.x + g.x) * S, y = (it.y + g.y) * S, w = g.w * S, h = g.h * S;

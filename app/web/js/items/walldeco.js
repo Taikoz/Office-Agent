@@ -11,12 +11,12 @@ const n2 = v => +(+v).toFixed(2);
 const FONT = "font-family=\"'Trebuchet MS','Arial Rounded MT Bold',sans-serif\" font-weight=\"bold\"";
 const SCRIPT = "font-family=\"'Brush Script MT','Segoe Script',cursive\" font-style=\"italic\" font-weight=\"bold\"";
 // a 2D wall art from a function of its state (the style's colours, the time…)
-class WallArt extends SvgArt {
+export class WallArt extends SvgArt {
   constructor(name, w, h, fn, opts) { super(name, w, h, opts); this.fn = fn; }
   body(o) { return this.fn(o); }
 }
 // the colours of a style go to the art as they are
-class WallDeco extends Item {
+export class WallDeco extends Item {
   artState(st) { const { id: _i, name: _n, sw: _s, ...art } = st; return art; }
 }
 
