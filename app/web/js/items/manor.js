@@ -51,7 +51,7 @@ wall(ManorWall, { type: "manorwall", name: "Mur de manoir", price: 320, art: "is
   desc: "Boiseries sombres en bas, papier damassé déchiré en haut, une corniche, une toile d'araignée dans le coin : aligne-les pour un couloir de manoir." });
 // the creaking door: it swings open when someone comes near (the chief, a dev of the room), and closes behind them
 const doorOpen = new WeakMap();
-const near = (it, x, y) => { const [x0, y0, x1, y1] = hub.footOf(it); return Math.hypot((x0 + x1) / 2 - x, (y0 + y1) / 2 - y) < 22; };
+const near = (it, x, y) => { const [x0, y0, x1, y1] = hub.footOf(it); return Math.hypot((x0 + x1) / 2 - x, (y0 + y1) / 2 - y) < 34; };  // wide: open before he reaches it
 const someoneNear = it => {
   const r = it.room;
   return (chief.room === r && near(it, r === "office" ? chief.x : chief.lx, r === "office" ? chief.y : chief.ly))
@@ -59,7 +59,7 @@ const someoneNear = it => {
 };
 class CreakyDoor extends Colored {
   isoState(it, t) {
-    const was = doorOpen.get(it) || 0, want = someoneNear(it) ? 1 : 0, o = was + (want - was) * 0.08;
+    const was = doorOpen.get(it) || 0, want = someoneNear(it) ? 1 : 0, o = was + (want - was) * 0.14;
     if (want && was < 0.02 && !still()) sfx("door");  // the creak
     doorOpen.set(it, o);
     return { ...super.isoState(it, t), open: still() ? want : o };
@@ -72,7 +72,7 @@ class PortraitWall extends ManorWall {
   isoState(it, t) {
     const [x0, y0, x1, y1] = hub.footOf(it), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, here = chief.room === it.room;
     const x = it.room === "office" ? chief.x : chief.lx, y = it.room === "office" ? chief.y : chief.ly;
-    const look = here ? Math.max(-1, Math.min(1, Math.round(((x - cx) - (y - cy)) / 30))) : 0;
+    const look = here ? Math.max(-1, Math.min(1, Math.round(((x - cx) - (y - cy)) / 30))) * (it.rot % 2 ? -1 : 1) : 0;  // on screen; a turned wall is drawn mirrored
     return { ...super.isoState(it, t), look, lit: hub.nightLevel?.() > 0 };
   }
 }
@@ -206,7 +206,7 @@ new class extends Gadget {
     const list = haunted();
     if (!list.length) { say(CHIEF_NAME, "Le bocal est vide : aucun agent bloqué. Pour l'instant… 👻", 3500); sfx("commit"); return; }
     toast("BOCAL 👻", `${list.length} âme${list.length > 1 ? "s" : ""} en peine`, list.slice(0, 4).map(a => `${a.status === "blocked" ? "⛔ bloqué" : "🌀 tourne en rond"} : ${who(a)}`).join(" · "));
-    say(CHIEF_NAME, `Ouuuh… ${list.length} agent${list.length > 1 ? "s" : ""} hante${list.length > 1 ? "nt" : ""} le manoir. Il faut les délivrer ! 👻`, 4000); sfx("fail");
+    say(CHIEF_NAME, `Ouuuh… ${list.length} agent${list.length > 1 ? "s" : ""} hante${list.length > 1 ? "nt" : ""} le manoir. Il faut ${list.length > 1 ? "les" : "le"} délivrer ! 👻`, 4000); sfx("fail");
   }]] }));
 // the grandfather clock: the real time; it strikes the CI's state of the agents' MRs (agents/ticket.js pipeOf)
 new class extends Gadget {
@@ -217,7 +217,7 @@ new class extends Gadget {
   actions: [["strike", "🕰️", "Sonner les coups", () => {
     const h = clockNow().getHours() % 12 || 12, pipes = Object.values(hub.data?.pipelines || {}).filter(p => p && p.state !== "merged");
     const red = pipes.filter(p => p.ci === "failed").length, run = pipes.filter(p => p.ci === "running" || p.ci === "pending").length, green = pipes.filter(p => p.ci === "success").length;
-    say(CHIEF_NAME, `${"DONG… ".repeat(Math.min(h, 4)).trim()}${h > 4 ? ` (×${h})` : ""} 🕰️`, 3000); sfx("commit");
+    say(CHIEF_NAME, `${"DONG… ".repeat(Math.min(h, 3))}${h > 3 ? `(${h} coups) ` : ""}🕰️`, 3000); sfx("commit");
     setTimeout(() => say(CHIEF_NAME, pipes.length ? `Les CI : ${red} rouge${red > 1 ? "s" : ""}, ${run} en cours, ${green} verte${green > 1 ? "s" : ""}.${red ? " Les morts se réveillent… 💀" : " Tout est calme. 🌙"}` : "Aucune CI à sonner : pas de MR ouverte. 🌙", 4500), 2400);
   }]] }));
 // the coffin: a nap, the lid closed (the best rest of the manor)
@@ -234,7 +234,7 @@ new class extends Gadget {
 // the bats: asleep upside down under their beam; they take off during the security alarm (agents/events2.js), or when
 // woken up
 new class extends Gadget {
-  isoState(it, t) { const al = hub.alarm, fly = (al && performance.now() < al.until) || now() < (it.flyUntil || 0); return { w: hub.styleOf(it).w, fly, frame: still() ? 0 : anim(t, 140) % 16 }; }
+  isoState(it, t) { const al = hub.alarm, fly = (al && performance.now() < al.until) || now() < (it.flyUntil || 0); return { w: hub.styleOf(it).w, fly, frame: still() ? 0 : fly ? anim(t, 140) % 16 : anim(t, 700) % 4 }; }
 }(manor({ type: "batroost", cat: "deco", name: "Poutre aux chauves-souris", price: 850, w: 16, d: 6, rots: 2, art: "isobatroost",
   desc: "Une vieille poutre sur deux poteaux, cinq chauves-souris qui dorment la tête en bas. Pendant l'alarme sécurité, elles s'envolent en tourbillon. Clic : les réveiller.",
   styles: DARKWOOD,

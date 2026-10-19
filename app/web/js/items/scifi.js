@@ -44,7 +44,7 @@ hull({ type: "hullport", name: "Cloison à hublot", price: 600, art: "isohullpor
   desc: "Un hublot rond sur les étoiles et une planète à anneaux ; les étoiles scintillent." });
 // the sliding door: it opens when someone comes near (the chief, a dev of the room), and closes behind them
 const doorOpen = new WeakMap();
-const near = (it, x, y) => { const [x0, y0, x1, y1] = hub.footOf(it); return Math.hypot((x0 + x1) / 2 - x, (y0 + y1) / 2 - y) < 22; };
+const near = (it, x, y) => { const [x0, y0, x1, y1] = hub.footOf(it); return Math.hypot((x0 + x1) / 2 - x, (y0 + y1) / 2 - y) < 34; };  // wide: open before he reaches it
 class SlidingDoor extends Hull {
   isoState(it, t) {
     const r = it.room, someone = (chief.room === r && near(it, r === "office" ? chief.x : chief.lx, r === "office" ? chief.y : chief.ly))

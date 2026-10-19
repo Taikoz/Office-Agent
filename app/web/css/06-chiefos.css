@@ -206,9 +206,9 @@
   #chiefos.grimoire .ubok { --ub-orange: #5a1e2a; }  /* 07-gitlab.css paints it var(--ub-orange) !important */
   #chiefos.grimoire .bpapp small { color: #d9cfb8; }
   /* both themes: the skill map's heat cells keep their own colours (10-apps.css); HOLO's main buttons on a deep cyan */
-  #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell { background: color-mix(in srgb, #19b6ee calc(var(--k, .5) * 100%), #2a3442); color: #fff; border: 0; border-radius: 5px; box-shadow: none; }
-  #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell.lo { color: #cfe6f2; } #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell.hi { color: #081746; }
-  #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell.best { box-shadow: inset 0 0 0 2px #fbaa08; }
+  #chiefos:is(.holo, .grimoire, .crypte, .galion, .zen, .tropic) .osapp .kmcell { background: color-mix(in srgb, #19b6ee calc(var(--k, .5) * 100%), #2a3442); color: #fff; border: 0; border-radius: 5px; box-shadow: none; }
+  #chiefos:is(.holo, .grimoire, .crypte, .galion, .zen, .tropic) .osapp .kmcell.lo { color: #cfe6f2; } #chiefos:is(.holo, .grimoire, .crypte, .galion, .zen, .tropic) .osapp .kmcell.hi { color: #081746; }
+  #chiefos:is(.holo, .grimoire, .crypte, .galion, .zen, .tropic) .osapp .kmcell.best { box-shadow: inset 0 0 0 2px #fbaa08; }
   #chiefos.holo .ubok { --ub-orange: #00788a; }
   /* ChiefOS CRYPTE: a haunted manor (chiefos.js osSkin): black velvet, gothic arches for the windows, tombstones for the
      icons, candle wax and blood red, bone-white text; dark like HOLO, the apps keep their layout through the variables */
@@ -245,3 +245,94 @@
   #chiefos.crypte .hoboot b { font-size: 28px; letter-spacing: .1em; color: var(--wax); text-shadow: 0 0 16px #ff9a3b88; }
   #chiefos.crypte .hoboot span { color: #c0303a; letter-spacing: .5em; }
   #chiefos.crypte .hoboot em { background: linear-gradient(90deg, transparent, #8f1f2a, #c0303a, #8f1f2a, transparent); box-shadow: 0 0 10px #c0303a; }
+  /* ChiefOS GALION: a pirate ship (chiefos.js osSkin): dark deck planks, brass and rope, portholes for the icons, a
+     treasure-map parchment for the headings; dark like CRYPTE, the apps keep their layout through the variables */
+  #chiefos.galion { --ub-orange: #c9a040; --ub-bg: #1e140cf2; --ub-head: #2a1c10; --ub-card: #ffffff0c; --ub-line: #c9a04040; --ub-text: #f0e6d0; --ub-dim: #b8a888; --brass: #e2c06a; --rope: #c9a46a;
+    font-family: "Pirata One", "IM Fell English", Georgia, serif; font-size: 14px; border-radius: 6px; box-shadow: 0 0 0 2px #5a3a20, 0 0 0 5px #1a0f08, 0 0 0 6px #c9a04066, 0 24px 70px #000e;
+    background: repeating-linear-gradient(0deg, #2a1c10 0 22px, #1c1208 22px 23px, #32220f 23px 45px, #1c1208 45px 46px), linear-gradient(180deg, #2a1c10, #120a04); }
+  #chiefos.galion::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5; background: radial-gradient(120% 80% at 50% 50%, transparent 62%, #0008 100%); }
+  #chiefos.galion .ubtop { color: var(--ub-text); background: linear-gradient(180deg, #3a2614, #1a0f08); border-bottom: 3px double var(--rope); letter-spacing: .06em; text-shadow: 0 1px 0 #000; }
+  #chiefos.galion .ubact { color: var(--brass); border: 1px solid #c9a04066; border-radius: 999px; } #chiefos.galion .ubact:hover, #chiefos.galion .ubact.on { background: #c9a04026; }
+  #chiefos.galion .ubtitle { color: var(--brass); } #chiefos.galion .ubclock { color: #d8e8f0; } #chiefos.galion .ubsys button { color: var(--ub-text); }
+  #chiefos.galion .ubdock { background: linear-gradient(90deg, #120a04, #2a1c10); border-right: 3px double var(--rope); border-radius: 0; }
+  #chiefos.galion .ubdock button .ic, #chiefos.galion .ubgrid .ic, #chiefos.galion .ubappic { border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--tint) 45%, #8fd0ff), color-mix(in srgb, var(--tint) 30%, #1a4a6a)); box-shadow: inset 0 0 0 2px #e2c06a, inset 0 0 0 3px #8a6a28, 0 3px 6px #000a; }
+  #chiefos.galion .ubdock button:hover .ic { box-shadow: inset 0 0 0 2px #fff0b0, inset 0 0 0 3px #8a6a28, 0 0 12px #e2c06a88; }
+  #chiefos.galion .ubdock button.on::before { background: var(--brass); box-shadow: 0 0 8px var(--brass); }
+  #chiefos.galion .ubdock .ubshow { color: var(--brass); } #chiefos.galion .osbadge { background: #b8302a; box-shadow: 0 0 6px #b8302a; }
+  #chiefos.galion .ubwin { border-radius: 8px; background: var(--ub-bg); border: 3px double var(--rope); box-shadow: 0 0 0 1px #1a0f08, 0 16px 40px #000c; overflow: hidden; }
+  #chiefos.galion .ubhead { background: linear-gradient(180deg, #4a3018, var(--ub-head)); border-bottom: 1px solid #c9a04077; }
+  #chiefos.galion .ubhead b { color: var(--brass); letter-spacing: .1em; text-transform: uppercase; font-size: 13.5px; }
+  #chiefos.galion .ubhead b::before { content: "⚓ "; } #chiefos.galion .ubhead b::after { content: " ⚓"; }
+  #chiefos.galion .ubctl button { background: transparent; color: var(--ub-text); border: 1px solid #c9a04066; border-radius: 50%; } #chiefos.galion .ubctl .x:hover { background: #b8302a; border-color: #b8302a; }
+  #chiefos.galion .osapp { scrollbar-color: #5a3a20 transparent; }
+  #chiefos.galion .osapp h4 { color: #3a2410; background: linear-gradient(90deg, #e8d4a0, #d9c08a 70%, transparent); padding: 2px 8px; border-radius: 2px; letter-spacing: .12em; }
+  #chiefos.galion .osapp h4::before { content: "✕ "; color: #b8302a; }
+  #chiefos.galion .osrow { background: linear-gradient(90deg, #c9a04012, var(--ub-card) 40%); border-bottom: 1px dashed #c9a46a33; }
+  #chiefos.galion .osapp button, #chiefos.galion .ubmenu button { color: var(--ub-text); background: #ffffff0d; border: 1px solid #c9a04055; border-radius: 4px; }
+  #chiefos.galion .osapp button:hover { background: #c9a04026; border-color: #e2c06a; } #chiefos.galion .osapp button.on, #chiefos.galion .osapp .ubok { background: #1f6a8a; border-color: #e2c06a; color: #fff8e8; }
+  #chiefos.galion .ubok { --ub-orange: #1f6a8a; }
+  #chiefos.galion input, #chiefos.galion select, #chiefos.galion textarea { background: #120a04cc !important; color: var(--ub-text) !important; border: 1px solid #6a4a28 !important; border-radius: 3px !important; }
+  #chiefos.galion a { color: #8fd0ff; } #chiefos.galion code { color: var(--brass); background: #ffffff10; }
+  #chiefos.galion .ubmenu { background: #1e140cf8; border: 3px double var(--rope); } #chiefos.galion .ubsearch { background: #120a04 !important; }
+  #chiefos.galion .s-blocked, #chiefos.galion .pit { color: #ff8a7a; } #chiefos.galion .s-done, #chiefos.galion .ci-success { color: #8fe0a0; } #chiefos.galion .ci-running { color: #f0c860; }
+  #chiefos.galion .hoboot { background: radial-gradient(circle at 50% 40%, #1f4a6a, #06121c); color: #e8d4a0; }
+  #chiefos.galion .hoboot b { font-size: 28px; letter-spacing: .08em; color: var(--brass); text-shadow: 0 2px 0 #000, 0 0 16px #e2c06a66; }
+  #chiefos.galion .hoboot span { color: #f0e6d0; letter-spacing: .5em; }
+  #chiefos.galion .hoboot em { background: linear-gradient(90deg, transparent, #8a6a28, #e2c06a, #8a6a28, transparent); box-shadow: 0 0 10px #e2c06a; }
+  /* ChiefOS ZEN: a Japanese house (chiefos.js osSkin): rice paper in a dark wood lattice, sumi ink, red hanko seals for
+     the icons, a bamboo dock, headings brushed in ink; light like Ubuntu, the apps keep their layout through the variables */
+  #chiefos.zen { --ub-orange: #c0303a; --ub-bg: #f6f1e4f5; --ub-head: #ece4d0; --ub-card: #ffffffaa; --ub-line: #3a2a1e30; --ub-text: #1c1c22; --ub-dim: #6a5a4a; --sumi: #1c1c22; --shu: #c0303a;
+    font-family: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif; font-size: 14px; border-radius: 2px; box-shadow: 0 0 0 3px #3a2a1e, 0 0 0 5px #1c1410, 0 24px 70px #000c;
+    background: linear-gradient(90deg, #3a2a1e 0 2px, transparent 2px) 0 0 / 60px 100%, linear-gradient(0deg, #3a2a1e 0 2px, transparent 2px) 0 0 / 100% 80px, #efe8d6; }
+  #chiefos.zen .ubtop { color: var(--sumi); background: #3a2a1e; color: #f4efe0; border-bottom: 2px solid var(--shu); letter-spacing: .1em; }
+  #chiefos.zen .ubact { color: #f4efe0; border: 1px solid #f4efe066; border-radius: 0; } #chiefos.zen .ubact:hover, #chiefos.zen .ubact.on { background: var(--shu); border-color: var(--shu); }
+  #chiefos.zen .ubtitle, #chiefos.zen .ubclock, #chiefos.zen .ubsys button { color: #f4efe0; }
+  #chiefos.zen .ubdock { background: repeating-linear-gradient(0deg, #8a9a4a 0 38px, #6a7a3a 38px 41px), #8a9a4a; border-right: 2px solid #3a2a1e; border-radius: 0; }
+  #chiefos.zen .ubdock button .ic, #chiefos.zen .ubgrid .ic, #chiefos.zen .ubappic { border-radius: 4px; background: color-mix(in srgb, var(--tint) 18%, #c0303a); box-shadow: inset 0 0 0 2px #f4efe0aa, 0 2px 0 #7a1a20, 0 3px 6px #0005; filter: saturate(.9); }
+  #chiefos.zen .ubdock button:hover .ic { transform: rotate(-4deg); }
+  #chiefos.zen .ubdock button.on::before { background: #f4efe0; } #chiefos.zen .ubdock .ubshow { color: #1c1c22; } #chiefos.zen .osbadge { background: var(--sumi); }
+  #chiefos.zen .ubwin { border-radius: 0; background: var(--ub-bg); border: 3px solid #3a2a1e; box-shadow: 0 0 0 1px #c9b890, 0 16px 40px #0006; overflow: hidden; }
+  #chiefos.zen .ubhead { background: var(--ub-head); border-bottom: 1px solid #3a2a1e55; }
+  #chiefos.zen .ubhead b { color: var(--sumi); letter-spacing: .14em; font-size: 14px; } #chiefos.zen .ubhead b::after { content: " ●"; color: var(--shu); font-size: 10px; vertical-align: middle; }
+  #chiefos.zen .ubctl button { background: transparent; color: var(--sumi); border: 1px solid #3a2a1e55; border-radius: 0; } #chiefos.zen .ubctl .x:hover { background: var(--shu); color: #fff; border-color: var(--shu); }
+  #chiefos.zen .osapp h4 { color: var(--sumi); border-bottom: 2px solid var(--sumi); border-image: linear-gradient(90deg, var(--sumi), #1c1c2200) 1; padding-bottom: 2px; letter-spacing: .16em; }
+  #chiefos.zen .osapp h4::before { content: "■ "; color: var(--shu); }
+  #chiefos.zen .osrow { background: var(--ub-card); border-bottom: 1px solid #3a2a1e18; }
+  #chiefos.zen .osapp button, #chiefos.zen .ubmenu button { color: var(--sumi); background: #fffdf6; border: 1px solid #3a2a1e66; border-radius: 0; }
+  #chiefos.zen .osapp button:hover { background: #f4e8d0; } #chiefos.zen .osapp button.on, #chiefos.zen .osapp .ubok { background: var(--shu); border-color: #7a1a20; color: #fff; }
+  #chiefos.zen input, #chiefos.zen select, #chiefos.zen textarea { background: #fffdf6 !important; color: var(--sumi) !important; border: 1px solid #3a2a1e66 !important; border-radius: 0 !important; }
+  #chiefos.zen a { color: #22336a; } #chiefos.zen code { color: var(--shu); background: #3a2a1e10; }
+  #chiefos.zen .ubmenu { background: #f6f1e4fa; border: 2px solid #3a2a1e; }
+  #chiefos.zen .hoboot { background: radial-gradient(circle at 50% 40%, #f6f1e4, #d8ccb0); color: var(--sumi); }
+  #chiefos.zen .hoboot b { font-size: 30px; letter-spacing: .12em; color: var(--sumi); }
+  #chiefos.zen .hoboot span { color: var(--shu); letter-spacing: .5em; }
+  #chiefos.zen .hoboot em { background: linear-gradient(90deg, transparent, var(--sumi), transparent); }
+  /* ChiefOS TROPIC: a beach club (chiefos.js osSkin): a sunset sky over a turquoise sea, white sand windows with rounded
+     corners, icons as round floats, a palm-green dock, coral buttons; light, the apps keep their layout through the variables */
+  #chiefos.tropic { --ub-orange: #ff6a5a; --ub-bg: #fffaf0; --ub-head: #fff1dc; --ub-card: #ffffffcc; --ub-line: #3ab8d840; --ub-text: #1e3a4a; --ub-dim: #5a7a8a; --coral: #ff6a5a; --turq: #1aa8c8;
+    font-family: "Trebuchet MS", "Avenir Next", system-ui, sans-serif; font-size: 14px; border-radius: 18px; box-shadow: 0 0 0 3px #fff6e0, 0 0 0 5px #3ab8d8, 0 24px 70px #0007;
+    background: linear-gradient(180deg, #ff9a6a 0%, #ffc070 30%, #ffe6a8 46%, #3ab8d8 47%, #1a8ab8 70%, #f0dca8 71%, #e8d0a0 100%); }
+  #chiefos.tropic .ubtop { color: #fff; background: linear-gradient(90deg, #ff6a5a, #ff9a4a); border-bottom: 0; text-shadow: 0 1px 0 #0003; }
+  #chiefos.tropic .ubact { color: #fff; border: 1px solid #ffffff99; border-radius: 999px; } #chiefos.tropic .ubact:hover, #chiefos.tropic .ubact.on { background: #ffffff33; }
+  #chiefos.tropic .ubtitle, #chiefos.tropic .ubclock, #chiefos.tropic .ubsys button { color: #fff; }
+  #chiefos.tropic .ubdock { background: linear-gradient(180deg, #2f8a5a, #1f6a4a); border-radius: 0 18px 18px 0; border-right: 0; }
+  #chiefos.tropic .ubdock button .ic, #chiefos.tropic .ubgrid .ic, #chiefos.tropic .ubappic { border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--tint) 40%, #ffffff) 0 30%, transparent 31%), repeating-conic-gradient(#ff6a5a 0 45deg, #ffffff 45deg 90deg); box-shadow: 0 2px 4px #0004; }
+  #chiefos.tropic .ubdock button:hover .ic { transform: rotate(20deg); }
+  #chiefos.tropic .ubdock button.on::before { background: #ffe08a; } #chiefos.tropic .ubdock .ubshow { color: #fff; } #chiefos.tropic .osbadge { background: var(--coral); }
+  #chiefos.tropic .ubwin { border-radius: 16px; background: var(--ub-bg); border: 0; box-shadow: 0 0 0 2px #fff, 0 16px 40px #0004; overflow: hidden; }
+  #chiefos.tropic .ubhead { background: linear-gradient(90deg, #3ab8d8, #5ad0c8); border-bottom: 0; }
+  #chiefos.tropic .ubhead b { color: #fff; letter-spacing: .06em; text-shadow: 0 1px 2px #0006; } #chiefos.tropic .ubhead b::before { content: "🌴 "; }
+  #chiefos.tropic .ubctl button { background: #ffffff33; color: #fff; border: 0; border-radius: 50%; } #chiefos.tropic .ubctl .x:hover { background: var(--coral); }
+  #chiefos.tropic .osapp h4 { color: var(--turq); letter-spacing: .1em; border-bottom: 2px dotted #ffb07a; padding-bottom: 2px; } #chiefos.tropic .osapp h4::before { content: "☀ "; color: #ff9a4a; }
+  #chiefos.tropic .osrow { background: var(--ub-card); border-bottom: 1px solid #3ab8d822; border-radius: 8px; }
+  #chiefos.tropic .osapp button, #chiefos.tropic .ubmenu button { color: var(--ub-text); background: #fff; border: 1px solid #3ab8d866; border-radius: 999px; }
+  #chiefos.tropic .osapp button:hover { background: #e8f8fc; } #chiefos.tropic .osapp button.on, #chiefos.tropic .osapp .ubok { background: var(--coral); border-color: var(--coral); color: #fff; }
+  #chiefos.tropic .ubok { --ub-orange: #ff6a5a; }
+  #chiefos.tropic input, #chiefos.tropic select, #chiefos.tropic textarea { background: #fff !important; color: var(--ub-text) !important; border: 1px solid #3ab8d866 !important; border-radius: 10px !important; }
+  #chiefos.tropic a { color: #1a8ab8; } #chiefos.tropic code { color: #c0402a; background: #ff6a5a14; }
+  #chiefos.tropic .ubmenu { background: #fffaf0fa; border: 2px solid #3ab8d8; border-radius: 14px; }
+  #chiefos.tropic .hoboot { background: linear-gradient(180deg, #ff7a5a, #ffc070 55%, #3ab8d8 56%, #1a8ab8); color: #fff; }
+  #chiefos.tropic .hoboot b { font-size: 30px; letter-spacing: .06em; text-shadow: 0 2px 0 #0003; }
+  #chiefos.tropic .hoboot span { letter-spacing: .5em; }
+  #chiefos.tropic .hoboot em { background: linear-gradient(90deg, transparent, #fff, transparent); }

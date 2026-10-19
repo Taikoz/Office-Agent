@@ -14,9 +14,13 @@ import { OsApp } from "../apps/base.js";
 // his desk: the classic one or the holographic command post (items/scifi.js), whichever is in the office
 const chiefDesk = () => furni.items.find(i => i.room === "office" && hub.defOf(i.type)?.chiefDesk) || furni.items.find(i => hub.defOf(i.type)?.chiefDesk);
 // the look of ChiefOS: Ubuntu, HOLO (futuristic: neon glass, a hexagon dock) or GRIMOIRE (a spell book: leather, gold,
-// parchment pages, wax seals) or CRYPTE (a haunted manor: black velvet, gothic arches, candle wax, blood red); auto: the one of the chief's desk (its def's osSkin), Ubuntu otherwise
+// parchment pages, wax seals), CRYPTE (a haunted manor: black velvet, gothic arches, candle wax, blood red) GALION (a
+// pirate ship: deck wood, brass, rope, a treasure map) ZEN (a Japanese house: rice paper, ink, red seals) or TROPIC (a
+// beach club: a sunset, sand, turquoise, palms); auto: the one of the chief's desk (its def's osSkin), Ubuntu otherwise
 export const OS_SKINS = [["ubuntu", "Ubuntu", "le bureau classique"], ["holo", "HOLO", "futuriste : verre, néon, hexagones"], ["grimoire", "Grimoire", "un livre de sorts : cuir, dorures, parchemin"],
-  ["crypte", "Crypte", "un manoir hanté : velours noir, ogives, cire de bougie, rouge sang"]];
+  ["crypte", "Crypte", "un manoir hanté : velours noir, ogives, cire de bougie, rouge sang"], ["galion", "Galion", "un navire pirate : bois de pont, laiton, cordage, carte au trésor"],
+  ["zen", "Zen", "une maison japonaise : papier de riz, encre, sceaux rouges, bambou"],
+  ["tropic", "Tropical", "un beach club : coucher de soleil, sable, turquoise, palmiers"]];
 let skinBook = new SaveSlot("office-osskin", { skin: "auto" }).data;
 export const osSkin = () => skinBook.skin === "auto" ? hub.defOf(chiefDesk()?.type)?.osSkin || "ubuntu" : skinBook.skin;
 export function setOsSkin(skin) { skinBook.skin = skin; SaveSlot.get("office-osskin").save(skinBook); bootUntil = osSkin() !== "ubuntu" ? performance.now() + 1400 : 0; renderChiefOs(); }
@@ -24,6 +28,9 @@ let bootUntil = 0;
 const BOOT = {
   holo: { title: "CHIEFOS // NEXUS", lines: ["NOYAU QUANTIQUE ........ OK", "LIAISON AGENTS ......... OK", "FLUX GITLAB ............ OK", "MÉMOIRE MMX ............ OK", "INTERFACE HOLOGRAPHIQUE  OK"] },
   grimoire: { title: "Le Grimoire du Chef", lines: ["Les chandelles s'allument…", "Les hiboux sont à leur poste…", "Les portraits se réveillent…", "L'encre des parchemins est fraîche…", "Le grimoire s'ouvre. ✦"] },
+  tropic: { title: "ChiefOS Beach Club", lines: ["On déplie les transats…", "Le DJ lance son set…", "Le maître-nageur compte les agents…", "Les cocktails sont frappés…", "Aloha ! 🌺"] },
+  zen: { title: "禅 ChiefOS", lines: ["On fait glisser les shōji…", "L'encre est broyée…", "Les daruma ouvrent un œil…", "Le gravier est ratissé…", "Bienvenue. お帰りなさい。"] },
+  galion: { title: "Le Galion du Chef", lines: ["On hisse le pavillon noir…", "Les canons sont chargés…", "La vigie compte les agents…", "Le perroquet récite les tickets…", "Larguez les amarres ! ⚓"] },
   crypte: { title: "Le Manoir s'éveille", lines: ["Les chandelles vacillent…", "Les portraits ouvrent les yeux…", "Les fantômes font l'appel des agents…", "L'horloge sonne minuit…", "Bienvenue au manoir. 🦇"] },
 };
 
@@ -80,8 +87,8 @@ export function dockSettingsHtml() {
 export function renderChiefOs() {
   if (osBox.hidden) return;
   const now = clockNow(), app = curApp(), { icon, label } = app;
-  const skin = osSkin(), holo = skin === "holo", book = skin === "grimoire", crypt = skin === "crypte";
-  for (const k of ["holo", "grimoire", "crypte"]) osBox.classList.toggle(k, skin === k);
+  const skin = osSkin(), holo = skin === "holo", book = skin === "grimoire", crypt = skin === "crypte", ship = skin === "galion", zen = skin === "zen", trop = skin === "tropic";
+  for (const k of ["holo", "grimoire", "crypte", "galion", "zen", "tropic"]) osBox.classList.toggle(k, skin === k);
   const day = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }), time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const pinned = dockApps(), running = !osOverview && !pinned.includes(osApp) ? osApp : null;  // the open app shows up while it runs, like Ubuntu
   const dock = pinned.map(id => dockIcon(id)).join("") + (running ? `<span class="ubrun"></span>${dockIcon(running, " running")}` : "");
@@ -93,9 +100,9 @@ export function renderChiefOs() {
     : `<section class="ubwin"><div class="ubhead"><span class="ubappic" style="--tint:${app.tint}">${icon}</span><b>${esc(label)}</b>
         <span class="ubctl"><button data-os="overview" title="Réduire">–</button><button data-os="max" title="Agrandir">▢</button><button class="x" data-os="close" title="Fermer (Échap)">×</button></span></div>
         <div class="osapp">${app.render()}</div></section>`;
-  const boot = BOOT[skin] && performance.now() < bootUntil ? `<div class="hoboot"><b>${BOOT[skin].title}</b><span>${holo ? `v${now.getFullYear() - 2000}.${now.getMonth() + 1}` : crypt ? "🕯 🦇 🕯" : "✦ ✦ ✦"}</span>${BOOT[skin].lines.map((l, i) => `<i style="--d:${i * 0.22}s">${l}</i>`).join("")}<em></em></div>` : "";
-  osBox.innerHTML = `${boot}<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">${holo ? "◈ MODULES" : book ? "✦ Sortilèges" : crypt ? "☾ Séances" : "Activités"}</button><span class="ubtitle">${holo ? `▸ ${esc(label).toUpperCase()}` : book ? `📜 ${esc(label)}` : crypt ? `🕯️ ${esc(label)}` : `${icon} ${esc(label)}`}</span>
-      <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : book ? `${esc(now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))} · ${time.replace(":", " h ")}` : crypt ? `☾ ${esc(day)} · ${time}${now.getHours() === 0 ? " · minuit…" : ""}` : `${esc(day)}  ${time}`}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
+  const boot = BOOT[skin] && performance.now() < bootUntil ? `<div class="hoboot"><b>${BOOT[skin].title}</b><span>${holo ? `v${now.getFullYear() - 2000}.${now.getMonth() + 1}` : crypt ? "🕯 🦇 🕯" : ship ? "⚓ 🏴‍☠️ ⚓" : zen ? "⛩ 🌸 ⛩" : trop ? "🌴 ☀️ 🌴" : "✦ ✦ ✦"}</span>${BOOT[skin].lines.map((l, i) => `<i style="--d:${i * 0.22}s">${l}</i>`).join("")}<em></em></div>` : "";
+  osBox.innerHTML = `${boot}<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">${holo ? "◈ MODULES" : book ? "✦ Sortilèges" : crypt ? "☾ Séances" : ship ? "⚓ Cap" : zen ? "⛩ Chemins" : trop ? "🌴 Spots" : "Activités"}</button><span class="ubtitle">${holo ? `▸ ${esc(label).toUpperCase()}` : book ? `📜 ${esc(label)}` : crypt ? `🕯️ ${esc(label)}` : ship ? `🗺️ ${esc(label)}` : zen ? `🎴 ${esc(label)}` : trop ? `🌺 ${esc(label)}` : `${icon} ${esc(label)}`}</span>
+      <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : book ? `${esc(now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))} · ${time.replace(":", " h ")}` : crypt ? `☾ ${esc(day)} · ${time}${now.getHours() === 0 ? " · minuit…" : ""}` : ship ? `⚓ ${esc(day)} · ${time} · cap au ${["N", "NE", "E", "SE", "S", "SO", "O", "NO"][now.getHours() % 8]}` : zen ? `${esc(day)} · ${time} · ${["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][Math.floor(((now.getHours() + 1) % 24) / 2)]}の刻` : trop ? `☀️ ${esc(day)} · ${time}${now.getHours() >= 18 ? " · happy hour 🍹" : ""}` : `${esc(day)}  ${time}`}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
     <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}</div>${menuHtml()}`;
   if (osOverview) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   else app.mount();

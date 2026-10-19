@@ -14,12 +14,16 @@ function grid(room) {
   let g = grids.get(room);
   if (g?.sig === sig) return g;
   const cols = Math.ceil(R.w / CELL), rows = Math.ceil((R.h - 70) / CELL), block = new Uint8Array(cols * rows);
-  const mark = (x0, y0, x1, y1) => {
+  // the cells a footprint covers (with a margin), marked in the array m
+  const mark = (m, x0, y0, x1, y1) => {
     for (let cy = Math.max(0, Math.floor((y0 - 70 - 2) / CELL)); cy <= Math.min(rows - 1, Math.floor((y1 - 70 + 1) / CELL)); cy++)
-      for (let cx = Math.max(0, Math.floor((x0 - 2) / CELL)); cx <= Math.min(cols - 1, Math.floor((x1 + 1) / CELL)); cx++) block[cy * cols + cx] = 1;
+      for (let cx = Math.max(0, Math.floor((x0 - 2) / CELL)); cx <= Math.min(cols - 1, Math.floor((x1 + 1) / CELL)); cx++) m[cy * cols + cx] = 1;
+    return m;
   };
-  for (const it of items) mark(...footOf(it));
-  g = { sig, cols, rows, block };
+  for (const it of items) mark(block, ...footOf(it));
+  // the cells of the pieces standing on a point (someone seated on a throne): walkable to get out of them, or into them
+  const under = (x, y) => items.reduce((m, it) => { const [x0, y0, x1, y1] = footOf(it); return x > x0 && x < x1 && y > y0 && y < y1 ? mark(m, x0, y0, x1, y1) : m; }, new Uint8Array(cols * rows));
+  g = { sig, cols, rows, block, under };
   grids.set(room, g);
   return g;
 }
@@ -50,11 +54,19 @@ export function route(room, a, b) {
   const cost = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), open = [];
   const start = sy * g.cols + sx, goal = ty * g.cols + tx, h = i => Math.hypot(i % g.cols - tx, Math.floor(i / g.cols) - ty);
   cost[start] = 0; open.push([h(start), start]);
-  const ok = i => i === goal || i === start || !g.block[i];
+  // the start and the goal may stand inside a footprint (seated on a throne, the seat of a sofa): the cells of that piece
+  // are walkable, to get out of it or into it (only that piece: a wall next to it stays a wall)
+  const inStart = g.under(a.x, a.y), inGoal = g.under(b.x, b.y);
+  const ok = i => i === goal || i === start || !g.block[i] || inStart[i] || inGoal[i];
+  // each cell expanded once (closed): a partition across the room makes A* visit most of it, and the stale entries of
+  // the open list no longer eat the guard (which used to give up and walk straight through the wall)
+  const closed = new Uint8Array(N);
   let found = false, guard = 0;
-  while (open.length && guard++ < 6000) {
+  while (open.length && guard++ < N * 8) {
     let k = 0; for (let j = 1; j < open.length; j++) if (open[j][0] < open[k][0]) k = j;
     const [, i] = open.splice(k, 1)[0];
+    if (closed[i]) continue;
+    closed[i] = 1;
     if (i === goal) { found = true; break; }
     const cx = i % g.cols, cy = Math.floor(i / g.cols);
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
