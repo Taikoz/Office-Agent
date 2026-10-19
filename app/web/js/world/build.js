@@ -148,7 +148,9 @@ function chiefToPc(slot) {
   if (hub.chiefBusyNow()) return say(CHIEF_NAME, "Pas maintenant, l'équipe a besoin de moi !");
   if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }
+let started = false;
 function stepBuild(t) {
+  if (!started) { started = true; starterKit(); }
   syncKitchen();
   if (chief.pendingOffice && chief.room === "office") { const fn = chief.pendingOffice; chief.pendingOffice = null; fn(); }
   if (chief.at === "pc" && !chief.path.length && (t > chief.pcUntil || hub.chiefBusyNow())) chiefGo("podium");
@@ -346,6 +348,30 @@ function autoPlace(type, style) {
     if (sp) { placeAt(type, style, sp, room, buy.rot); return renderBuy(); }
   }
   toast("MODE ACHAT", "Pas de place libre", `${d.name} : place-le à la main ou fais de la place.`);
+}
+// a new office is not empty: a desk with its chair and a computer for a dev, and the chief's desk (ChiefOS); free,
+// each one once, when the office has none (furni.kitDev, furni.kitChief: done, kept in the save; sold later: not back)
+function starterKit() {
+  if (typeof DEMO !== "undefined" && DEMO) return;
+  const office = itemsIn("office"), hasDev = office.some(o => defOf(o.type)?.workstation), hasChief = office.some(o => o.type === "chiefdesk");
+  const wantDev = !furni.kitDev && !hasDev, wantChief = !furni.kitChief && !hasChief;
+  if (furni.kitDev && furni.kitChief) return;
+  furni.kitDev = true; furni.kitChief = true;
+  if (!wantDev && !wantChief) return saveBuild();
+  const R = roomSize("office"), placed = [];
+  const add = (type, spot) => { const d = defOf(type); if (!d) return null; const it = { uid: ++furni.seq, type, style: d.styles?.[0]?.id || null, room: "office", rot: 0, ...spot }; furni.items.push(it); placed.push(d.name); return it; };
+  const free = (type, pts) => { for (const p of pts) { const sp = defOf(type) && placement(type, p, "office", 0); if (sp) return sp; } return null; };
+  const rows = [110, 140, 170, 200];
+  const deskAt = wantDev && free("desk", rows.flatMap(y => [0.32, 0.25, 0.4, 0.18].map(k => ({ x: R.w * k, y }))));
+  if (deskAt) {
+    const desk = add("desk", deskAt), dd = defOf("desk"), cd = defOf("chairmesh"), pd = defOf("pc");
+    if (cd) add("chairmesh", { x: Math.round(desk.x + dd.seat[0] - cd.w / 2), y: Math.round(desk.y + dd.seat[1] - cd.d / 2) });  // in front: syncDesks turns it to the desk
+    const s = surfaceOf(desk); if (pd && s) add("pc", { x: s.x + (s.w - pd.w) / 2, y: s.y + (s.d - pd.d) / 2, on_: desk.uid });
+  }
+  const bossAt = wantChief && free("chiefdesk", rows.flatMap(y => [0.62, 0.7, 0.55, 0.78].map(k => ({ x: R.w * k, y }))));
+  if (bossAt) add("chiefdesk", bossAt);
+  saveBuild();
+  if (placed.length) toast("🏢 BIENVENUE", "Ton bureau est équipé", `${placed.join(", ")} : offert${placed.length > 1 ? "s" : ""}. Le reste s'achète (🛒 ACHAT).`);
 }
 // an object given by another chief (social/gifts.js): free, put on the first free spot from the middle of the room
 export function giftPlace(type, room) {
