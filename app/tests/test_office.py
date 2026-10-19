@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -14,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -143,6 +144,19 @@ class TeamTests(unittest.TestCase):
         for p in self.patches:
             p.stop()
 
+    def test_one_agent_type_per_desk(self) -> None:
+        mine = {n: Path(f"/x/{n}.md") for n in ("tech-lead", "mr-reviewer", "zeta-bot", "feature-builder")}
+        with mock.patch.object(team, "agent_files", return_value=mine):
+            roles = team.settings()["roles"]
+        self.assertEqual(roles, ["feature-builder", "mr-reviewer", "zeta-bot", "general-purpose", "Explore", "general-purpose", "general-purpose", "general-purpose"])
+        self.assertFalse(team.save_roles(["x"] * 7)[0])
+        self.assertFalse(team.save_roles(["bad name"] * 8)[0])
+        mine_roles = ["Explore"] * 7 + ["mr-reviewer"]
+        self.assertTrue(team.save_roles(mine_roles)[0])
+        self.assertEqual(team.settings()["roles"], mine_roles)
+        self.assertTrue(team.save({"chief": "Boss", "team": self.names})[0])
+        self.assertEqual(team.settings()["roles"], mine_roles)  # renaming the team keeps the roles
+
     def test_first_launch_then_save(self) -> None:
         self.assertFalse(team.settings()["setup"])
         ok, _ = team.save({"chief": "Ada", "team": self.names, "office": "Labo <b>"})
@@ -246,6 +260,7 @@ class HistoryTests(unittest.TestCase):
         home = str(Path.home()).replace("/", "-")
         self.assertEqual(history.project_name(f"{home}-repos-Office-Agent"), "Office-Agent")
         self.assertEqual(history.project_name("-tmp-x"), "tmp-x")
+        self.assertEqual(history.project_name(re.sub(r"[^A-Za-z0-9]", "-", str(Path.home())) + "-repos-Office-Agent"), "Office-Agent")
 
     def test_costs_group_by_ticket_and_project(self) -> None:
         fake = [{"ticket": "APP-1", "project": "cogito", "cost": 1.5, "first": 0, "last": 600, "status": "done", "type": "feature-builder"},
@@ -871,3 +886,233 @@ class SlackTests(unittest.TestCase):
         slack.save("xoxb-good-token-123", "C0SUPPORT1")
         self.assertEqual(slack.save("", "C0SUPPORT1")["configured"], True)  # an empty token keeps the saved one
         self.assertFalse(slack.forget()["configured"])
+
+
+class InsightTests(unittest.TestCase):
+    """ChiefOS → 💡 Idées (insights.py): shapes of commands and errors, recurring tasks / errors / corrections, no model call."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.projects = root / "projects"
+        self.patches = [mock.patch.object(config, "STATE_DIR", root / "state"), mock.patch.object(config, "PROJECTS", self.projects),
+                        mock.patch.object(insights, "list_files", return_value=[])]
+        for p in self.patches:
+            p.start()
+        insights._result = None
+
+    def tearDown(self) -> None:
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
+
+    def session(self, name: str, day: str, records: list[dict]) -> Path:
+        folder = self.projects / "-home-me-repos-demo"
+        folder.mkdir(parents=True, exist_ok=True)
+        first = {"type": "user", "timestamp": f"{day}T10:00:00Z", "message": {"role": "user", "content": "livre le ticket"}}
+        return write_transcript(folder / f"{name}.jsonl", [first, *records])
+
+    def test_command_shapes_skip_reading_and_heredocs(self) -> None:
+        cmd = "cd x && python3 -I tools/gl.py mr-create --title 'a; b' | head\npython3 - <<'PY'\ndef f():\n  return 1\nPY\nnpm run build"
+        self.assertEqual([s for s, _ in insights.command_tokens(cmd)], ["gl.py mr-create", "npm run"])
+        self.assertEqual(insights.command_tokens("ls -la; cat a | grep b"), [])
+
+    def test_error_signature_drops_paths_numbers_and_quotes(self) -> None:
+        a = insights.error_signature("Exit code 2\nError: cannot open '/home/me/a.txt' at line 12")
+        b = insights.error_signature("Exit code 2\nError: cannot open '/tmp/b.txt' at line 99")
+        self.assertEqual(a, b)
+        self.assertEqual(insights.error_signature("(eval):1: === not found"), insights.error_signature("(eval):3: ===== not found"))
+
+    def test_recurring_task_needs_three_sessions_on_three_days(self) -> None:
+        steps = lambda p: [tool_use(f"{p}1", "Bash", command="python3 tools/gl.py mr-create"), tool_result(f"{p}1"),
+                           tool_use(f"{p}2", "Bash", command="python3 yt.py command X"), tool_result(f"{p}2"),
+                           tool_use(f"{p}3", "Bash", command="python3 tools/gl.py mr-note 1"), tool_result(f"{p}3")]
+        self.session("s1", "2026-10-01", steps("a"))
+        self.session("s2", "2026-10-02", steps("b"))
+        self.assertFalse([i for i in insights.compute()["items"] if i["kind"] == "task"])
+        self.session("s3", "2026-10-03", steps("c"))
+        tasks = [i for i in insights.compute()["items"] if i["kind"] == "task"]
+        self.assertEqual(tasks[0]["steps"], ["gl.py mr-create", "yt.py command", "gl.py mr-note"])
+        self.assertEqual(tasks[0]["sessions"], 3)
+
+    def test_task_inside_a_named_skill_is_not_proposed(self) -> None:
+        for i, day in enumerate(("2026-10-01", "2026-10-02", "2026-10-03")):
+            self.session(f"s{i}", day, [tool_use(f"k{i}", "Skill", skill="deliver"), tool_result(f"k{i}"),
+                                        *[r for j, c in enumerate(("make build", "make test", "make deploy")) for r in (tool_use(f"t{i}{j}", "Bash", command=c), tool_result(f"t{i}{j}"))]])
+        self.assertFalse([i for i in insights.compute()["items"] if i["kind"] == "task"])
+
+    def test_recurring_error_with_its_fix_and_corrections(self) -> None:
+        for i, day in enumerate(("2026-10-01", "2026-10-02")):
+            recs = [tool_use(f"e{i}", "Bash", command="pytest tests/x.py"), tool_result(f"e{i}", True, f"Exit code 1\nModuleNotFoundError: No module named 'jwt{i}'"),
+                    tool_use(f"f{i}", "Bash", command="pytest -p no:cacheprovider tests/x.py"), tool_result(f"f{i}")]
+            if i == 0:
+                recs += [tool_use("e9", "Bash", command="pytest tests/y.py"), tool_result("e9", True, "Exit code 1\nModuleNotFoundError: No module named 'other'")]
+            recs += [{"type": "user", "message": {"role": "user", "content": f"non, pas ça {n}"}} for n in range(2)]
+            self.session(f"s{i}", day, recs)
+        items = insights.compute()["items"]
+        err = next(i for i in items if i["kind"] == "error")
+        self.assertEqual((err["tool"], err["count"], err["sessions"]), ("pytest", 3, 2))
+        self.assertEqual(err["fix"], "pytest -p no:cacheprovider tests/x.py")
+        self.assertEqual(next(i for i in items if i["kind"] == "corrections")["count"], 4)
+
+    def test_dismissed_items_are_hidden_and_digest_masks_secrets(self) -> None:
+        for i, day in enumerate(("2026-10-01", "2026-10-02", "2026-10-03")):
+            self.session(f"s{i}", day, [tool_use(f"e{i}", "Bash", command="curl x"), tool_result(f"e{i}", True, "Exit code 7\ncurl: (7) Failed to connect")])
+        key = insights.insights()["items"][0]["key"]
+        insights.dismiss(key)
+        self.assertFalse([i for i in insights.insights()["items"] if i["key"] == key])
+        self.assertNotIn("abc123", insights.redact("curl -H 'Authorization: Bearer abc123' -d token=abc123"))
+
+    def test_ai_texts_are_kept_per_item_and_capped(self) -> None:
+        item = {"key": "err:x|y", "kind": "error", "tool": "x", "signature": "y", "count": 3, "days": ["d"], "projects": ["p"], "samples": ["s"], "fix": ""}
+        reply = json.dumps({"err:x|y": {"cause": "c", "remedy": "r", "junk": 1}})
+        with mock.patch.object(insights.quips, "ask", return_value=(reply, "")) as ask:
+            self.assertEqual(insights.write_ai([item]), {"written": 1})
+            self.assertFalse(ask.call_args.kwargs["need_on"] is True)
+        self.assertEqual(insights.state()["ai"]["err:x|y"], {"cause": "c", "remedy": "r"})
+        raw = json.loads((config.STATE_DIR / "insights.json").read_text()); raw["aiUsed"] = insights.AI_DAILY
+        (config.STATE_DIR / "insights.json").write_text(json.dumps(raw))
+        self.assertEqual(insights.write_ai([{**item, "key": "err:z|w"}]), {"error": "limit"})
+
+
+class LessonTests(unittest.TestCase):
+    """ChiefOS → 📚 Leçons (lessons.py): harvest, the user's decisions, what a subagent receives, effect, the hook."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.patches = [mock.patch.object(config, "STATE_DIR", root / "state"), mock.patch.object(config, "QUESTIONS", root / "questions"),
+                        mock.patch("office.questions.QUESTIONS", root / "questions")]
+        for p in self.patches:
+            p.start()
+        lessons._harvest.update(at=0.0, running=False, error="", review=[], ci=[])
+        self.err = {"key": "err:Bash|(eval):N: == not found", "kind": "error", "tool": "Bash", "signature": "(eval):N: == not found", "count": 14,
+                    "sessions": 4, "days": ["2026-10-01", "2026-10-03"], "samples": ["(eval):1: === not found"], "fix": "", "projects": ["cogito"],
+                    "projectShare": 1.0, "agents": ["feature-builder"], "agentShare": 0.8}
+
+    def tearDown(self) -> None:
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
+
+    def harvest(self, items: list[dict], summs: list[dict] | None = None) -> dict:
+        with mock.patch.object(insights, "latest", return_value=({"items": items}, summs or [])):
+            return lessons.harvest(network=False)
+
+    def ask(self, qid: str, question: str, answer: str, created: float) -> None:
+        folder = Path(self.tmp.name) / "questions"
+        folder.mkdir(exist_ok=True)
+        (folder / f"{qid}.json").write_text(json.dumps({"id": qid, "question": question, "answer": answer, "created": created, "answered": created + 5,
+                                                         "from": "feature-builder", "cwd": "/home/me/repos/cogito"}))
+
+    def test_harvest_proposes_once_and_never_again_after_a_decision(self) -> None:
+        self.assertEqual(self.harvest([self.err])["added"], 1)
+        x = lessons.load()["lessons"][0]
+        self.assertEqual((x["id"], x["status"], x["scope"]), ("L-0001", "pending", {"agent": "feature-builder", "project": "cogito"}))
+        lessons.decide("L-0001", "reject")
+        self.assertEqual(self.harvest([self.err])["added"], 0)
+        self.assertEqual(len(lessons.load()["lessons"]), 1)
+
+    def test_a_question_asked_twice_becomes_a_faq(self) -> None:
+        now = time.time()
+        self.ask("q1", "Quelle branche cible pour la MR cogito ?", "main", now - 3000)
+        self.harvest([])
+        self.assertFalse(lessons.load()["lessons"])
+        self.ask("q2", "Quelle branche cible pour cette MR cogito ?", "develop", now - 100)
+        self.harvest([])
+        faq = lessons.load()["lessons"][0]
+        self.assertEqual(faq["kind"], "faq")
+        self.assertIn("develop", faq["text"])
+        self.assertEqual(faq["scope"], {"agent": "feature-builder", "project": "cogito"})
+
+    def test_only_validated_lessons_of_the_right_scope_are_given(self) -> None:
+        self.harvest([self.err])
+        event = {"tool_name": "Agent", "cwd": "/home/me/repos/cogito", "tool_input": {"subagent_type": "feature-builder", "description": "Livre APP-1", "prompt": "Livre APP-1"}}
+        self.assertIsNone(lessons.hook_output(event))  # still pending
+        lessons.decide("L-0001", "approve", {"text": "Sous zsh, citer les séparateurs : echo '==='."})
+        out = lessons.hook_output(event)["hookSpecificOutput"]
+        self.assertEqual(out["hookEventName"], "PreToolUse")
+        self.assertTrue(out["updatedInput"]["prompt"].startswith("Livre APP-1"))
+        self.assertIn("[L-0001] Sous zsh, citer", out["updatedInput"]["prompt"])
+        self.assertEqual(out["updatedInput"]["subagent_type"], "feature-builder")
+        self.assertIsNone(lessons.hook_output({**event, "tool_input": out["updatedInput"]}))  # never twice
+        self.assertIsNone(lessons.hook_output({**event, "cwd": "/home/me/repos/other"}))  # another project
+        self.assertIsNone(lessons.hook_output({**event, "tool_input": {**event["tool_input"], "subagent_type": "mr-reviewer"}}))
+        self.assertEqual(lessons.injections()[0]["ids"], ["L-0001"])
+        with mock.patch.dict(config.CFG, {"lessons": False}):
+            self.assertIsNone(lessons.hook_output(event))
+
+    def test_injection_is_capped(self) -> None:
+        data = {"seq": 9, "lessons": [{"id": f"L-000{i}", "key": f"k{i}", "kind": "correction", "status": "active", "text": "x" * 200,
+                                       "scope": {"agent": "", "project": ""}, "words": []} for i in range(1, 10)]}
+        lessons.save(data)
+        chosen = lessons.select("feature-builder", "mission", "/r/x")
+        self.assertLessEqual(len(chosen), lessons.MAX_INJECT)
+        self.assertLessEqual(len(lessons.block(chosen)), lessons.MAX_CHARS + 300)
+
+    def test_effect_ok_when_the_error_stops_and_ko_when_it_goes_on(self) -> None:
+        self.harvest([self.err])
+        lessons.decide("L-0001", "approve")
+        data = lessons.load()
+        data["lessons"][0].update(decided=time.time() - 7 * 86_400, decidedDay="2026-10-10")
+        quiet = [{"day": "2026-10-12", "errors": []}]
+        noisy = [{"day": "2026-10-12", "errors": [["Bash", "(eval):N: == not found", "", ""]] * 6}]
+        with mock.patch.object(insights, "latest", return_value=({"items": []}, quiet)):
+            lessons.measure(data)
+        self.assertEqual(data["lessons"][0]["effect"], "ok")
+        with mock.patch.object(insights, "latest", return_value=({"items": []}, noisy)):
+            lessons.measure(data)
+        self.assertEqual(data["lessons"][0]["effect"], "ko")
+        self.assertEqual(lessons.expertise(data)[0]["agent"], "feature-builder")
+
+    def test_review_and_ci_lessons(self) -> None:
+        remarks = [{"mr": f"u{i}", "project": "cogito", "agent": "feature-builder", "text": "Avoid using any type in TypeScript props", "day": "2026-10-0%d" % (i + 1), "file": "a.ts"} for i in range(2)]
+        self.assertEqual(lessons.review_lessons(remarks)[0]["scope"]["project"], "cogito")
+        self.assertFalse(lessons.review_lessons(remarks[:1]))
+        ci = lessons.ci_lessons([{"mr": "u", "project": "coffer", "agent": "x", "job": "lint-py", "stage": "test", "sig": "e501 line too long", "day": "2026-10-02", "fixed": True}])
+        self.assertIn("lint-py", ci[0]["text"])
+
+    def test_hook_command_prints_the_new_input_alone(self) -> None:
+        import subprocess as sp
+        home = Path(self.tmp.name) / "home"
+        state = home / ".claude" / "agent-office"
+        state.mkdir(parents=True)
+        (state / "lessons.json").write_text(json.dumps({"seq": 1, "lessons": [{"id": "L-0001", "key": "k", "kind": "error", "status": "active",
+                                                                              "text": "Citer les séparateurs sous zsh.", "scope": {"agent": "", "project": ""}, "words": []}]}))
+        event = {"tool_name": "Agent", "cwd": "/tmp", "tool_input": {"subagent_type": "Explore", "description": "d", "prompt": "Find X"}}
+        bin_office = Path(__file__).resolve().parent.parent.parent / "bin" / "office.py"
+        run = sp.run([sys.executable, "-I", str(bin_office), "hook-lessons"], input=json.dumps(event), capture_output=True, text=True,
+                     env={**os.environ, "HOME": str(home)}, timeout=30)
+        self.assertEqual(run.returncode, 0)
+        self.assertIn("[L-0001]", json.loads(run.stdout)["hookSpecificOutput"]["updatedInput"]["prompt"])
+
+    def test_transcript_reports_the_lessons_received(self) -> None:
+        folder = Path(self.tmp.name) / "s" / "subagents"
+        folder.mkdir(parents=True)
+        path = write_transcript(folder / "agent-a1.jsonl", [{"type": "user", "message": {"role": "user", "content": "Livre X" + lessons.block([{"id": "L-0003", "text": "t"}])}}])
+        self.assertEqual(transcripts.subagent(path, time.time())["lessons"], ["L-0003"])
+
+
+class KnowhowTests(unittest.TestCase):
+    """ChiefOS → 🗺️ Compétences (knowhow.py): the topics of a run and how it went."""
+
+    def test_topics_from_files_and_commands(self) -> None:
+        home = str(Path.home())
+        files = [f"{home}/repos/cogito/src/features/kanban/Board.tsx", f"{home}/repos/cogito/src/features/kanban/Board.test.tsx"]
+        t = knowhow.topics_of(files, ["cd x && python3 -I tools/gl.py mr-create --title Q", "grep -rn docker src"])
+        self.assertEqual(t["proj:cogito"], 1.0)
+        self.assertEqual(t["zone:cogito/kanban"], 1.0)
+        self.assertEqual((t["tech:React"], t["tech:Tests"]), (1.0, 0.5))
+        self.assertEqual(t["tool:GitLab"], 1.0)
+        self.assertNotIn("tool:Docker", t)  # a word in a grep is not a tool used
+
+    def test_a_reviewer_gets_the_repository_its_commands_work_in(self) -> None:
+        t = knowhow.topics_of([], ["git -C ~/repos/portfolio-api diff main", "python3 -I ~/repos/.claude/tools/gl.py mr-diff 12"], "repos")
+        self.assertEqual(t["proj:portfolio-api"], 1.0)
+        self.assertNotIn("proj:repos", t)
+
+    def test_outcome(self) -> None:
+        good = {"status": "done", "tests": {"ok": True}, "mr": "u1", "errors": 0}
+        self.assertEqual(knowhow.outcome(good, set(), False), (4.0, ["livré", "tests verts", "MR"]))
+        self.assertEqual(knowhow.outcome(good, {"u1"}, True)[0], 2.0)
+        self.assertEqual(knowhow.outcome({"status": "blocked", "errors": 12}, set(), False)[0], -3.0)

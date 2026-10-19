@@ -37,7 +37,7 @@ def answered(days: float = 30) -> list[dict[str, Any]]:
         except (OSError, ValueError):
             continue
         if q.get("answer") is not None and time.time() - q.get("created", 0) < days * 86_400 and not excluded(q.get("cwd", "")):
-            out.append({k: q.get(k) for k in ("id", "question", "options", "context", "from", "created", "answer", "answered")})
+            out.append({k: q.get(k) for k in ("id", "question", "options", "context", "from", "created", "answer", "answered", "cwd")})
     return sorted(out, key=lambda q: -(q.get("answered") or q["created"]))
 
 

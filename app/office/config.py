@@ -46,6 +46,8 @@ DEFAULTS: dict[str, Any] = {
     "gitlab_tools": None,            # folder holding gl.py (CI / merged state of the agents' MRs)
     "audit_log": None,               # path to a security audit-log.json (findings give XP)
     "to_verify_regex": r"yt\.py command\b.*to verify",
+    "lessons": True,                 # add the validated lessons (ChiefOS → Leçons) to the subagents' prompts
+    "process_rules": None,           # ChiefOS → Process: [{"when": "feature-builder", "project": "cogito", "then": "guardian-test-writer"}, …]
 }
 
 COLOR_NAMES = {  # Claude Code agent frontmatter colors

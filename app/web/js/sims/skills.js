@@ -44,9 +44,10 @@ export function gainSkill(a, stars) {
   }
 }
 
-// the chief's pick for a new agent: the most skilled free dev for its kind of work, then the least tired
+// the chief's pick for a new agent: the most skilled free dev for its kind of work and its topic (apps/skillmap.js),
+// then the least tired
 function bestDevFor(a, pool) {
-  const id = skillOf(a.type), score = n => skillLevel(n, id) * 12 - mate(n).fatigue * 0.25 + mate(n).moral * 0.05;
+  const id = skillOf(a.type), score = n => skillLevel(n, id) * 12 + (hub.knowhowFor?.(n, a) || 0) - mate(n).fatigue * 0.25 + mate(n).moral * 0.05;
   return pool.reduce((b, n) => score(n) > score(b) ? n : b);
 }
 function skillTag(name, type) {
@@ -61,8 +62,9 @@ function skillRow(icon, label, lvl, k) {
 }
 export function workSkillsHtml(name) {
   const have = SKILLS.filter(([id]) => skillXp(name, id) > 0).sort((a, b) => skillXp(name, b[0]) - skillXp(name, a[0])).slice(0, 3);
+  const topics = hub.knowhowLine?.(name) || "";  // its 🥇🥈🥉 topics (apps/skillmap.js)
   if (!have.length) return TEAM.includes(name) ? `<div class="skill muted"><span class="ic">💼</span><span>Pas encore de mission livrée : ses compétences montent avec ses missions.</span></div>` : "";
-  return have.map(([id, icon, label]) => {
+  return topics + have.map(([id, icon, label]) => {
     const lvl = skillLevel(name, id), next = SKILL_XP[lvl], cur = SKILL_XP[lvl - 1];
     return skillRow(icon, label, lvl, next === undefined ? 1 : (skillXp(name, id) - cur) / (next - cur));
   }).join("");
@@ -70,7 +72,7 @@ export function workSkillsHtml(name) {
 // one line for the side panel of a dev
 function skillsLine(name) {
   const have = SKILLS.filter(([id]) => skillXp(name, id) > 0).map(([id, icon, label]) => `${icon} ${label} ${skillLevel(name, id)}`);
-  return `<p class="muted">Compétences : ${have.length ? esc(have.join(" · ")) : "aucune mission livrée pour l'instant"}</p>`;
+  return `<p class="muted">Compétences : ${have.length ? esc(have.join(" · ")) : "aucune mission livrée pour l'instant"}</p>${hub.knowhowLine?.(name) || ""}`;
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)

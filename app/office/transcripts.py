@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from .config import ASK_RE, HEAD_BYTES, TAIL_BYTES, TICKET_RE
 from .questions import match_question
+
+LESSONS_MARK = "## Leçons des missions précédentes (Agent Office)"  # lessons.MARK (not imported: lessons.py imports this package)
+LESSON_IDS = re.compile(r"\[(L-\d{4})\]")
 
 
 def read_head(path: Path) -> list[dict[str, Any]]:
@@ -156,6 +160,7 @@ def subagent(path: Path, now: float, questions: list[dict[str, Any]] | None = No
         "started": first.get("timestamp"),
         "status": status,
         "question": question,
+        "lessons": LESSON_IDS.findall(prompt.split(LESSONS_MARK, 1)[1]) if LESSONS_MARK in prompt else [],
         **state,
     }
 

@@ -133,16 +133,17 @@ def _refund() -> None:
         _save(s)
 
 
-def ask(system: str, prompt: str) -> tuple[str | None, str]:
+def ask(system: str, prompt: str, need_on: bool = True) -> tuple[str | None, str]:
     """One call, if allowed: (text, "") or (None, why: off, limit, engine, failed). The slot is booked under the lock
-    (on, quota, GAP after the last one), the call runs outside it; a call that brings nothing gives its slot back."""
+    (on, quota, GAP after the last one), the call runs outside it; a call that brings nothing gives its slot back.
+    need_on=False: a feature with its own switch (insights.py) shares the quota but not the devs' one."""
     global _last
     kind = engine()
     if kind == "none":
         return None, "engine"
     with _lock:
         s = settings()
-        if not s["on"]:
+        if need_on and not s["on"]:
             return None, "off"
         if s["used"] >= DAILY_MAX:
             return None, "limit"
@@ -152,7 +153,7 @@ def ask(system: str, prompt: str) -> tuple[str | None, str]:
         _save(s)
     if at > time.time():
         time.sleep(at - time.time())
-    if not settings()["on"]:  # switched off while waiting
+    if need_on and not settings()["on"]:  # switched off while waiting
         _refund()
         return None, "off"
     out = ((_api(system, prompt) if kind == "api" else _cli(system, prompt)) or "").strip()

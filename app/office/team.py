@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .config import CFG, STATE_DIR
+from .config import CFG, STATE_DIR, agent_files
 
 TEAM_FILE = STATE_DIR / "team.json"
 LOGO_TYPES = {"png": "image/png", "jpeg": "image/jpeg", "webp": "image/webp", "svg": "image/svg+xml"}
@@ -17,6 +17,9 @@ LOGO_MAX = 300_000  # bytes, once decoded
 DATA_URL = re.compile(r"^data:image/(png|jpeg|webp|svg\+xml);base64,([A-Za-z0-9+/=\s]+)$")
 NAME_BAD = re.compile(r"[\x00-\x1f<>\"`]")
 DESKS = 8
+PREFERRED = ["feature-builder", "mr-reviewer", "guardian-test-writer", "security-auditor", "audit-security-code", "youtrack-board-cleaner"]
+MAIN_ONLY = {"tech-lead"}  # run as the main session (the chief), never as a subagent
+ROLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 
 
 def clean(value: Any, limit: int = 20) -> str:
@@ -42,6 +45,33 @@ def logo_path() -> Path | None:
     return None
 
 
+def default_roles() -> list[str]:
+    """One agent type per desk: the user's own agents (the usual ones first), then general-purpose and Explore; the
+    desks left over get general-purpose."""
+    mine = [n for n in agent_files() if n not in MAIN_ONLY]
+    custom = [n for n in PREFERRED if n in mine] + sorted(n for n in mine if n not in PREFERRED)
+    roles = custom[:DESKS - 2] + ["general-purpose", "Explore"]
+    return (roles + ["general-purpose"] * DESKS)[:DESKS]
+
+
+def roles_of(saved: dict[str, Any]) -> list[str]:
+    roles = saved.get("roles")
+    if isinstance(roles, list) and len(roles) == DESKS and all(isinstance(r, str) and ROLE_RE.match(r) for r in roles):
+        return roles
+    return default_roles()
+
+
+def save_roles(roles: Any) -> tuple[bool, str]:
+    """The agent type of each desk (ChiefOS → Équipe)."""
+    if not isinstance(roles, list) or len(roles) != DESKS or not all(isinstance(r, str) and ROLE_RE.match(r) for r in roles):
+        return False, f"il faut un type d'agent valide pour chacun des {DESKS} bureaux"
+    saved = load() or {}
+    saved["roles"] = roles
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    write(TEAM_FILE, json.dumps(saved, ensure_ascii=False, indent=2).encode())
+    return True, "rôles enregistrés"
+
+
 def settings() -> dict[str, Any]:
     """Names and logo for the page: the saved team, else ~/.claude/agent-office.json, else the page defaults."""
     saved = load() or {}
@@ -54,6 +84,7 @@ def settings() -> dict[str, Any]:
         "team": [n for n in (clean(x) for x in team) if n][:DESKS],
         "cat": clean(saved.get("cat")),
         "logo": f"/logo?v={int(logo.stat().st_mtime)}" if logo else None,
+        "roles": roles_of(saved),
     }
 
 
@@ -86,6 +117,8 @@ def save(data: dict[str, Any]) -> tuple[bool, str]:
         if logo is not None:
             write(STATE_DIR / f"logo.{ext}", raw)
     body = {"chief": chief, "team": team, "cat": clean(data.get("cat")) or "Brume", "office": clean(data.get("office"), 30)}
+    if isinstance((load() or {}).get("roles"), list):
+        body["roles"] = (load() or {})["roles"]  # renaming the team keeps the desks' roles
     write(TEAM_FILE, json.dumps(body, ensure_ascii=False, indent=2).encode())
     return True, "équipe enregistrée"
 

@@ -2,7 +2,7 @@
 
 import { standing, walkStep } from "../world/motion.js";
 import { hub, provide } from "../hub.js";
-import { ARRIVAL_GAP, COFFEE, DESKS, DOOR, HAIRS, LANE, QSPOTS, SKINS, TEAM, TICKET_RE, arrivals, chief, clip, ctx, doorFree, ents, firstLoad, fromDesk, hash, mmxQueue, toDesk, typeColor } from "../core/core.js";
+import { ARRIVAL_GAP, COFFEE, DESKS, DOOR, GENERALISTS, HAIRS, LANE, QSPOTS, SKINS, TEAM, TICKET_RE, arrivals, devOfType, roleOf, chief, clip, ctx, doorFree, ents, firstLoad, fromDesk, hash, mmxQueue, toDesk, typeColor } from "../core/core.js";
 
 /* ---------- entities ---------- */
 export function lookFor(id, type) {
@@ -40,12 +40,18 @@ export function sync(session) {
       const free = TEAM.filter(n => !used.has(n) && !hub.isVacant(n));  // a resigned dev's post is vacant (careers.js)
       if (!free.length) continue;
       const pool = free.filter(hub.devHasDesk).length ? free.filter(hub.devHasDesk) : free;  // a dev with a desk first (build.js)
-      const who = free.includes(hub.crew.ids[a.id]) ? hub.crew.ids[a.id] : hub.bestDevFor(a, pool);  // the most skilled for this work (skills.js)
+      // one dev per agent type: the dev of this type's desk takes the mission; when busy, a free dev comes as a
+      // reinforcement (a generalist first, then the most skilled for this work, skills.js)
+      const own = devOfType(a.type), prev = hub.crew.ids[a.id];
+      const generalists = pool.filter(n => GENERALISTS.includes(roleOf(n)));
+      const who = own && free.includes(own) ? own : free.includes(prev) ? prev : hub.bestDevFor(a, generalists.length ? generalists : pool);
       hub.crew.ids[a.id] = who;
       const desk = DESKS[TEAM.indexOf(who)];
       const seat = { x: desk.x, y: desk.y + 22 };
       e = { agent: a, who, desk, look: { ...lookFor(who, a.type), team: true }, x: DOOR.x, y: DOOR.y, path: [], seated: false, leaving: false, picked: firstLoad,
-        coffeeNext: performance.now() + 20000 };
+        coffeeNext: performance.now() + 20000, helper: own && who !== own ? own : null };
+      // a reinforcement works with the notes of the type's dev: its lessons (lessons.py) and the mission counts for it (skillmap.js)
+      if (e.helper && !firstLoad) { e.fxKind = "quip"; e.fxMsg = `📒 ${e.helper} m'a passé ses notes`; e.fxUntil = performance.now() + 8000; }
       if (firstLoad) { e.x = seat.x; e.y = seat.y; e.seated = true; }
       else {
         // door → board (takes its ticket) → desk

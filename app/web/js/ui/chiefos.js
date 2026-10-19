@@ -98,8 +98,8 @@ for (const type of OsApp.EVENTS) osBox.addEventListener(type, ev => {
 });
 addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); closeChiefOs(); } }, true);  // Escape belongs to a terminal that has the focus
 document.getElementById("osbtn").onclick = () => chiefToDesk();
-// live apps refresh every 3 s; forms and long pages stay still
-setInterval(() => { if (!osBox.hidden && !osOverview && curApp().live) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
+// live apps refresh every 3 s (not while a field of theirs has the focus); forms and long pages stay still
+setInterval(() => { if (!osBox.hidden && !osOverview && curApp().live && !osBox.contains(document.activeElement?.closest("select, input, textarea"))) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
 
 // right click on an app (dock or Activités): its menu; a click elsewhere closes it
 osBox.addEventListener("contextmenu", ev => {

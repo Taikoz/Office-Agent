@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -25,8 +26,11 @@ def runs(game: Game, days: float) -> Iterator[dict[str, Any]]:
 
 def project_name(dirname: str) -> str:
     """A readable project from Claude Code's folder name (-home-me-repos-Office-Agent → Office-Agent)."""
-    home = str(Path.home()).replace("/", "-").replace("\\", "-")
-    name = dirname[len(home):] if dirname.startswith(home) else dirname
+    name = dirname
+    for home in (re.sub(r"[^A-Za-z0-9]", "-", str(Path.home())), str(Path.home()).replace("/", "-").replace("\\", "-")):
+        if dirname.startswith(home):  # Claude Code turns every other character than a letter or a digit into "-"
+            name = dirname[len(home):]
+            break
     for prefix in ("-repos-", "-projects-", "-src-", "-code-", "-"):
         if name.startswith(prefix):
             return name[len(prefix):] or dirname
