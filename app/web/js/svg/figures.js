@@ -38,10 +38,14 @@ class PersonArt extends Figure {
       else if (outfit === "shirt") g += `<path fill="${shade(shirt, 1.25)}" d="M-2.4 ${ty}h1.8l-0.6 1.6zM0.6 ${ty}h1.8l-1.2 1.6z"/>` + R(-1, ty, 2, 1, skd) + [1.8, 3.4, 5].map(y => R(-0.3, ty + y, 0.6, 0.6, shade(shirt, 0.6))).join("");
       else if (outfit === "hoodie") g += R(-2.6, ty, 5.2, 1.6, shade(shirt, 0.85)) + R(-1, ty, 2, 1, skd) + R(-1.2, ty + 1.4, 0.4, 2.2, "#f4f2ea") + R(0.8, ty + 1.4, 0.4, 2.2, "#f4f2ea") + R(-2.2, ty + 4, 4.4, 2, sh);
       else if (outfit === "flight") g += R(-1.8, ty + 1.4, 3.6, 2.4, "#1a222c") + R(-1.4, ty + 2, 0.8, 0.8, "#00e5ff") + R(0.4, ty + 2, 0.8, 0.8, "#ff3df2") + R(-4, ty, 0.7, 7, tie) + R(3.3, ty, 0.7, 7, tie) + R(-2.2, ty, 4.4, 0.9, sh);
+      else if (outfit === "vampire") g += R(-1.2, ty, 2.4, 3.6, "#f4f2ea") + R(-0.8, ty + 1, 1.6, 0.4, "#d8d4c8") + R(-0.8, ty + 2.2, 1.6, 0.4, "#d8d4c8") + R(-0.5, ty + 0.2, 1, 1, tie) + R(-2.6, ty, 0.6, 5, sh) + R(2, ty, 0.6, 5, sh);
       else if (robe) g += R(-0.4, ty, 0.8, 7, tie) + `<path fill="${sh}" d="M-2.4 ${ty}h4.8l-2.4 2.2z"/>` + R(-0.7, ty + 0.4, 1.4, 1, "#d4a640");
       else if (outfit === "polo") g += R(-1, ty, 2, 1.2, skd) + R(-2.4, ty, 1.4, 1.2, shade(shirt, 1.3)) + R(1, ty, 1.4, 1.2, shade(shirt, 1.3)) + R(-0.3, ty + 1.4, 0.6, 0.6, shade(shirt, 0.6)) + R(-0.3, ty + 2.6, 0.6, 0.6, shade(shirt, 0.6));
       else g += R(-1, ty, 2, 1.2, skd) + R(-2.2, ty, 1.2, 1.4, shade(shirt, 1.25)) + R(1, ty, 1.2, 1.4, shade(shirt, 1.25));
     }
+    // a vampire's cape: its edges lined in red down the sides, a high collar behind the head (the back: all cape)
+    if (outfit === "vampire") g += (back ? "" : R(-5.4, ty - 0.6, 1.4, 12.2, "#14141a") + R(4, ty - 0.6, 1.4, 12.2, "#14141a") + R(-4.4, ty, 0.5, 11, tie) + R(3.9, ty, 0.5, 11, tie))
+      + `<path fill="${tie}" d="M-4.4 ${ty + 0.4}L-5.4 ${hy + 3.4}L-2.6 ${ty}ZM4.4 ${ty + 0.4}L5.4 ${hy + 3.4}L2.6 ${ty}Z"/>`;
     // arms
     const arm = (x, y, h, hy2) => R(x, y, 2, h, shirt) + R(x + (x < 0 ? 0 : 1.4), y, 0.6, h, sh) + R(x, hy2, 2, 1.6, skin);
     if (arms === "up") g += arm(-6, ty - 5, 6, ty - 6.4) + arm(4, ty - 5, 6, ty - 6.4);
@@ -49,6 +53,7 @@ class PersonArt extends Figure {
     else if (arms === "baton") { const lift = frame % 2 ? -3 : 0; g += arm(-6, ty + 1, 5, ty + 6) + arm(4, ty - 2 + lift, 6, ty - 3.4 + lift); }
     else g += arm(-6, ty + 1, 6, ty + 7) + arm(4, ty + 1, 6, ty + 7);
     if (look.wand && !back) g += arms === "up" ? R(4.7, ty - 11, 0.6, 5, "#5a3a24") + R(4.6, ty - 11.6, 0.8, 0.8, "#fff3b0") : arms !== "type" && !seated ? `<path stroke="#5a3a24" stroke-width=".6" stroke-linecap="round" d="M5.2 ${ty + 8}l3 -3.4"/>` + R(7.8, ty + 4.2, 0.8, 0.8, "#fff3b0") : "";
+    if (outfit === "vampire" && back) g += R(-5.4, ty - 0.6, 10.8, 12.4, "#14141a") + R(-5.4, ty + 11.2, 10.8, 0.6, tie);
     if (look.jetpack) g += back ? R(-3.2, ty + 0.6, 6.4, 6, "#9aa6b4") + R(-2.4, ty + 1.4, 4.8, 0.8, "#00e5ff") + R(-2.8, ty + 6.6, 1.8, 1.2, "#2a3340") + R(1, ty + 6.6, 1.8, 1.2, "#2a3340")
       : R(-3.4, ty, 0.8, 5, "#2a3340") + R(2.6, ty, 0.8, 5, "#2a3340");  // the tanks from behind, the straps from the front
     if (look.scarf) {  // a striped scarf around the neck, one end down the front
@@ -95,6 +100,7 @@ class PersonArt extends Figure {
     else if (hat === "helmet") g += `<circle cx="0" cy="${hy + 3.2}" r="5.8" fill="#bfe9ff" fill-opacity=".28" stroke="#e8f6ff" stroke-width=".45"/><path fill="#ffffff" fill-opacity=".45" d="M-3.6 ${hy + 0.6}q1.4 -2.6 4 -3l-.2 .8q-2.2 .6 -3.2 2.6z"/>` + R(-3.8, hy + 7.6, 7.6, 1, "#c9d2dc");
     else if (hat === "visor") g += back ? R(-3.4, hy + 2.6, 6.8, 0.8, "#2a3340") : R(-3.5, hy + 2.8, 7, 1.9, "#00e5ff") + R(-3.5, hy + 2.8, 7, 0.5, "#e8ffff");
     else if (hat === "wizard") g += `<path fill="#2a2350" d="M-3.2 ${hy + 0.2}L0.4 ${hy - 7.4}Q2.6 ${hy - 9} 4.2 ${hy - 7.6}Q2.4 ${hy - 7.6} 2 ${hy - 6}L3.2 ${hy + 0.2}Z"/>` + R(-5, hy - 0.2, 10, 1, "#2a2350") + R(-3.1, hy - 1.3, 6.2, 0.9, "#d4a640") + R(-0.8, hy - 4, 1, 1, "#ffe14d");
+    else if (hat === "tophat") g += R(-4.4, hy - 0.2, 8.8, 1, "#14141a") + R(-2.8, hy - 5.4, 5.6, 5.2, "#1c1c24") + R(-2.8, hy - 1.6, 5.6, 1, "#8f1f2a") + R(-2.8, hy - 5.4, 5.6, 0.5, "#2a2a36");
     else if (hat === "fedora") g += R(-4.6, hy - 0.2, 9.2, 1, "#4a3826") + R(-3, hy - 3, 6, 3, "#5c4632") + R(-3, hy - 1, 6, 0.8, "#1c1c24");
     else if (hat === "headset") g += `<path fill="none" stroke="#2a2a33" stroke-width=".9" d="M-3.6 ${hy + 3}V${hy - 0.4}Q0 ${hy - 3.6} 3.6 ${hy - 0.4}V${hy + 3}"/>` + R(-4.4, hy + 2, 1.6, 2.6, "#2a2a33") + R(2.8, hy + 2, 1.6, 2.6, "#2a2a33") + (back ? "" : `<path fill="none" stroke="#2a2a33" stroke-width=".4" d="M-3.6 ${hy + 4.4}Q-3 ${hy + 6.4} -1 ${hy + 6.2}"/>` + R(-1.4, hy + 5.8, 0.9, 0.9, "#ff6b6b"));
     return g;
