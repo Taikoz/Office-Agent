@@ -65,6 +65,10 @@ function notifyChanges() {
       const ring = now.q && now.q !== prev.q ? "question" : chiefRow ? "" : now.status !== prev.status && now.status === "blocked" ? "blocked"
         : now.status !== prev.status && now.status === "done" ? "deliver" : now.ci === "failed" && prev.ci !== "failed" ? "ci" : now.stuck && !prev.stuck ? "stuck" : "";
       if (ring) hub.sfx?.(ring);
+      if (ring === "deliver") hub.comicReady?.(`${s.id}|${a.id}`, who, a.ticket);  // its comic strip (ui/comic.js)
+      const tl = { question: `❓ ${who} a une question`, blocked: `⛔ ${who} est bloqué`, deliver: `✓ ${who} livre${a.ticket ? ` ${a.ticket}` : ""}`, ci: `✗ CI rouge pour ${who}`, stuck: `🌀 ${who} tourne en rond` }[ring];
+      if (tl) hub.timelapseEvent?.(tl);
+      if (!chiefRow && now.mr && now.mr !== prev.mr) hub.timelapseEvent?.(`🔔 ${who} ouvre une MR`);  // the day's events, for the timelapse (ui/timelapse.js)
       if (now.q && now.q !== prev.q) notify(`❓ ${who} a une question`, a.question.question, s.id, target, true, a.question);
       if (chiefRow) continue;
       if (now.status !== prev.status && now.status === "blocked") notify(`⛔ ${who} est bloqué`, a.lastError || a.action, s.id, target, true);

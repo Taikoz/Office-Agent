@@ -94,7 +94,8 @@ cv.addEventListener("click", ev => {
 });
 document.getElementById("rows").addEventListener("click", ev => {
   if (ev.target.closest("a")) return;  // MR / ticket links open in a new tab
-  const tool = ev.target.closest("[data-history], [data-relaunch]");
+  const tool = ev.target.closest("[data-history], [data-relaunch], [data-comic]");
+  if (tool?.dataset.comic) return hub.openComic?.(tool.dataset.comic);
   if (tool?.dataset.history) return openPanel(`ticket:${tool.dataset.history}`);
   if (tool?.dataset.relaunch) return hub.relaunch(tool.dataset.relaunch);
   const rv = ev.target.closest("[data-review]");

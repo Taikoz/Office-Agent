@@ -328,12 +328,12 @@ box.addEventListener("keydown", ev => {
 /* ---------- the banners: a notification drops at the top of the screen; a tap opens the app ---------- */
 const banners = document.createElement("div");
 banners.id = "phonebanners"; banners.setAttribute("aria-live", "polite"); document.body.append(banners);
-hub.phoneBanner = ({ icon = "📱", app: to = "home", thread: th = "", title, body = "" }) => {
-  if (!box.hidden && app === to && (to !== "thread" || thread === th)) return true;  // already looking at it
+hub.phoneBanner = ({ icon = "📱", app: to = "home", thread: th = "", title, body = "", go: open = null }) => {  // go: what a tap does instead of opening the phone
+  if (!open && !box.hidden && app === to && (to !== "thread" || thread === th)) return true;  // already looking at it
   const el = document.createElement("button");
   el.className = "pbanner"; el.innerHTML = `<span class="ic">${icon}</span><span class="txt"><b>${esc(title)}</b>${body ? `<small>${esc(clip(body, 110))}</small>` : ""}</span><time>maintenant</time>`;
   const gone = () => { el.classList.add("out"); setTimeout(() => el.remove(), 350); };
-  el.onclick = () => { if (th) { thread = th; draft = ""; } hub.openPhone(to); el.remove(); };
+  el.onclick = () => { if (open) open(); else { if (th) { thread = th; draft = ""; } hub.openPhone(to); } el.remove(); };
   banners.prepend(el); while (banners.children.length > 3) banners.lastChild.remove();
   setTimeout(gone, 6500);
   return true;

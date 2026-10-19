@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, framecheck, gitlab, history, net, savegame, schedules, slack, team, terminal
+from . import blueprints, claudefiles, framecheck, gitlab, history, net, quips, savegame, schedules, slack, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
@@ -159,6 +159,8 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 self.reply(200, "application/json", json.dumps(GAME.state(), ensure_ascii=False).encode())
             elif self.path.startswith("/api/mmx"):
                 self.reply(200, "application/json", json.dumps(mmx_storage(), ensure_ascii=False).encode())
+            elif self.path.startswith("/api/quips"):  # the devs' own words (quips.py): on or off, the calls of the day
+                self.reply(200, "application/json", json.dumps(quips.status()).encode())
             elif self.path.startswith("/api/perf"):
                 days = parse_qs(urlparse(self.path).query).get("days", ["7"])[0]
                 self.reply(200, "application/json", json.dumps(perf(min(30.0, max(0.1, float(days) if days.replace(".", "", 1).isdigit() else 7.0)))).encode())
@@ -184,7 +186,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/blueprint/publish", "/api/net", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -250,6 +252,13 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 if self.path == "/api/team":
                     ok, output = team.save(data if isinstance(data, dict) else {})
                     self.reply(200 if ok else 400, "application/json", json.dumps({"ok": ok, "output": output}, ensure_ascii=False).encode())
+                    return
+                if self.path in ("/api/quips", "/api/quip", "/api/comic"):  # quips.py: each line costs a small model call
+                    body = (quips.set_on(bool(data.get("on"))) if self.path == "/api/quips"
+                            else quips.quip(str(data.get("s", "")), str(data.get("a", "")), str(data.get("who", ""))[:30], str(data.get("traits", ""))[:120])
+                            if self.path == "/api/quip"
+                            else quips.comic(str(data.get("s", "")), str(data.get("a", "")), str(data.get("who", ""))[:30], data.get("moments") or []))
+                    self.reply(200, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/launch":
                     ok, output = launch(str(data["agent"]), str(data["prompt"]))

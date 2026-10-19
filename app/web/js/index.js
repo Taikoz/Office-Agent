@@ -174,4 +174,7 @@ import "./core/setup.js";
 import "./save/file.js";
 import "./ui/quality.js";
 import "./ui/morning.js";
+import "./agents/quips.js";
+import "./ui/comic.js";
+import "./ui/timelapse.js";
 import "./main.js";
