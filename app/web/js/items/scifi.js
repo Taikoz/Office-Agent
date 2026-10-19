@@ -122,7 +122,7 @@ new StyledDesk(sci({ type: "deskcommand", cat: "bureau", room: "office", worksta
     { id: "noir", name: "Noir, lumière ambre", sw: "#ffb03b", c: "#2a3340", led: "#ffb03b" }] }));
 new class extends ChiefDesk {
   isoState(_it, t) { return { frame: still() ? 0 : anim(t, 700) % 6 }; }
-}(sci({ type: "chiefdeskholo", chiefDesk: true, cat: "bureau", name: "Poste de commandement holographique", price: 3200, room: "office", unique: true, w: 34, d: 16, art: "isochiefdeskholo",
+}(sci({ type: "chiefdeskholo", chiefDesk: true, osSkin: "holo", cat: "bureau", name: "Poste de commandement holographique", price: 3200, room: "office", unique: true, w: 34, d: 16, art: "isochiefdeskholo",
   spots: [{ x: 17, y: 24, face: [0, -1] }], desc: "Ton poste de commandement : une console courbe, un clavier lumineux, trois écrans holographiques. Dessus, ChiefOS passe en HOLO.",
   styles: [{ id: "noir", name: "Noir", sw: "#1a222c" }] }));
 

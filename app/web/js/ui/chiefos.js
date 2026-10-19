@@ -13,13 +13,17 @@ import { OsApp } from "../apps/base.js";
 
 // his desk: the classic one or the holographic command post (items/scifi.js), whichever is in the office
 const chiefDesk = () => furni.items.find(i => i.room === "office" && hub.defOf(i.type)?.chiefDesk) || furni.items.find(i => hub.defOf(i.type)?.chiefDesk);
-// the look of ChiefOS: Ubuntu, or HOLO (futuristic: neon glass, a hexagon dock, a boot sequence); auto: HOLO at the
-// holographic command post
+// the look of ChiefOS: Ubuntu, HOLO (futuristic: neon glass, a hexagon dock) or GRIMOIRE (a spell book: leather, gold,
+// parchment pages, wax seals); auto: the one of the chief's desk (its def's osSkin), Ubuntu otherwise
+export const OS_SKINS = [["ubuntu", "Ubuntu", "le bureau classique"], ["holo", "HOLO", "futuriste : verre, néon, hexagones"], ["grimoire", "Grimoire", "un livre de sorts : cuir, dorures, parchemin"]];
 let skinBook = new SaveSlot("office-osskin", { skin: "auto" }).data;
-export const osSkin = () => skinBook.skin === "auto" ? (chiefDesk()?.type === "chiefdeskholo" ? "holo" : "ubuntu") : skinBook.skin;
-export function setOsSkin(skin) { skinBook.skin = skin; SaveSlot.get("office-osskin").save(skinBook); bootUntil = osSkin() === "holo" ? performance.now() + 1400 : 0; renderChiefOs(); }
+export const osSkin = () => skinBook.skin === "auto" ? hub.defOf(chiefDesk()?.type)?.osSkin || "ubuntu" : skinBook.skin;
+export function setOsSkin(skin) { skinBook.skin = skin; SaveSlot.get("office-osskin").save(skinBook); bootUntil = osSkin() !== "ubuntu" ? performance.now() + 1400 : 0; renderChiefOs(); }
 let bootUntil = 0;
-const HOLO_BOOT = ["NOYAU QUANTIQUE ........ OK", "LIAISON AGENTS ......... OK", "FLUX GITLAB ............ OK", "MÉMOIRE MMX ............ OK", "INTERFACE HOLOGRAPHIQUE  OK"];
+const BOOT = {
+  holo: { title: "CHIEFOS // NEXUS", lines: ["NOYAU QUANTIQUE ........ OK", "LIAISON AGENTS ......... OK", "FLUX GITLAB ............ OK", "MÉMOIRE MMX ............ OK", "INTERFACE HOLOGRAPHIQUE  OK"] },
+  grimoire: { title: "Le Grimoire du Chef", lines: ["Les chandelles s'allument…", "Les hiboux sont à leur poste…", "Les portraits se réveillent…", "L'encre des parchemins est fraîche…", "Le grimoire s'ouvre. ✦"] },
+};
 
 // the chief walks to his desk, sits, and ChiefOS opens
 function chiefToDesk() {
@@ -35,7 +39,7 @@ export let osApp = "questions";  // the app shown (js/apps/*.js, OsApp)
 const curApp = () => OsApp.get(osApp) || OsApp.list()[0];
 export function openChiefOs(app) {
   if (app) setOsApp(app); osOverview = false;
-  if (osBox.hidden && osSkin() === "holo" && !hub.focusMode) { bootUntil = performance.now() + 1400; setTimeout(renderChiefOs, 1450); }  // the boot sequence
+  if (osBox.hidden && osSkin() !== "ubuntu" && !hub.focusMode) { bootUntil = performance.now() + 1400; setTimeout(renderChiefOs, 1450); }  // the boot sequence
   osBox.hidden = false; renderChiefOs();
 }
 export function closeChiefOs() { osBox.hidden = true; if (chief.at === "chiefos") chief.at = "free"; }
@@ -74,7 +78,7 @@ export function dockSettingsHtml() {
 export function renderChiefOs() {
   if (osBox.hidden) return;
   const now = clockNow(), app = curApp(), { icon, label } = app;
-  const holo = osSkin() === "holo"; osBox.classList.toggle("holo", holo);
+  const skin = osSkin(), holo = skin === "holo", book = skin === "grimoire"; osBox.classList.toggle("holo", holo); osBox.classList.toggle("grimoire", book);
   const day = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }), time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const pinned = dockApps(), running = !osOverview && !pinned.includes(osApp) ? osApp : null;  // the open app shows up while it runs, like Ubuntu
   const dock = pinned.map(id => dockIcon(id)).join("") + (running ? `<span class="ubrun"></span>${dockIcon(running, " running")}` : "");
@@ -86,9 +90,9 @@ export function renderChiefOs() {
     : `<section class="ubwin"><div class="ubhead"><span class="ubappic" style="--tint:${app.tint}">${icon}</span><b>${esc(label)}</b>
         <span class="ubctl"><button data-os="overview" title="Réduire">–</button><button data-os="max" title="Agrandir">▢</button><button class="x" data-os="close" title="Fermer (Échap)">×</button></span></div>
         <div class="osapp">${app.render()}</div></section>`;
-  const boot = holo && performance.now() < bootUntil ? `<div class="hoboot"><b>CHIEFOS // NEXUS</b><span>v${new Date().getFullYear() - 2000}.${now.getMonth() + 1}</span>${HOLO_BOOT.map((l, i) => `<i style="--d:${i * 0.22}s">${l}</i>`).join("")}<em></em></div>` : "";
-  osBox.innerHTML = `${boot}<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">${holo ? "◈ MODULES" : "Activités"}</button><span class="ubtitle">${holo ? `▸ ${esc(label).toUpperCase()}` : `${icon} ${esc(label)}`}</span>
-      <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : `${esc(day)}  ${time}`}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
+  const boot = BOOT[skin] && performance.now() < bootUntil ? `<div class="hoboot"><b>${BOOT[skin].title}</b><span>${holo ? `v${now.getFullYear() - 2000}.${now.getMonth() + 1}` : "✦ ✦ ✦"}</span>${BOOT[skin].lines.map((l, i) => `<i style="--d:${i * 0.22}s">${l}</i>`).join("")}<em></em></div>` : "";
+  osBox.innerHTML = `${boot}<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">${holo ? "◈ MODULES" : book ? "✦ Sortilèges" : "Activités"}</button><span class="ubtitle">${holo ? `▸ ${esc(label).toUpperCase()}` : book ? `📜 ${esc(label)}` : `${icon} ${esc(label)}`}</span>
+      <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : book ? `${esc(now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))} · ${time.replace(":", " h ")}` : `${esc(day)}  ${time}`}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
     <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}</div>${menuHtml()}`;
   if (osOverview) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   else app.mount();
@@ -151,4 +155,4 @@ osBox.addEventListener("drop", ev => {
 osBox.addEventListener("dragend", () => { dragApp = null; });
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get osSkin() { return osSkin; }, get setOsSkin() { return setOsSkin; }, get chiefToDesk() { return chiefToDesk; }, get osBox() { return osBox; }, get renderChiefOs() { return renderChiefOs; } });
+provide({ get OS_SKINS() { return OS_SKINS; }, get osSkin() { return osSkin; }, get setOsSkin() { return setOsSkin; }, get chiefToDesk() { return chiefToDesk; }, get osBox() { return osBox; }, get renderChiefOs() { return renderChiefOs; } });
