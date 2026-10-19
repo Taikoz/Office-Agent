@@ -1076,6 +1076,8 @@ class IsoAvatar extends SvgArt {
       else if (hold === "bag") { block(cx - 1.8, cy - 1.6, 3.6, 3.4, z - 6.6, 5, "#1f2329", [["front", 0.6, 3.2, 2.4, 0.5, "#3a3f48"]]); block(cx - 0.6, cy - 0.4, 1.2, 1, z - 1.6, 1.4, "#1f2329"); }  // a full bin bag
       else if (hold === "can") { block(cx - 1.4, cy - 1.6, 2.8, 3.4, z - 4.2, 3.2, "#3f9e5a", [["top", 0.4, 0.4, 2, 2.6, "#2f7a45"]]); block(cx - 0.5, cy + 1.8, 1, 2.6, z - 2.2, 0.9, "#3f9e5a"); block(cx - 0.3, cy - 0.6, 0.6, 2, z - 1, 0.6, "#2f7a45"); }  // a watering can, hanging from the hand
       else if (hold === "paddle") { block(cx - 0.4, cy - 0.6, 0.8, 1.8, z - 0.9, 0.8, "#8a6a4a"); block(cx - 1.7, cy + 1.1, 3.4, 3.2, z - 1.2, 0.6, "#d64545", [["top", 0.3, 0.3, 2.8, 2.6, "#e85555"]]); }
+      else if (hold === "pint") { block(cx - 1.1, cy - 1.1, 2.2, 2.2, z - 0.6, 3.6, "#f2b632", [["front", 0.2, 0.4, 1.8, 2.4, "#f7c948"], ["right", 0.6, 0.4, 1, 2.4, "#c8902a"]]); block(cx - 1.1, cy - 1.1, 2.2, 2.2, z + 3, 0.8, "#fffaf0"); }  // a pint, its foam
+      else if (hold === "cocktail") { block(cx - 0.2, cy - 0.2, 0.4, 0.4, z - 0.6, 2, "#dfeaf2"); block(cx - 1.2, cy - 1.2, 2.4, 2.4, z + 1.4, 1.6, "#ff7aa8", [["top", 0.3, 0.3, 1.8, 1.8, "#ffa8c8"]]); block(cx + 0.6, cy - 0.4, 0.3, 0.3, z + 3, 1.6, "#fbaa08"); }  // a stemmed glass, its umbrella
     } else {
       arm(-1, arms === "up" ? "up" : arms === "type" ? "type" : "down");
       arm(1, arms === "up" ? "up" : arms === "type" ? "type" : arms === "baton" ? "wave" : "down");

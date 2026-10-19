@@ -39,7 +39,7 @@ export class BuiltRoom extends Room {
   }
   // the chief, when he is here (not at the head of the table: a meeting draws him there)
   chiefHere() { return chief.room === this.id && !(this.id === "meeting" && hub.meeting.on); }
-  chiefItem(t, G, items) { if (this.chiefHere()) items.push({ pt: [chief.lx, chief.ly], draw: () => G.put(chief.lx, chief.ly, chief.lx, chief.ly, 0, () => drawChiefLounge(t), { x: chief.lx - 9, y: chief.ly - 34, w: 18, h: 37, to: { x: chief.lx, y: chief.ly - 8 } }) }); }
+  chiefItem(t, G, items) { if (this.chiefHere()) items.push({ pt: [chief.lx, chief.ly], draw: () => G.put(chief.lx, chief.ly, chief.lx, chief.ly, chief.lpath.length ? 0 : chief.lspot?.lift || 0, () => drawChiefLounge(t), { x: chief.lx - 9, y: chief.ly - 34, w: 18, h: 37, to: { x: chief.lx, y: chief.ly - 8 } }) }); }
   chiefOver(t) { if (this.chiefHere()) anchored(chief.lx, chief.ly, () => drawChiefLoungeOver(t)); }
   // the wall and floor of its decor, a baseboard, its title, the door back to the office, the rugs and wall objects
   shell(t, title) {
@@ -304,7 +304,8 @@ class TerraceRoom extends BuiltRoom {
     for (const it of hub.itemsIn("terrace")) {
       const d = hub.defOf(it.type), [x0, y0, x1, y1] = hub.footOf(it), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       if (d.visit === "terrace" || d.act === "read") out.push(...hub.spotsOf(it).map(sp => ({ ...sp, pose: { seated: true, ...(d.pose || {}) } })));
-      else if (it.type === "bar") for (const k of [0.25, 0.5, 0.75]) out.push(it.rot % 2 ? { x: x1 + 6, y: y0 + (y1 - y0) * k, face: [-1, 0], pose: { cup: true } } : { x: x0 + (x1 - x0) * k, y: y1 + 6, face: [0, -1], pose: { cup: true } });
+      else if (d.bar && it.type !== "bar") out.push(...hub.spotsOf(it).map(sp => ({ ...sp, pose: { hold: "pint" } })));  // at the counter (items/bar.js)
+      else if (it.type === "bar") for (const k of [0.25, 0.5, 0.75]) out.push(it.rot % 2 ? { x: x1 + 6, y: y0 + (y1 - y0) * k, face: [-1, 0], pose: { cup: true, hold: "pint" } } : { x: x0 + (x1 - x0) * k, y: y1 + 6, face: [0, -1], pose: { cup: true, hold: "pint" } });
       else if (it.type === "grill") out.push({ x: cx, y: y1 + 6, face: [0, -1], pose: { arms: "reach" } });
       else if (it.type === "firepit") for (const [dx, dy] of [[-1, 0], [1, 0], [0, 1]]) out.push({ x: cx + dx * ((x1 - x0) / 2 + 6), y: cy + dy * ((y1 - y0) / 2 + 6), face: [-dx, -dy], pose: { cup: true } });
     }
@@ -316,7 +317,7 @@ class TerraceRoom extends BuiltRoom {
   poseOf(l, t) {
     const sp = l.roomSpot || this.partySpotOf(l) || {}, p = sp.pose || {}, face = sp.face;
     return { seated: !!p.seated, back: (face?.[1] ?? 0) < 0, dir: face || null, smile: true, frame: Math.floor(t / (p.arms === "reach" ? 300 : 500)),
-      arms: p.arms || (p.seated ? "down" : Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down"), hold: p.book ? "book" : "" };
+      arms: p.arms || (p.seated ? "down" : Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down"), hold: p.book ? "book" : p.hold || "" };
   }
   // who is here: at the afterwork, or come for a moment (social/visits.js)
   people() { return [...loungers.values()].filter(l => l.partyRoom === "terrace" && !l.path.length).map(l => ({ l, sp: l.roomSpot || this.partySpotOf(l) })).filter(o => o.sp); }

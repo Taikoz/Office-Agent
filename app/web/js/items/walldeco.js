@@ -1,7 +1,9 @@
 // Wall decoration of the shop: glowing neon signs (their light shows at night, iso/rooms.js lampsOver), framed
 // posters (the frame chosen as a style), clocks that give the real time (a seconds hand, a swinging pendulum).
 
+import { hub } from "../hub.js";
 import { SvgArt, shade } from "../svg/base.js";
+import { sfx } from "../sims/progress.js";
 import { clockNow } from "../sims/days.js";
 import { Item } from "./base.js";
 
@@ -21,7 +23,9 @@ class WallDeco extends Item {
 /* ---------- neon signs: a halo (blurred), the glass tube, its white-hot core; on a clear acrylic plate ---------- */
 // shape(colour, width): the strokes of the sign
 function neonArt(name, w, h, shape) {
-  return new WallArt(name, w, h, ({ c = "#ff4fb8" }) => {
+  return new WallArt(name, w, h, ({ c = "#ff4fb8", on = true }) => {
+    if (!on) return `<rect x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="1.5" fill="#ffffff" fill-opacity=".05" stroke="#ffffff" stroke-opacity=".14" stroke-width=".3"/>`  // switched off: the cold glass tube
+      + `<g opacity=".55">${shape(shade(c, 0.45), 1.3)}</g><g opacity=".5">${shape("#d8dde6", 0.4)}</g>`;
     const glow = `<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.3"/></filter>`;
     return `<defs>${glow}</defs><rect x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="1.5" fill="#ffffff" fill-opacity=".07" stroke="#ffffff" stroke-opacity=".18" stroke-width=".3"/>`
       + [[1.5, 1.5], [w - 1.5, 1.5], [1.5, h - 1.5], [w - 1.5, h - 1.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".5" fill="#c9ccd6"/>`).join("")
@@ -45,8 +49,16 @@ const neons = [
   ["neonwave", "Néon vague", 140, 40, 12, "Une onde qui court sur le mur.", tpath("M2 6C6 1 8 1 12 6C16 11 18 11 22 6C26 1 28 1 32 6C36 11 38 11 38 9"), [["violet", "Violet", "#b46bff"]]],
   ["neonship", "Néon SHIP IT", 160, 46, 16, "La devise de l'équipe, en grand.", both(ttext("SHIP IT", 23, 9, 7.5), tpath("M9 12.5H37 M33 10.5L37 12.5L33 14.5")), [["orange", "Orange", "#ff9a3b"]]],
 ];
+// a neon has a switch: a click turns it off or on (its light at night too, iso/rooms.js lampsOver)
+class Neon extends WallDeco {
+  state(it) { return !it.off; }
+  thumbState() { return true; }
+  pie(it) { return [["switch", "💡", it.off ? "Allumer le néon" : "Éteindre le néon"]]; }
+  perform(it, id) { if (id !== "switch") return false; it.off = !it.off; hub.saveBuild?.(); sfx("commit"); return true; }
+}
+export { Neon, neonArt, ttext, tpath, both, NEON };
 for (const [type, name, price, w, h, desc, shape, extra] of neons)
-  new WallDeco({ type, cat: "neons", name, price, room: "any", kind: "wall", w, h, glow: true, art2d: neonArt(`wall${type}`, w, h, shape), desc: `💡 Lumineux · ${desc}`, styles: NEON(extra) });
+  new Neon({ type, cat: "neons", name, price, room: "any", kind: "wall", w, h, glow: true, art2d: neonArt(`wall${type}`, w, h, shape), desc: `💡 Lumineux · ${desc}`, styles: NEON(extra) });
 
 /* ---------- framed posters: the picture, a mat, the frame (a style: black, oak, gilt, aluminium, white) ---------- */
 const FRAMES = [["noir", "Cadre noir", "#1c1c22", 1.2], ["chene", "Cadre chêne", "#a8784a", 1.4], ["dore", "Cadre doré", "#d4a640", 1.8], ["alu", "Cadre alu", "#b8bcc6", 0.8], ["blanc", "Cadre blanc", "#f4f2ea", 1.2]]

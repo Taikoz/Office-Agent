@@ -75,7 +75,7 @@ export function chiefToOffice(next = "podium") {
     chiefGo(next, next === "coffee" ? c => { c.coffeeUntil = performance.now() + 6000; hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.usedCoffee?.(); } : undefined);
     if (hub.view === from) hub.setView("office");
   };
-  chief.lspot = null;
+  chief.lspot = null; chief.roomNext = null;  // called back: what he went for elsewhere is off
   if (from !== "lounge") { chief.lpath = [{ ...exitOf(from), on: arrive }]; return; }  // a built room: its door back to the office
   chief.lpath = [...via, { x: via[0]?.x ?? chief.lx, y: hub.LOUNGE_CORRIDOR }, { x: hub.LD.x, y: hub.LOUNGE_CORRIDOR }, { ...hub.LD, on: arrive }];
 }
@@ -117,10 +117,14 @@ export function chiefLoungeAct(actId, uid = null) {
   chief.bubble = act.chief.line;
   chief.until = performance.now() + 2500;
 }
-// the chief uses an object bought: in the break room, its activity; elsewhere he goes there first
+// the chief uses an object bought: in the break room, its activity; in any other room he goes there and does it the
+// same way, on its spot (world/interact.js)
 export function chiefUseItem(it) {
-  const actId = hub.defOf(it.type).act; if (!actId) return;
-  if (it.room !== "lounge") { chief.bubble = "Ça s'utilise en salle de repos."; chief.until = performance.now() + 2500; return; }
+  const actId = hub.defOf(it.type).act, act = actId && hub.Activity.get(actId); if (!act) return;
+  if (it.room !== "lounge") return hub.chiefUse(it, { sit: true, pose: act.pose, then: () => {
+    chief.bubble = act.chief.line || act.task; chief.until = performance.now() + 3000;
+    hub.crewAdd?.(CHIEF_NAME, Object.fromEntries(Object.entries(act.chief.fx || {}).map(([k, v]) => [k, v / 2])));  // once, not per minute
+  } });
   if (chief.room === "lounge") return chiefLoungeAct(actId, it.uid);
   chief.loungeNext = () => chiefLoungeAct(actId, it.uid);
   chiefToLounge();
@@ -134,6 +138,7 @@ function stepChief(dt, t) {
   }
   if (chief.room !== "office") {  // the break room or a built room
     if (!chief.lpath.length && chief.loungeNext && chief.room === "lounge") { const fn = chief.loungeNext; chief.loungeNext = null; fn(); }  // what he came for (chiefUseItem, chiefToRoom)
+    if (!chief.lpath.length && chief.roomNext?.room === chief.room) { const fn = chief.roomNext.fn; chief.roomNext = null; fn(); }  // an object of this room (world/interact.js)
     if (!chief.lpath.length) return;
     hub.routeAhead(chief.lpath, chief.lx, chief.ly, chief.room);
     const tgt = walkStep(chief, chief.lpath, dt, 0.05, chief.room, "lx", "ly");  // with some weight (world/motion.js)

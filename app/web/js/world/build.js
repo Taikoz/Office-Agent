@@ -33,7 +33,7 @@ export const saveBuild = () => { SaveSlot.get(BUILD_KEY).save(furni); syncAll();
 
 /* ---------- the catalog: categories (the objects are in js/items/) ---------- */
 export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "Chaises"], ["fauteuils", "🛋️", "Fauteuils"], ["canapes", "🛋️", "Canapés"], ["poufs", "🫘", "Poufs"], ["sport", "🏋️", "Sport"], ["bibliotheque", "📖", "Bibliothèque"], ["tables", "🍽️", "Tables"], ["electronique", "🖥️", "Électronique"],
-  ["tableaux", "🖼️", "Tableaux"], ["cadres", "🖼️", "Posters"], ["neons", "🌈", "Néons"], ["horloges", "🕰️", "Horloges"], ["rangement", "📚", "Rangement"], ["cafe", "☕", "Café"], ["cuisine", "🍳", "Cuisine"], ["loisirs", "🎮", "Loisirs"],
+  ["tableaux", "🖼️", "Tableaux"], ["cadres", "🖼️", "Posters"], ["neons", "🌈", "Néons"], ["horloges", "🕰️", "Horloges"], ["rangement", "📚", "Rangement"], ["cafe", "☕", "Café"], ["cuisine", "🍳", "Cuisine"], ["bar", "🍸", "Bar"], ["loisirs", "🎮", "Loisirs"],
   ["plantes", "🪴", "Plantes"], ["deco", "🐠", "Déco"], ["lumiere", "💡", "Lumière"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"],
   ["murs", "🧱", "Murs"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["garde", "🎩", "Garde-robe"]];
 export const defOf = type => CATALOG.find(d => d.type === type);
@@ -116,7 +116,8 @@ function itemPieItems(uid, sub) {
   const it = itemByUid(uid); if (!it) return [];
   if (sub === "cook") return RECIPES.map(rc => [`cook:${rc.id}`, rc.icon, rc.label, !kitchenReady() && rc.lvl <= cookLevel(CHIEF_NAME) ? "frigo + gazinière" : recipeLock(rc, cookLevel(CHIEF_NAME))]);
   if (sub === "shop") return shopItems();
-  const out = defOf(it.type).pie(it);  // js/items/
+  const own = defOf(it.type).pie(it);  // js/items/
+  const out = [...own, ...(hub.interactPie?.(it, defOf(it.type), own) || [])];  // nothing of its own: what any object offers (world/interact.js)
   if (defOf(it.type).role === "coffee" && it.room === "office") out.unshift(["coffee", "☕", "Prendre un café"]);
   if (defOf(it.type).role === "console") out.unshift(["play", "🎮", "Jouer à la console"]);
   if (defOf(it.type).role === "podium") out.unshift(["podium", "🎤", "Retour au podium"]);
@@ -136,6 +137,7 @@ function itemPieAction(uid, id) {
   if (id === "podium") return hub.chiefOrder("podium");
   if (id === "meet") return hub.startMeeting();
   if (hub.upkeepAct?.(it, id)) return;
+  if (id.startsWith("x:")) return hub.interactRun?.(it, defOf(it.type), id);
   defOf(it.type).perform(it, id);  // js/items/
 }
 // the chief on a free computer: he walks to the desk, sits and plays a while, then goes back to his podium
@@ -229,7 +231,7 @@ function paintGrid(cat, room) {
 }
 // the categories in families (the rail on the left), each family's categories as tabs over the grid
 export const BUY_GROUPS = [["travail", "💼", "Travail", ["bureau", "chaises", "electronique", "rangement"]], ["salon", "🛋️", "Salon", ["fauteuils", "canapes", "poufs", "tables", "tapis"]],
-  ["cuisine", "🍳", "Cuisine", ["cafe", "cuisine"]], ["loisirs", "🎮", "Loisirs", ["loisirs", "sport", "bibliotheque"]], ["deco", "🖼️", "Déco", ["plantes", "deco", "tableaux", "cadres", "neons", "horloges", "lumiere"]],
+  ["cuisine", "🍳", "Cuisine", ["cafe", "cuisine"]], ["bar", "🍸", "Bar", ["bar"]], ["loisirs", "🎮", "Loisirs", ["loisirs", "sport", "bibliotheque"]], ["deco", "🖼️", "Déco", ["plantes", "deco", "tableaux", "cadres", "neons", "horloges", "lumiere"]],
   ["dehors", "🌿", "Dehors", ["exterieur"]], ["piece", "🏗️", "La pièce", ["murs", "sols", "fenetres", "construction"]], ["plus", "🐾", "Plus", ["animaux", "garde"]], ["envies", "♡", "Envies", ["envies"]]];
 const groupOf = cat => BUY_GROUPS.find(g => g[3].includes(cat)) || BUY_GROUPS[0];
 const catLabel = id => id === "envies" ? ["envies", "♡", "Mes envies"] : BUY_CATS.find(c => c[0] === id) || [id, "", id];
