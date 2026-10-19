@@ -22,6 +22,7 @@ import { Lamp } from "./lamp.js";
 import { FrameArt, Win } from "./catalog2.js";
 import { WallArt, WallDeco } from "./walldeco.js";
 import { StyledDesk } from "./desk.js";
+import { ChiefDesk } from "./chiefdesk.js";
 
 const THEME = "magie";
 const sty = (list, key = "c") => list.map(([id, name, sw, more]) => ({ id, name, sw, ...(more || { [key]: sw }) }));
@@ -123,6 +124,15 @@ new class extends Gadget {
 new StyledDesk(magic({ type: "deskwizard", cat: "bureau", room: "office", workstation: true, name: "Bureau de sorcier", price: 1300, w: 40, d: 14, art: "isodeskwizard", seat: [20, 24], surface: { z: 13.4 },
   desc: "Deux caissons sculptés à poignées d'or, sous-main de cuir, une pile de grimoires, l'encrier et sa plume, une bougie. La place d'un dev (ordinateur et chaise à part).",
   styles: [{ id: "ebene", name: "Ébène, cuir vert", sw: "#3a2416", w: "#3a2416", leather: "#2f5d3a" }, { id: "noyer", name: "Noyer, cuir bordeaux", sw: "#5c3d27", w: "#5c3d27", leather: "#6e1f2a" },
+    { id: "chene", name: "Chêne, cuir nuit", sw: "#6b4a2e", w: "#6b4a2e", leather: "#22336a" }] }));
+
+// the headmaster's desk: the chief's desk of the theme; ChiefOS opens there as a grimoire (ui/chiefos.js osSkin)
+new class extends ChiefDesk {
+  isoState(it, t) { return { w: hub.styleOf(it).w, leather: hub.styleOf(it).leather, frame: still() ? 0 : anim(t, 400) % 12 }; }
+}(magic({ type: "chiefdeskmagic", chiefDesk: true, osSkin: "grimoire", cat: "bureau", name: "Bureau du directeur", price: 3000, room: "office", unique: true, w: 34, d: 16, art: "isochiefdeskmagic",
+  spots: [{ x: 17, y: 24, face: [0, -1] }],
+  desc: "Ton bureau de directeur d'école : caissons sculptés, étoile d'or, grimoire ouvert dont les runes brillent, boule de cristal, plume, chandelles, petit planétaire qui tourne. Assis là, ChiefOS s'ouvre en Grimoire.",
+  styles: [{ id: "ebene", name: "Ébène, cuir bordeaux", sw: "#3a2416", w: "#3a2416", leather: "#5a1e2a" }, { id: "noyer", name: "Noyer, cuir vert", sw: "#5c3d27", w: "#5c3d27", leather: "#1f4a32" },
     { id: "chene", name: "Chêne, cuir nuit", sw: "#6b4a2e", w: "#6b4a2e", leather: "#22336a" }] }));
 
 /* ---------- magic things ---------- */

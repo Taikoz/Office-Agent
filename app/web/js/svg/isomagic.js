@@ -231,3 +231,33 @@ art("isocrystalball", 6, 6, 12, ({ frame = 0, c = "#b48cff" }) => {
   g += `<path fill="none" stroke="${c}" stroke-width=".6" stroke-linecap="round" d="M${n2(x + Math.cos(a) * 1.6)} ${n2(y + Math.sin(a) * 1.6)}Q${n2(x)} ${n2(y)} ${n2(x - Math.cos(a) * 1.2)} ${n2(y - Math.sin(a) * 1.2)}"/>`;
   return g + `<circle cx="${n2(x - 0.9)}" cy="${n2(y - 0.9)}" r=".6" fill="#ffffff" fill-opacity=".8"/>`;
 });
+// the headmaster's desk (the chief's: ChiefOS opens as a grimoire there): carved pedestals with gold handles, an arched
+// panel with a gold star, a leather top, an open grimoire whose runes glow (frame), a crystal ball, a quill, candles,
+// scrolls, a small golden orrery whose planets turn
+art("isochiefdeskmagic", 34, 16, 40, ({ w = "#3a2416", leather = "#5a1e2a", frame = 0 }) => {
+  let g = ishadow(34, 16);
+  for (const x of [0, 23]) {
+    g += ibox(x, 1, 11, 15, 0, 13, T3(w));
+    for (let k = 0; k < 3; k++) g += ifront(x + 1, 16, 9, 1.2 + k * 3.8, 3.2, shade(w, 1.14)) + icyl(x + 5.5, 16, 2.6 + k * 3.8, 0.3, 0.45, GOLD[2], GOLD[0]);
+  }
+  g += ibox(11, 3, 12, 12, 0, 13, T3(shade(w, 0.85))) + path([[13, 15, 1.5], [21, 15, 1.5], [21, 15, 8], [17, 15, 11.5], [13, 15, 8]], shade(w, 1.12));
+  g += path([[17, 15, 8.6], [17.5, 15, 7.2], [18.8, 15, 7], [17.8, 15, 6.2], [18.2, 15, 4.9], [17, 15, 5.7], [15.8, 15, 4.9], [16.2, 15, 6.2], [15.2, 15, 7], [16.5, 15, 7.2]], GOLD[1]);
+  g += ibox(-0.6, -0.4, 35.2, 17, 13, 1.6, T3(shade(w, 1.08))) + ifront(-0.6, 16.6, 35.2, 13.3, 0.5, GOLD[1]) + itop(4, 3, 26, 10, 14.62, leather) + itop(4.6, 3.6, 24.8, 8.8, 14.63, shade(leather, 1.12));
+  // the open grimoire, its runes
+  g += itop(12, 6, 10, 6, 14.7, "#efe2c0") + iline(ipt(17, 6, 14.75), ipt(17, 12, 14.75), "#a8906a", 0.35);
+  const glowA = [0.35, 0.7, 1, 0.7][frame % 4];
+  for (let r = 0; r < 3; r++) g += iline(ipt(12.8, 7.2 + r * 1.5, 14.76), ipt(16.2, 7.2 + r * 1.5, 14.76), "#7a5a2e", 0.25) + iline(ipt(17.8, 7.2 + r * 1.5, 14.76), ipt(21.2, 7.2 + r * 1.5, 14.76), "#b48cff", 0.35);
+  g += glow(19.5, 9, 15.4, 4, "#b48cff", 0.18 * glowA);
+  // the crystal ball, the quill in its inkwell, the scrolls
+  g += icyl(29, 6, 14.6, 1, 1.4, GOLD[2], GOLD[0]);
+  const [bx, by] = ipt(29, 6, 18.4);
+  g += `<circle cx="${n2(bx)}" cy="${n2(by)}" r="2.6" fill="#b48cff" fill-opacity=".35"/><circle cx="${n2(bx)}" cy="${n2(by)}" r="2.1" fill="#dfeaf2" fill-opacity=".6"/><circle cx="${n2(bx - 0.7)}" cy="${n2(by - 0.7)}" r=".5" fill="#fff"/>`;
+  g += icyl(7, 12, 14.6, 1.4, 0.9, "#1c1c22", "#2a2a40") + iline(ipt(7, 12, 16), ipt(8.8, 10.6, 22), "#f4efe2", 0.7) + iline(ipt(7.6, 11.6, 17.2), ipt(8.4, 10.8, 21), "#d9cfb8", 0.35);
+  for (const [x, y] of [[4.6, 6], [6.2, 5.2]]) g += icyl(x, y, 14.6, 1.1, 0.9, "#e8d6ae", "#f4e7c4") + iline(ipt(x - 0.9, y, 15.1), ipt(x + 0.9, y, 15.1), "#8f2b2b", 0.35);
+  // two candles, a little golden orrery
+  for (const x of [10, 24]) g += icyl(x, 4, 14.6, 0.6, 1, GOLD[2], GOLD[0]) + candle(x, 4, 15.2, 3.4, frame + x);
+  const [ox, oy] = ipt(29, 12, 21), a = frame * 0.7;
+  g += icyl(29, 12, 14.6, 4, 0.3, GOLD[1], GOLD[0]) + `<circle cx="${n2(ox)}" cy="${n2(oy)}" r="1.2" fill="#f4d67a"/><ellipse cx="${n2(ox)}" cy="${n2(oy)}" rx="3.6" ry="1.4" fill="none" stroke="${GOLD[1]}" stroke-width=".3"/>`;
+  return g + `<circle cx="${n2(ox + Math.cos(a) * 3.6)}" cy="${n2(oy + Math.sin(a) * 1.4)}" r=".6" fill="#3a7ac0"/><circle cx="${n2(ox - Math.cos(a * 1.6) * 2.2)}" cy="${n2(oy - Math.sin(a * 1.6) * 0.9)}" r=".45" fill="#c0303a"/>`;
+});
+const glow = (x, y, z, r, c, a) => { const [px, py] = ipt(x, y, z); return `<circle cx="${n2(px)}" cy="${n2(py)}" r="${r}" fill="${c}" fill-opacity="${a.toFixed(2)}"/>`; };

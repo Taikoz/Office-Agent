@@ -2,7 +2,7 @@
 
 import { esc } from "../core/data.js";
 import { OsApp } from "./base.js";
-import { dockSettingsHtml, osSkin, setOsSkin } from "../ui/chiefos.js";
+import { OS_SKINS, dockSettingsHtml, osSkin, setOsSkin } from "../ui/chiefos.js";
 import { SaveSlot } from "../save/slot.js";
 import { meteo } from "../world/seasons.js";
 import { plan } from "./planning.js";
@@ -33,8 +33,8 @@ function settingsAppHtml() {
     ${supportSettingsHtml()}
     ${perfHtml()}
     <h4>APPARENCE DE CHIEFOS</h4>
-    <div class="osrow"><b>Style</b><span class="qbtns">${[["auto", "Auto", "HOLO au poste de commandement holographique, Ubuntu sinon"], ["ubuntu", "Ubuntu", "le bureau classique"], ["holo", "HOLO", "futuriste : verre, néon, hexagones"]]
-      .map(([id, label, hint]) => `<button data-skin="${id}" class="${skinNow() === id ? "on" : ""}" title="${hint}">${label}</button>`).join("")}</span><span class="muted">${osSkin() === "holo" ? "◈ HOLO actif" : "Ubuntu actif"}</span></div>
+    <div class="osrow"><b>Style</b><span class="qbtns">${[["auto", "Auto", "celui du bureau du chef : HOLO au poste de commandement holographique, Grimoire au bureau du directeur, Ubuntu sinon"], ...OS_SKINS]
+      .map(([id, label, hint]) => `<button data-skin="${id}" class="${skinNow() === id ? "on" : ""}" title="${hint}">${label}</button>`).join("")}</span><span class="muted">${OS_SKINS.find(s => s[0] === osSkin())[1]} actif</span></div>
     ${dockSettingsHtml()}
     <h4>AUTRES RÉGLAGES</h4>
     <div class="osrow"><b>🌦️ Météo réelle</b><span class="muted">${meteo.on ? `activée · ${esc(meteo.city)}` : "désactivée"}</span><button data-os-app="meteo">Ouvrir</button></div>

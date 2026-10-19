@@ -155,3 +155,58 @@
   #chiefos .hoboot em { display: block; height: 3px; margin-top: 14px; background: linear-gradient(90deg, #00e5ff, var(--holo2)); box-shadow: 0 0 10px #00e5ff; transform-origin: left; animation: hobar 1.1s ease-out forwards; }
   @keyframes hoboot { to { opacity: 1; } } @keyframes hobar { from { transform: scaleX(0); } to { transform: scaleX(1); } } @keyframes hobootout { to { opacity: 0; visibility: hidden; } }
   @media (prefers-reduced-motion: reduce) { #chiefos.holo::after { animation: none; } #chiefos .hoboot { display: none; } }
+  /* ChiefOS GRIMOIRE: a spell book (chiefos.js osSkin): a leather binding with gold tooling for the bar and the dock, wax
+     seals for the icons, parchment pages for the windows, ink for the text; the same variables, a serif hand */
+  #chiefos.grimoire { --ub-orange: #b8862a; --ub-bg: #f1e4c4; --ub-head: #5a1e2a; --ub-card: #e8d6ae; --ub-line: #c9ad7a; --ub-text: #3a2414; --ub-dim: #7a5a3a; --gold: #d4a640;
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; font-size: 14.5px; border-radius: 6px; box-shadow: 0 0 0 2px #3a1a10, 0 0 0 4px #d4a640, 0 0 0 6px #3a1a10, 0 24px 70px #000e;
+    background: radial-gradient(120% 120% at 50% 0%, #6a2a2e 0%, #3a1218 55%, #200a0c 100%), repeating-linear-gradient(35deg, #ffffff05 0 2px, transparent 2px 7px); background-blend-mode: soft-light; }
+  #chiefos.grimoire .ubtop { color: #f4e2b0; background: linear-gradient(180deg, #4a161e, #2a0c10); border-bottom: 2px solid var(--gold); font-variant: small-caps; letter-spacing: .06em; text-shadow: 0 1px 0 #000; }
+  #chiefos.grimoire .ubact { color: #f4e2b0; border: 1px solid #d4a64088; } #chiefos.grimoire .ubact:hover, #chiefos.grimoire .ubact.on { background: #d4a64033; }
+  #chiefos.grimoire .ubtitle { color: #e8c98a; font-style: italic; } #chiefos.grimoire .ubclock { color: #f4e2b0; font-style: italic; } #chiefos.grimoire .ubsys button { color: #f4e2b0; }
+  #chiefos.grimoire .ubdock { background: linear-gradient(90deg, #2a0c10, #4a161e 60%, #2a0c10); border-right: 2px solid var(--gold); border-radius: 0 10px 10px 0;
+    box-shadow: inset 0 0 0 1px #00000088, inset -3px 0 0 #d4a64055; }
+  #chiefos.grimoire .ubdock button .ic, #chiefos.grimoire .ubgrid .ic, #chiefos.grimoire .ubappic { border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tint) 70%, #fff), color-mix(in srgb, var(--tint) 60%, #5a1e2a) 60%, color-mix(in srgb, var(--tint) 35%, #200a0c));
+    box-shadow: 0 0 0 2px #d4a640, 0 0 0 3px #3a1a10, 0 2px 4px #000a; }
+  #chiefos.grimoire .ubdock button:hover .ic { box-shadow: 0 0 0 2px #f4d67a, 0 0 10px #f4d67a, 0 2px 4px #000a; }
+  #chiefos.grimoire .ubdock button.on::before { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+  #chiefos.grimoire .ubdock .ubshow { color: #f4e2b0; } #chiefos.grimoire .osbadge { background: #8f2b2b; box-shadow: 0 0 0 2px var(--gold); }
+  #chiefos.grimoire .ubwin { border-radius: 4px; box-shadow: 0 0 0 1px #8a6a3a, 0 0 0 3px #e8d6ae, 0 0 0 4px #8a6a3a, 0 14px 34px #000c;
+    background: radial-gradient(140% 90% at 50% 50%, #f6ebcf 55%, #e6cf9e 100%), radial-gradient(circle at 85% 20%, #c9a46a33 0 40px, transparent 41px); }
+  #chiefos.grimoire .ubhead { background: linear-gradient(180deg, #6a2430, #4a161e); border-bottom: 2px solid var(--gold); }
+  #chiefos.grimoire .ubhead b { color: #f4e2b0; font-variant: small-caps; letter-spacing: .1em; font-size: 16px; text-shadow: 0 1px 0 #000; }
+  #chiefos.grimoire .ubhead b::before, #chiefos.grimoire .ubhead b::after { content: " ✦ "; color: var(--gold); }
+  #chiefos.grimoire .ubctl button { background: #d4a64022; color: #f4e2b0; border: 1px solid #d4a64088; } #chiefos.grimoire .ubctl .x:hover { background: #8f2b2b; }
+  #chiefos.grimoire .osapp { scrollbar-color: #b8862a transparent; }
+  #chiefos.grimoire .osapp h4 { color: #5a1e2a; font-variant: small-caps; font-size: 15px; letter-spacing: .08em; border-bottom: 1px solid #c9ad7a; padding-bottom: 2px; }
+  #chiefos.grimoire .osapp h4::before { content: "❦ "; color: var(--ub-orange); }
+  #chiefos.grimoire .osrow { background: #efe0bb; border-bottom: 1px dashed #c9ad7a; }
+  #chiefos.grimoire .osrow b { color: #3a2414; font-weight: 700; }
+  #chiefos.grimoire .osapp button, #chiefos.grimoire .ubmenu button { color: #3a2414; background: linear-gradient(180deg, #f4e2b0, #e0c68a); border: 1px solid #8a6a3a; border-radius: 4px; }
+  #chiefos.grimoire .osapp button:hover { background: #f4d67a; } #chiefos.grimoire .osapp button.on, #chiefos.grimoire .osapp .ubok { background: #5a1e2a; color: #f4e2b0; border-color: var(--gold); }
+  #chiefos.grimoire input, #chiefos.grimoire select, #chiefos.grimoire textarea { background: #fbf3dd !important; color: #3a2414 !important; border: 1px solid #a8885a !important; border-radius: 3px !important; }
+  #chiefos.grimoire a { color: #8f2b2b; } #chiefos.grimoire code { color: #5a1e2a; background: #e8d6ae; }
+  #chiefos.grimoire .ubmenu { background: #f1e4c4; border: 1px solid #8a6a3a; color: #3a2414; } #chiefos.grimoire .ubmtitle { color: #5a1e2a; }
+  #chiefos.grimoire .ubover { color: #f4e2b0; } #chiefos.grimoire .ubgrid button { color: #f4e2b0; } #chiefos.grimoire .ubhint { color: #e8c98a; }
+  #chiefos.grimoire .ubsearch { background: #f1e4c4 !important; }
+  #chiefos.grimoire .hoboot { background: radial-gradient(circle at 50% 45%, #4a161e, #1a0608); color: #f4e2b0; font-style: italic; }
+  #chiefos.grimoire .hoboot b { font-size: 30px; letter-spacing: .08em; font-variant: small-caps; color: #f4d67a; text-shadow: 0 0 18px #d4a640aa; }
+  #chiefos.grimoire .hoboot span { color: var(--gold); letter-spacing: .6em; }
+  #chiefos.grimoire .hoboot em { background: linear-gradient(90deg, transparent, #d4a640, #f4d67a, #d4a640, transparent); box-shadow: 0 0 10px #d4a640; }
+  /* the grimoire on the apps' own colours: buttons, counters, statuses in ink; the apps painted dark (blueprints, browser,
+     the skills' list) keep their light text */
+  #chiefos.grimoire .ubok, #chiefos.grimoire .osapp button.ubok { background: #5a1e2a; color: #f4e2b0; border-color: #d4a640; }
+  #chiefos.grimoire .glcount { background: #5a1e2a; color: #f4e2b0; }
+  #chiefos.grimoire .s-blocked, #chiefos.grimoire .pit { color: #a8202a; } #chiefos.grimoire .ci-running { color: #8a5a00; } #chiefos.grimoire .s-done, #chiefos.grimoire .ci-success { color: #2f6e3c; }
+  #chiefos.grimoire .kmdev b { color: #3a2414; } #chiefos.grimoire .kmdev small { color: #7a5a3a; }
+  #chiefos.grimoire :is(.bpapp, .brapp, .seside) { --ub-text: #f6f5f4; --ub-dim: #b9b6b0; --ub-card: #383838; --ub-bg: #2c2c2c; color: #f6f5f4; }
+  #chiefos.grimoire :is(.bpapp, .brapp, .seside) h4 { color: #e8c98a; border-bottom-color: #5a4a3a; }
+  #chiefos.grimoire :is(.bpapp, .brapp, .seside) button:not(.ubok) { color: #f6f5f4; background: #ffffff14; border-color: #ffffff2a; }
+  #chiefos.grimoire :is(.bpapp, .brapp, .seside) :is(input, select, textarea) { background: #1e1e1e !important; color: #f6f5f4 !important; border-color: #555 !important; }
+  #chiefos.grimoire .ubok { --ub-orange: #5a1e2a; }  /* 07-gitlab.css paints it var(--ub-orange) !important */
+  #chiefos.grimoire .bpapp small { color: #d9cfb8; }
+  /* both themes: the skill map's heat cells keep their own colours (10-apps.css); HOLO's main buttons on a deep cyan */
+  #chiefos:is(.holo, .grimoire) .osapp .kmcell { background: color-mix(in srgb, #19b6ee calc(var(--k, .5) * 100%), #2a3442); color: #fff; border: 0; border-radius: 5px; box-shadow: none; }
+  #chiefos:is(.holo, .grimoire) .osapp .kmcell.lo { color: #cfe6f2; } #chiefos:is(.holo, .grimoire) .osapp .kmcell.hi { color: #081746; }
+  #chiefos:is(.holo, .grimoire) .osapp .kmcell.best { box-shadow: inset 0 0 0 2px #fbaa08; }
+  #chiefos.holo .ubok { --ub-orange: #00788a; }
