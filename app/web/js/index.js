@@ -119,6 +119,7 @@ import "./items/window.js";
 import "./items/bar.js";
 import "./items/magic.js";
 import "./items/scifi.js";
+import "./items/manor.js";
 import "./world/interact.js";
 import "./world/build.js";
 import "./world/place.js";

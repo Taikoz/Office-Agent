@@ -19,7 +19,8 @@ if (chiefStyle.look) Object.assign(CHIEF_LOOK, chiefStyle.look); else Object.ass
 const saveChiefStyle = () => SaveSlot.get("office-chieflook").save(chiefStyle);
 // what is sold in the wardrobe (world/shop.js SHOP, its "chief": [key, value]): locked in the editor until bought
 const PAID = { "hat|crown": "crown", "hat|wizard": "chief:wizard", "outfit|robe": "chief:robe", "scarf|*": "chief:scarf", "wand|*": "chief:wand",
-  "outfit|flight": "chief:flight", "hat|helmet": "chief:helmet", "hat|visor": "chief:visor", "jetpack|*": "chief:jetpack" };
+  "outfit|flight": "chief:flight", "hat|helmet": "chief:helmet", "hat|visor": "chief:visor", "jetpack|*": "chief:jetpack",
+  "outfit|vampire": "chief:vampire", "hat|tophat": "chief:tophat" };
 export const paidFor = (key, v) => { if (!v) return ""; const id = PAID[`${key}|${v}`] || PAID[`${key}|*`]; return id && !shop.owned.includes(id) ? id : ""; };
 const lockedMsg = key => v => paidFor(key, v) ? "À acheter dans la garde-robe" : "";
 // the chief's hat: the one chosen in the editor (the paid ones only once bought), else the shop's crown toggle
@@ -49,9 +50,9 @@ const CAS = {
   shoes: ["#17141c", "#5c3d27", "#f7f7f7", "#8f2b46", "#4090d7", "#fbaa08"],
   style: [[0, "Courts"], [1, "En pétard"], [2, "Mi-longs"], [3, "Houppe"], [4, "Raie de côté"], [5, "Chauve"], [6, "Longs"], [7, "Chignon"], [8, "Crête"]],
   beard: [["", "Rasé"], ["stubble", "3 jours"], ["short", "Courte"], ["full", "Fournie"], ["mustache", "Moustache"], ["goatee", "Bouc"]],
-  outfit: [["tux", "Smoking"], ["suit", "Costume"], ["shirt", "Chemise"], ["polo", "Polo"], ["hoodie", "Sweat à capuche"], ["tshirt", "T-shirt"], ["robe", "Robe de sorcier"], ["flight", "Combinaison spatiale"]],
+  outfit: [["tux", "Smoking"], ["suit", "Costume"], ["shirt", "Chemise"], ["polo", "Polo"], ["hoodie", "Sweat à capuche"], ["tshirt", "T-shirt"], ["robe", "Robe de sorcier"], ["flight", "Combinaison spatiale"], ["vampire", "Cape de vampire"]],
   glasses: [["", "Aucune"], ["square", "Carrées"], ["round", "Rondes"], ["sun", "Solaires"]],
-  hat: [["", "Aucun"], ["crown", "Couronne"], ["cap", "Casquette"], ["beanie", "Bonnet"], ["fedora", "Feutre"], ["headset", "Casque-micro"], ["party", "Fête"], ["wizard", "Chapeau pointu"], ["helmet", "Casque d'astronaute"], ["visor", "Visière holo"]],
+  hat: [["", "Aucun"], ["crown", "Couronne"], ["cap", "Casquette"], ["beanie", "Bonnet"], ["fedora", "Feutre"], ["headset", "Casque-micro"], ["party", "Fête"], ["wizard", "Chapeau pointu"], ["helmet", "Casque d'astronaute"], ["visor", "Visière holo"], ["tophat", "Haut-de-forme"]],
   scarf: [["", "Aucune"], ["#8f2b2b,#d4a640", "Rouge et or"], ["#2f5d3a,#c9ccd6", "Vert et argent"], ["#22336a,#b08a5a", "Bleu et bronze"], ["#d4a640,#1c1c22", "Jaune et noir"]],
   wand: [["", "Sans"], ["1", "Baguette"]],
   jetpack: [["", "Sans"], ["1", "Jetpack"]],
@@ -77,8 +78,8 @@ function casTabHtml() {
   const L = cas.look;
   if (cas.tab === "face") return `<h4>PEAU</h4>${swatches("skin", CAS.skin)}<h4>BARBE</h4>${choices("beard", CAS.beard)}${L.beard ? `<h4>COULEUR DE LA BARBE</h4>${swatches("beardColor", ["", ...CAS.hair].filter(Boolean))}` : ""}`;
   if (cas.tab === "hair") return `<h4>COUPE</h4>${choices("style", CAS.style)}<h4>COULEUR</h4>${swatches("hair", CAS.hair)}`;
-  if (cas.tab === "outfit") return `<h4>TENUE</h4>${choices("outfit", CAS.outfit, lockedMsg("outfit"))}<h4>${L.outfit === "flight" ? "COMBINAISON" : L.outfit === "robe" ? "ROBE" : L.outfit === "tux" || L.outfit === "suit" ? "VESTE" : "HAUT"}</h4>${swatches("shirt", CAS.shirt)}
-    ${["tux", "suit", "robe", "flight"].includes(L.outfit) ? `<h4>${L.outfit === "tux" ? "NŒUD PAPILLON" : L.outfit === "robe" ? "LISERÉ" : L.outfit === "flight" ? "BANDES" : "CRAVATE"}</h4>${swatches("tie", CAS.tie)}` : ""}<h4>PANTALON</h4>${swatches("pants", CAS.pants)}<h4>CHAUSSURES</h4>${swatches("shoes", CAS.shoes)}`;
+  if (cas.tab === "outfit") return `<h4>TENUE</h4>${choices("outfit", CAS.outfit, lockedMsg("outfit"))}<h4>${L.outfit === "flight" ? "COMBINAISON" : L.outfit === "vampire" ? "HABIT" : L.outfit === "robe" ? "ROBE" : L.outfit === "tux" || L.outfit === "suit" ? "VESTE" : "HAUT"}</h4>${swatches("shirt", CAS.shirt)}
+    ${["tux", "suit", "robe", "flight", "vampire"].includes(L.outfit) ? `<h4>${L.outfit === "tux" ? "NŒUD PAPILLON" : L.outfit === "robe" ? "LISERÉ" : L.outfit === "flight" ? "BANDES" : L.outfit === "vampire" ? "DOUBLURE DE LA CAPE" : "CRAVATE"}</h4>${swatches("tie", CAS.tie)}` : ""}<h4>PANTALON</h4>${swatches("pants", CAS.pants)}<h4>CHAUSSURES</h4>${swatches("shoes", CAS.shoes)}`;
   if (cas.tab === "acc") return `<h4>LUNETTES</h4>${choices("glasses", CAS.glasses)}<h4>CHAPEAU</h4>${choices("hat", CAS.hat, lockedMsg("hat"))}<h4>ÉCHARPE</h4>${choices("scarf", CAS.scarf, lockedMsg("scarf"))}<h4>BAGUETTE</h4>${choices("wand", CAS.wand, lockedMsg("wand"))}<h4>JETPACK</h4>${choices("jetpack", CAS.jetpack, lockedMsg("jetpack"))}`;
   return `<h4>DEUX TRAITS</h4><div class="ctraits">${TRAIT_IDS.map(id => { const t = TRAITS[id]; return `<button data-cas-trait="${id}" class="${cas.traits.includes(id) ? "on" : ""}" title="${esc(t.desc)}">${t.icon} ${esc(t.name)}</button>`; }).join("")}</div>
     <p class="muted">${cas.traits.map(id => `${TRAITS[id].icon} ${esc(TRAITS[id].desc)}`).join("<br>")}</p>

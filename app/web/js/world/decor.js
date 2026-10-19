@@ -166,6 +166,24 @@ function paintRug(p, x0, y0, w, h, type, base) {
     const mx = x0 + w * 0.72, my = y0 + h * 0.34, mr = Math.min(w, h) * 0.13;
     ellipse(mx, my, mr, mr, "#f4e7b0"); ellipse(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, mr * 0.85, base);
     for (let k = 0; k < 6; k++) rect(x0 + w * 0.2 + k * 2, y0 + h * 0.66 - k * 1.1, 1.6 - k * 0.2, 0.6, k ? light : "#f4efe2");
+  } else if (type === "toile") {  // a cobweb of silver: spokes from the heart, rings of thread, the spider in the middle
+    const cx = x0 + w / 2, cy = y0 + h / 2, rx = w / 2 - 3, ry = h / 2 - 3, silver = "rgba(232, 228, 240, 0.75)";
+    const ln = (ax, ay, bx, by, wd) => { const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L * wd / 2, ny = dx / L * wd / 2; p.poly([[ax + nx, ay + ny], [bx + nx, by + ny], [bx - nx, by - ny], [ax - nx, ay - ny]], silver); };
+    const N = 12, at = (k, f) => { const a = k * Math.PI * 2 / N; return [cx + Math.cos(a) * rx * f, cy + Math.sin(a) * ry * f]; };
+    for (let k = 0; k < N; k++) ln(cx, cy, ...at(k, 1), 0.35);
+    for (const f of [0.18, 0.34, 0.5, 0.66, 0.82, 0.97]) for (let k = 0; k < N; k++) ln(...at(k, f), ...at(k + 1, f * 0.96), 0.25);
+    ellipse(cx, cy + 1, 2.2, 2.6, "#0e0a12"); ellipse(cx, cy - 2, 1.4, 1.4, "#0e0a12"); rect(cx - 0.3, cy, 0.6, 0.6, "#c0303a");
+    for (const sd of [-1, 1]) for (const dy of [-1.4, 0, 1.4, 2.6]) ln(cx, cy + dy * 0.5, cx + sd * 4, cy + dy * 1.4 - 1, 0.4);
+  } else if (type === "elime") {  // an old oriental rug, faded, moth-eaten, holes down to the floor
+    const gold = "#b8963a", cx = x0 + w / 2, cy = y0 + h / 2;
+    rect(x0 + 1.5, y0 + 1.5, w - 3, 4, dark); rect(x0 + 1.5, y0 + h - 5.5, w - 3, 4, dark); rect(x0 + 1.5, y0 + 1.5, 4, h - 3, dark); rect(x0 + w - 5.5, y0 + 1.5, 4, h - 3, dark);
+    for (let x = x0 + 3; x < x0 + w - 3; x += 3) if (decorRnd(x) > 0.2) { rect(x, y0 + 3, 1, 1, gold); rect(x, y0 + h - 4, 1, 1, gold); }
+    const r = Math.min(h / 2 - 9, 13);
+    p.poly([[cx, cy - r], [cx + r * 1.8, cy], [cx, cy + r], [cx - r * 1.8, cy]], dark); p.poly([[cx, cy - r + 3], [cx + r * 1.8 - 5, cy], [cx, cy + r - 3], [cx - r * 1.8 + 5, cy]], shade(base, 1.15));
+    for (let i = 0; i < 40; i++) rect(x0 + 4 + decorRnd(i * 13) * (w - 8), y0 + 4 + decorRnd(i * 29 + 3) * (h - 8), 2 + decorRnd(i) * 4, 0.6, "rgba(255, 255, 255, 0.06)");  // the worn threads
+    for (const [fx, fy, fr] of [[0.22, 0.3, 2.6], [0.78, 0.68, 3.2], [0.6, 0.22, 1.6], [0.3, 0.76, 1.8]]) {  // the holes
+      ellipse(x0 + w * fx, y0 + h * fy, fr * 1.4, fr, "#4a3a2a"); ellipse(x0 + w * fx, y0 + h * fy, fr * 1.4, fr, light, 0.4);
+    }
   } else if (type === "persan") {
     const gold = "#d9a441", cx = x0 + w / 2, cy = y0 + h / 2;
     rect(x0 + 1.5, y0 + 1.5, w - 3, 4, dark); rect(x0 + 1.5, y0 + h - 5.5, w - 3, 4, dark);

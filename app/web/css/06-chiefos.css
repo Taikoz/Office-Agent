@@ -206,7 +206,42 @@
   #chiefos.grimoire .ubok { --ub-orange: #5a1e2a; }  /* 07-gitlab.css paints it var(--ub-orange) !important */
   #chiefos.grimoire .bpapp small { color: #d9cfb8; }
   /* both themes: the skill map's heat cells keep their own colours (10-apps.css); HOLO's main buttons on a deep cyan */
-  #chiefos:is(.holo, .grimoire) .osapp .kmcell { background: color-mix(in srgb, #19b6ee calc(var(--k, .5) * 100%), #2a3442); color: #fff; border: 0; border-radius: 5px; box-shadow: none; }
-  #chiefos:is(.holo, .grimoire) .osapp .kmcell.lo { color: #cfe6f2; } #chiefos:is(.holo, .grimoire) .osapp .kmcell.hi { color: #081746; }
-  #chiefos:is(.holo, .grimoire) .osapp .kmcell.best { box-shadow: inset 0 0 0 2px #fbaa08; }
+  #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell { background: color-mix(in srgb, #19b6ee calc(var(--k, .5) * 100%), #2a3442); color: #fff; border: 0; border-radius: 5px; box-shadow: none; }
+  #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell.lo { color: #cfe6f2; } #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell.hi { color: #081746; }
+  #chiefos:is(.holo, .grimoire, .crypte) .osapp .kmcell.best { box-shadow: inset 0 0 0 2px #fbaa08; }
   #chiefos.holo .ubok { --ub-orange: #00788a; }
+  /* ChiefOS CRYPTE: a haunted manor (chiefos.js osSkin): black velvet, gothic arches for the windows, tombstones for the
+     icons, candle wax and blood red, bone-white text; dark like HOLO, the apps keep their layout through the variables */
+  #chiefos.crypte { --ub-orange: #c0303a; --ub-bg: #160e14f2; --ub-head: #24121c; --ub-card: #ffffff0d; --ub-line: #c0303a40; --ub-text: #ece4d6; --ub-dim: #a89a8c; --wax: #d9b26a;
+    font-family: "Cinzel", "Trajan Pro", "Palatino Linotype", Georgia, serif; font-size: 14px; border-radius: 4px; box-shadow: 0 0 0 1px #3a1a24, 0 0 0 3px #0a0608, 0 0 40px #c0303a26, 0 24px 70px #000e;
+    background: radial-gradient(70% 60% at 50% 0%, #3a1a3a 0%, #1a0c16 55%, #08040a 100%), repeating-linear-gradient(90deg, #ffffff04 0 1px, transparent 1px 6px); background-blend-mode: screen; }
+  #chiefos.crypte::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5; background: radial-gradient(120% 80% at 50% 50%, transparent 60%, #000a 100%); }
+  #chiefos.crypte .ubtop { color: var(--ub-text); background: linear-gradient(180deg, #2a1420, #12080e); border-bottom: 1px solid #c0303a88; letter-spacing: .08em; text-shadow: 0 0 6px #000; }
+  #chiefos.crypte .ubact { color: var(--wax); border: 1px solid #d9b26a55; border-radius: 12px 12px 2px 2px; } #chiefos.crypte .ubact:hover, #chiefos.crypte .ubact.on { background: #c0303a33; }
+  #chiefos.crypte .ubtitle { color: var(--wax); } #chiefos.crypte .ubclock { color: #d8c8e8; font-style: italic; } #chiefos.crypte .ubsys button { color: var(--ub-text); }
+  #chiefos.crypte .ubdock { background: linear-gradient(90deg, #08040a, #1e0e18); border-right: 1px solid #c0303a66; border-radius: 0; box-shadow: inset -10px 0 20px -12px #c0303a88; }
+  #chiefos.crypte .ubdock button .ic, #chiefos.crypte .ubgrid .ic, #chiefos.crypte .ubappic { border-radius: 50% 50% 4px 4px / 60% 60% 4px 4px;
+    background: linear-gradient(170deg, color-mix(in srgb, var(--tint) 35%, #8a8090), color-mix(in srgb, var(--tint) 20%, #2a2430)); box-shadow: inset 0 0 0 1px #ffffff22, 0 3px 0 #0a0608, 0 4px 8px #000a; }
+  #chiefos.crypte .ubdock button:hover .ic { box-shadow: inset 0 0 0 1px #ffffff44, 0 3px 0 #0a0608, 0 0 12px #d9b26a88; }
+  #chiefos.crypte .ubdock button.on::before { background: var(--ub-orange); box-shadow: 0 0 8px var(--ub-orange); }
+  #chiefos.crypte .ubdock .ubshow { color: var(--wax); } #chiefos.crypte .osbadge { background: #c0303a; box-shadow: 0 0 6px #c0303a; }
+  #chiefos.crypte .ubwin { border-radius: 46px 46px 4px 4px; background: var(--ub-bg); box-shadow: 0 0 0 1px #4a2a34, 0 0 0 4px #0e080c, 0 0 0 5px #3a1a24, 0 16px 40px #000c; overflow: hidden; }
+  #chiefos.crypte .ubhead { background: linear-gradient(180deg, #3a1a2a, var(--ub-head)); border-bottom: 1px solid #c0303a77; padding-left: 30px; padding-right: 30px; }
+  #chiefos.crypte .ubhead b { color: var(--wax); letter-spacing: .12em; text-transform: uppercase; font-size: 13.5px; text-shadow: 0 0 8px #d9b26a55; }
+  #chiefos.crypte .ubhead b::before, #chiefos.crypte .ubhead b::after { content: " 🕯 "; }
+  #chiefos.crypte .ubctl button { background: transparent; color: var(--ub-text); border: 1px solid #d9b26a55; } #chiefos.crypte .ubctl .x:hover { background: #c0303a; border-color: #c0303a; }
+  #chiefos.crypte .osapp { scrollbar-color: #5a2a34 transparent; }
+  #chiefos.crypte .osapp h4 { color: var(--wax); letter-spacing: .14em; border-bottom: 1px solid #c0303a44; padding-bottom: 2px; }
+  #chiefos.crypte .osapp h4::before { content: "☾ "; color: #c0303a; }
+  #chiefos.crypte .osrow { background: linear-gradient(90deg, #c0303a12, var(--ub-card) 40%); border-bottom: 1px solid #ffffff10; }
+  #chiefos.crypte .osapp button, #chiefos.crypte .ubmenu button { color: var(--ub-text); background: #ffffff0f; border: 1px solid #d9b26a44; border-radius: 10px 10px 3px 3px; }
+  #chiefos.crypte .osapp button:hover { background: #c0303a33; border-color: #d9b26a88; } #chiefos.crypte .osapp button.on, #chiefos.crypte .osapp .ubok { background: #8f1f2a; border-color: #c0303a; color: #fff4e8; }
+  #chiefos.crypte .ubok { --ub-orange: #8f1f2a; }
+  #chiefos.crypte input, #chiefos.crypte select, #chiefos.crypte textarea { background: #0a0608cc !important; color: var(--ub-text) !important; border: 1px solid #5a3a44 !important; border-radius: 3px !important; }
+  #chiefos.crypte a { color: #e8a0a8; } #chiefos.crypte code { color: var(--wax); background: #ffffff10; }
+  #chiefos.crypte .ubmenu { background: #160e14f8; border: 1px solid #c0303a88; } #chiefos.crypte .ubsearch { background: #0a0608 !important; }
+  #chiefos.crypte .s-blocked, #chiefos.crypte .pit { color: #ff7a84; } #chiefos.crypte .s-done, #chiefos.crypte .ci-success { color: #7fd89a; } #chiefos.crypte .ci-running { color: #f0c860; }
+  #chiefos.crypte .hoboot { background: radial-gradient(circle at 50% 40%, #2a1424, #050205); color: #d8c8e8; font-style: italic; }
+  #chiefos.crypte .hoboot b { font-size: 28px; letter-spacing: .1em; color: var(--wax); text-shadow: 0 0 16px #ff9a3b88; }
+  #chiefos.crypte .hoboot span { color: #c0303a; letter-spacing: .5em; }
+  #chiefos.crypte .hoboot em { background: linear-gradient(90deg, transparent, #8f1f2a, #c0303a, #8f1f2a, transparent); box-shadow: 0 0 10px #c0303a; }

@@ -39,7 +39,8 @@ export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "
 // themed collections (the rail's 🎭 Thèmes): an object of a theme has theme: <id> and keeps its own category; inside a
 // theme, its objects by shelf (an object's shelf, else its category's), then the chief's clothes of the wardrobe
 export const THEMES = [{ id: "magie", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef.", deco: "Déco et objets magiques" },
-  { id: "scifi", icon: "🚀", name: "Station spatiale", desc: "Cloisons de vaisseau, porte automatique, baie sur l'espace, ordinateurs du futur, téléporteurs, robot, poste de commandement (ChiefOS en HOLO)… et la combinaison du chef.", deco: "Gadgets et technologie" }];
+  { id: "scifi", icon: "🚀", name: "Station spatiale", desc: "Cloisons de vaisseau, porte automatique, baie sur l'espace, ordinateurs du futur, téléporteurs, robot, poste de commandement (ChiefOS en HOLO)… et la combinaison du chef.", deco: "Gadgets et technologie" },
+  { id: "manoir", icon: "🦇", name: "Manoir hanté", desc: "Murs de manoir, porte qui grince, portrait dont les yeux te suivent, bocal à fantômes (les agents bloqués), horloge comtoise, cercueil, orgue du maître (ChiefOS en Crypte)… et la cape du chef.", deco: "Curiosités hantées" }];
 for (const t of THEMES) BUY_CATS.push([`theme:${t.id}`, t.icon, t.name]);
 const SHELVES = [["murs", "🧱", "Murs à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
   ["tables", "🍽️", "Tables"], ["bureaux", "🗄️", "Bureaux"], ["ordinateurs", "💻", "Ordinateurs"], ["deco", "✨", "Déco"], ["garde", "🎩", "Garde-robe du chef"]];

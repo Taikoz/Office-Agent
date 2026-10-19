@@ -24,6 +24,9 @@ export const SHOP = [
   { id: "chief:helmet", name: "Casque d'astronaute", price: 1200, desc: `Pour ${CHIEF_NAME} : une bulle de verre sur un col d'acier.`, chief: { hat: "helmet" }, theme: "scifi", icon: "🪖" },
   { id: "chief:visor", name: "Visière holo", price: 700, desc: `Pour ${CHIEF_NAME} : un bandeau de lumière cyan devant les yeux.`, chief: { hat: "visor" }, theme: "scifi", icon: "🥽" },
   { id: "chief:jetpack", name: "Jetpack", price: 1600, desc: `Pour ${CHIEF_NAME} : deux réservoirs sur le dos ; des flammes sous lui quand il marche.`, chief: { jetpack: "1" }, theme: "scifi", icon: "🚀" },
+  { id: "hat:tophat", name: "Hauts-de-forme pour l'équipe", price: 1300, desc: "Toute l'équipe en haut-de-forme noir à ruban rouge.", hat: true, theme: "manoir", icon: "🎩" },
+  { id: "chief:vampire", name: "Cape de vampire", price: 1600, desc: `Pour ${CHIEF_NAME} : un habit noir, un jabot, une grande cape au col montant doublée de rouge (couleurs dans « Créer ton chef »).`, chief: { outfit: "vampire", shirt: "#1c1c24", tie: "#8f1f2a" }, theme: "manoir", icon: "🧛" },
+  { id: "chief:tophat", name: "Haut-de-forme", price: 800, desc: `Pour ${CHIEF_NAME} : soie noire, ruban rouge sang.`, chief: { hat: "tophat" }, theme: "manoir", icon: "🎩" },
   { id: "chief:wand", name: "Baguette magique", price: 600, desc: `Pour ${CHIEF_NAME} : en bois de houx, une étincelle au bout. Il la lève en dirigeant l'équipe.`, chief: { wand: "1" }, theme: "magie", icon: "🪄" },
 ];
 const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "", jetpack: "" };  // taken off: back to the default
