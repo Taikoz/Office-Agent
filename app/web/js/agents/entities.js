@@ -1,5 +1,6 @@
 // Devs at their desks: arrival, questions, coffee breaks, sync with the sessions.
 
+import { standing, walkStep } from "../world/motion.js";
 import { hub, provide } from "../hub.js";
 import { ARRIVAL_GAP, COFFEE, DESKS, DOOR, HAIRS, LANE, QSPOTS, SKINS, TEAM, TICKET_RE, arrivals, chief, clip, ctx, doorFree, ents, firstLoad, fromDesk, hash, mmxQueue, toDesk, typeColor } from "../core/core.js";
 
@@ -74,7 +75,7 @@ export function sync(session) {
       e.asking = false; e.spot = null;
       e.path = [{ x: e.x, y: LANE }, ...toDesk(e.desk)];
     } else if (e.seated && !e.leaving && a.status === "done" && (hub.mate(e.who).fatigue >= 60 || hub.mate(e.who).cafe <= 30)  // a mission is finished before any break
-      && !hub.focusMode && COFFEE.ok && performance.now() > (e.coffeeNext || 0) && !hub.Incident.get("coffee").on && ![...ents.values()].some(x => x.coffee)) goCoffee(e);
+      && !hub.focusMode && COFFEE.ok && performance.now() > (e.coffeeNext || 0) && !hub.Incident.get("coffee").on && ![...ents.values()].some(x => x.coffee || x.helping)) goCoffee(e);  // one at the machine at a time
   }
   hub.firstLoad = false;
 }
@@ -83,39 +84,42 @@ export function sync(session) {
 function goCoffee(e) {
   const back = toDesk(e.desk), seat = back.pop();
   e.coffee = true; e.seated = false;
+  e.emptyCup = !!hub.takeMess?.(e.desk?.uid);  // its last cup, left on the desk: taken back to the machine (world/upkeep.js)
+  const q = hub.coffeeQuality?.() ?? 1;  // a scaled machine: slower, weaker
   e.path = [...fromDesk(e.desk), { x: COFFEE.x, y: LANE },
-    { ...COFFEE, wait: COFFEE.cup?.wait || 4500, pose: "coffee", on: x => {
-      const c = COFFEE.cup || { cafe: 45, fatigue: -12, moral: 4 };  // the machine's tier (items/catalog2.js)
-      x.cup = true; hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.countWeekly?.("coffee"); hub.crewAdd(x.who, { cafe: c.cafe, fatigue: c.fatigue, moral: c.moral, ennui: -10 });
+    { ...COFFEE, wait: (COFFEE.cup?.wait || 4500) * (2 - q), pose: "coffee", on: () => hub.poke?.(hub.itemByUid(COFFEE.uid)) },
+    { x: COFFEE.x, y: COFFEE.y, on: x => {  // the cup, once made
+      const c0 = COFFEE.cup || { cafe: 45, fatigue: -12, moral: 4 }, c = { ...c0, cafe: Math.round(c0.cafe * q), moral: Math.round((c0.moral || 0) * q) };  // the machine's tier (items/catalog2.js)
+      x.cup = true; x.emptyCup = false; hub.usedCoffee?.();
+      if (q < 0.8) hub.addMoodlet?.(x.who, "scale", "🧂", "Café au goût de tartre", -1, 20); hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.countWeekly?.("coffee"); hub.crewAdd(x.who, { cafe: c.cafe, fatigue: c.fatigue, moral: c.moral, ennui: -10 });
       if (c.tier >= 4) hub.addMoodlet?.(x.who, "latteart", "☕", "Un café de barista", 4, 40); else if (c.tier <= 1) hub.addMoodlet?.(x.who, "badcoffee", "🤢", "Café tiède de la machine filtre", -2, 20);
     } },
     { x: COFFEE.x, y: LANE }, ...back,
-    { ...seat, on: x => { x.coffee = false; x.cup = false; x.coffeeNext = performance.now() + 120000; } }];
+    { ...seat, on: x => { x.coffee = false; if (x.cup) hub.leaveMess?.(x.desk?.uid); x.cup = false; x.coffeeNext = performance.now() + 120000; } }];
 }
 
 export function step(dt, t) {
-  hub.stepFx(dt, t); hub.stepCat(dt, t); hub.stepCrew(dt); hub.stepNeeds(dt); hub.stepChief(dt, t); hub.stepOfficeLife(t); hub.stepLounge(dt, t); hub.stepSocial(dt, t); hub.stepBuild(t); hub.checkBirthdays(); hub.Happening.stepAll(dt, t); hub.stepDog(dt, t); hub.Incident.step(t);
+  hub.stepFx(dt, t); hub.stepCat(dt, t); hub.stepCrew(dt); hub.stepNeeds(dt); hub.stepChief(dt, t); hub.stepOfficeLife(t); hub.stepLounge(dt, t); hub.stepSocial(dt, t); hub.stepBuild(t); hub.stepUpkeep?.(t); hub.checkBirthdays(); hub.Happening.stepAll(dt, t); hub.stepDog(dt, t); hub.Incident.step(t);
   hub.Room.current().step(dt, t);
   if (mmxQueue.length && ![...ents.values()].some(e => e.errand)) hub.dispatch(mmxQueue.splice(0));
   while (arrivals.length && t >= doorFree) {  // let the next dev in once the previous one cleared the door
     const e = ents.get(arrivals.shift());
     if (!e?.queued) continue;
-    e.queued = false; hub.doorFree = t + ARRIVAL_GAP;
+    e.queued = false; hub.doorFree = t + ARRIVAL_GAP; hub.snd?.("door", { room: "office", pan: -0.6 });
     chief.wave = t + 2500; chief.until = t + 5000;
     chief.bubble = `${e.agent.ticket || clip(e.agent.description, 22)} → ${e.who} (${hub.skillTag(e.who, e.agent.type)}) !`;
   }
   for (const [id, e] of ents) {
     if (e.queued) continue;
     if (e.pauseUntil) { if (t < e.pauseUntil) continue; e.pauseUntil = 0; e.pose = ""; }
-    if (!e.path.length) { if (e.leaving) ents.delete(id); continue; }
+    if (!e.path.length) { if (e.leaving) ents.delete(id); else if (!e.seated) standing("office", e, e.x, e.y); continue; }
     hub.routeAhead(e.path, e.x, e.y, "office");  // around the furniture (world/route.js)
-    const tgt = e.path[0], dx = tgt.x - e.x, dy = tgt.y - e.y, dist = Math.hypot(dx, dy), sp = 0.05 * dt;
-    if (dist <= sp) {
-      e.x = tgt.x; e.y = tgt.y; e.path.shift();
+    const tgt = walkStep(e, e.path, dt, 0.05, "office");  // with some weight, making way for the others (world/motion.js)
+    if (tgt) {
       if (tgt.on) tgt.on(e);
       if (tgt.wait) { e.pauseUntil = t + tgt.wait; e.pose = tgt.pose || ""; }
       if (!e.path.length && !e.leaving && !e.asking && !e.standup && !e.visiting) e.seated = true;
-    } else { e.x += dx / dist * sp; e.y += dy / dist * sp; }
+    }
   }
 }
 

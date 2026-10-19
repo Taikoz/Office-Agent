@@ -123,7 +123,7 @@ function chiefOrder(where) {
   if (where === "console" && !hub.OFFICE_SPOTS.console) { chief.bubble = "Pas de console ici : elle s'achète."; chief.until = t + 3000; return; }
   if (where === "coffee") {
     if (Incident.get("coffee").on) { chief.bubble = "La machine est en panne…"; chief.until = t + 3000; return; }
-    chiefGo("coffee", c => { c.coffeeUntil = performance.now() + 6000; smoke(COFFEE.x, 56, "#d5eeff"); });
+    chiefGo("coffee", c => { c.coffeeUntil = performance.now() + 6000; smoke(COFFEE.x, 56, "#d5eeff"); hub.usedCoffee?.(); });
   } else if (where === "console") chiefGo("console", c => { c.cup = false; });
   else chiefGo("podium");
   chief.manual = true;

@@ -8,7 +8,7 @@ import { CHIEF_NAME, chief } from "../core/core.js";
 import { chiefGo, chiefToLounge, chiefToOffice } from "../world/chief.js";
 import { saveBuild } from "../world/build.js";
 import { usersOf } from "../world/place.js";
-import { jukebox, toggleJukebox } from "../world/shop.js";
+import { jukebox, pressJukebox } from "../world/shop.js";
 import { weather } from "../agents/events2.js";
 import { say } from "../social/people.js";
 import { crewAdd } from "../sims/crew.js";
@@ -94,7 +94,7 @@ new class extends Gadget {
   actions: [
     ["joke", "🃏", "Raconte une blague", it => { say(CHIEF_NAME, "Dis Office, une blague !"); speak(it, "ENCEINTE", JOKES[Math.floor(Math.random() * JOKES.length)]); }],
     ["weather", "🌦️", "La météo des tests", it => { say(CHIEF_NAME, "Dis Office, quel temps fait-il ?"); speak(it, "MÉTÉO DES TESTS", WEATHER[weather()] || WEATHER.clear); }],
-    ["music", "🎵", "Musique !", it => { if (jukebox.playing && jukebox.uid !== it.uid) toggleJukebox(); jukebox.uid = it.uid; toggleJukebox(); speak(it, "ENCEINTE", jukebox.playing ? "C'est parti pour la musique 🎶" : "Musique coupée."); }],
+    ["music", "🎵", "Musique ! (station suivante)", it => { const st = pressJukebox(it); speak(it, "ENCEINTE", st ? `${st} 🎶` : "Musique coupée."); }],
   ] });
 
 /* ---------- the copier ---------- */

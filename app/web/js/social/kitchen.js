@@ -18,8 +18,8 @@ export const STOVE = { x: 212, y: 84 }, HELPER = { x: 190, y: 84 }, PAN = { x: 2
 export const panAt = fn => hub.ISO?.drawing && PAN.fx != null ? hub.ISO.put(PAN.x + 5, PAN.y + 5.6, PAN.fx, PAN.fy, PAN.z, fn) : fn();
 export const TABLE = { x: 162, y: 175, w: 48, h: 15 };
 export const SEATS = [{ x: 174, y: 172 }, { x: 198, y: 172, via: { x: 184, y: 172 } }, { x: 174, y: 204, via: { x: 150, y: 204 }, back: true }, { x: 198, y: 204, via: { x: 150, y: 204 }, back: true }];
-const COOK_ACT = { id: "cook", label: "cuisine", pose: { back: true, arms: "type" }, fx: { ennui: -2 } };
-export const HELP_ACT = { id: "helpcook", label: "aide en cuisine", pose: { back: true, arms: "type" }, fx: { ennui: -2, moral: 0.5 } };
+const COOK_ACT = { id: "cook", label: "cuisine", pose: { back: true, arms: "reach" }, fx: { ennui: -2 } };
+export const HELP_ACT = { id: "helpcook", label: "aide en cuisine", pose: { back: true, arms: "reach" }, fx: { ennui: -2, moral: 0.5 } };
 const EAT_ACT = { id: "eat", label: "mange à table", pose: { seated: true }, fx: { moral: 1 } };
 export const VISIT_ACT = { id: "visit", label: "papote", pose: {}, fx: { ennui: -2, moral: 0.5 } };
 export const RECIPES = [

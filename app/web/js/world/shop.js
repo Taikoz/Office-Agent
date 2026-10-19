@@ -44,22 +44,17 @@ export function renderShop() {
 document.getElementById("p-game").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-shop]"); if (b && selected === "shop") shopAction(b.dataset.shop, b.dataset.id);
 });
-export const jukebox = { playing: false, i: 0, timer: null };
-const TUNE = [523, 659, 784, 659, 587, 698, 880, 698, 523, 659, 784, 1047, 988, 784, 659, 587];
-export function toggleJukebox() {
-  jukebox.playing = !jukebox.playing; clearInterval(jukebox.timer);
-  if (!jukebox.playing) return;
-  if (!hub.soundOn) hub.toast("JUKEBOX", "La musique tourne en silence", "Active ♪ SON pour l'entendre.");
-  jukebox.timer = setInterval(() => {
-    if (!jukebox.playing || !hub.soundOn) return;
-    try {
-      hub.audio = hub.audio || new AudioContext();
-      const o = hub.audio.createOscillator(), g = hub.audio.createGain(), at = hub.audio.currentTime + 0.01, f = TUNE[jukebox.i++ % TUNE.length];
-      o.type = "triangle"; o.frequency.value = f; g.gain.setValueAtTime(0.025, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
-      o.connect(g).connect(hub.audio.destination); o.start(at); o.stop(at + 0.24);
-    } catch (_) { /* audio unavailable */ }
-  }, 260);
+// the jukebox (or a connected speaker): a press plays the first station, the next press the next one, then it stops;
+// the music itself is played by world/ambience.js, from where the jukebox stands
+export const jukebox = { playing: false, uid: null, type: "jukebox", station: 0 };
+export const STATIONS = [{ id: "jazz", name: "🎷 Jazz du bureau" }, { id: "synth", name: "🌆 Synthwave" }, { id: "chip", name: "👾 Chiptune" }];
+export function pressJukebox(it) {
+  if (jukebox.playing && jukebox.uid === it.uid) { if (++jukebox.station >= STATIONS.length) Object.assign(jukebox, { playing: false, station: 0 }); }
+  else Object.assign(jukebox, { playing: true, uid: it.uid, type: it.type, station: 0 });
+  if (jukebox.playing && !hub.soundOn) hub.toast("JUKEBOX", "La musique tourne en silence", "Active le son (🔊 en bas à droite) pour l'entendre.");
+  return jukebox.playing ? STATIONS[jukebox.station].name : "";
 }
+export function toggleJukebox() { jukebox.playing = !jukebox.playing; jukebox.station = 0; }
 
 /* kudos: one star at a time, the most starred of the day is the crush of the day */
 let kudos = new SaveSlot("office-kudos", { day: today(), counts: {}, total: {} }).data;

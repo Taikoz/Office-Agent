@@ -1,5 +1,6 @@
 // Break room: activities, chats, mate panel.
 
+import { standing, walkStep } from "./motion.js";
 import { hub, provide } from "../hub.js";
 import { CHIEF_NAME, H, TEAM, chief, curSession, ents, hash, selected, specialty, typeColor, roomSize } from "../core/core.js";
 import { drawPerson, stepOf } from "./scene.js";
@@ -75,9 +76,9 @@ function stepLounge(dt, t) {
       loungers.set(name, n);
       const sp = pickSpot(name);
       if (!loungeReady && sp) { n.x = sp.x; n.y = sp.y; n.spot = sp; n.next = t + Math.random() * 60000; }
-      else { sendTo(n, sp, t); n.path.unshift({ x: LD.x, y: LOUNGE_CORRIDOR }); n.say = "Je suis de retour !"; n.sayUntil = t + 2500; }
+      else { sendTo(n, sp, t); n.path.unshift({ x: LD.x, y: LOUNGE_CORRIDOR }); n.say = "Je suis de retour !"; n.sayUntil = t + 2500; hub.snd?.("door", { room: "lounge", pan: 0.6 }); }
     } else if (inOffice.has(name) && l && !l.called) {  // called by an agent: leaves through the door
-      l.called = true; l.say = "On m'appelle, j'y vais !"; l.sayUntil = t + 2500;
+      l.called = true; l.say = "On m'appelle, j'y vais !"; l.sayUntil = t + 2500; setTimeout(() => hub.snd?.("door", { room: "lounge", pan: 0.6 }), 4000);
       l.path = [...(l.spot?.via ? [{ ...l.spot.via }] : []), { x: l.spot?.via ? l.spot.via.x : l.x, y: LOUNGE_CORRIDOR }, { x: LD.x, y: LOUNGE_CORRIDOR }, { ...LD }];
       l.spot = null;
     }
@@ -86,11 +87,12 @@ function stepLounge(dt, t) {
   for (const [name, l] of loungers) {
     if (l.path.length) {
       hub.routeAhead(l.path, l.x, l.y, "lounge");  // around the furniture (world/route.js)
-      const tgt = l.path[0], dx = tgt.x - l.x, dy = tgt.y - l.y, dist = Math.hypot(dx, dy), sp = 0.04 * dt;
-      if (dist > sp) { l.x += dx / dist * sp; l.y += dy / dist * sp; }
-      else { l.x = tgt.x; l.y = tgt.y; l.path.shift(); }
+      walkStep(l, l.path, dt, 0.04, "lounge");  // with some weight, making way for the others (world/motion.js)
       if (!l.path.length && l.called) loungers.delete(name);
-    } else if (!l.called && !l.busy && !l.partyRoom && t > l.next) sendTo(l, pickSpot(name) || l.spot, t);
+    } else {
+      if (!l.partyRoom) standing("lounge", l, l.x, l.y);  // the others walk around them (world/motion.js)
+      if (!l.called && !l.busy && !l.partyRoom && t > l.next) sendTo(l, pickSpot(name) || l.spot, t);
+    }
   }
   // conversations
   while (chatQueue.length && t >= chatQueue[0].at) { const c = chatQueue.shift(); loungeSay(c.name, c.text, t); }
@@ -184,7 +186,7 @@ export function loungerPose(l, t) {
   const walking = l.path.length > 0, act = !walking && l.spot?.act, f = Math.floor(t / (walking ? 180 : 260));
   let opts = { frame: walking ? f : 0, step: walking ? stepOf(l, l.x, l.y) : null, talk: t < (l.sayUntil || 0), back: walking && l.path[0].y < l.y, smile: mate(l.name).moral >= 50, dir: walking ? [l.path[0].x - l.x, l.path[0].y - l.y] : l.spot?.face };
   if (act) {
-    opts = { ...opts, ...act.pose, frame: act.pose.arms === "type" ? f : 0 };
+    opts = { ...opts, ...act.pose, frame: act.pose.arms === "type" || act.pose.arms === "reach" || act.pose.hold === "paddle" ? f : 0 };
     if (act.dress) opts = act.dress(l, opts, t);  // an Activity (js/activities/); cooking, eating… are plain objects (social.js)
     if (l.spot.back) opts.back = true;
   }

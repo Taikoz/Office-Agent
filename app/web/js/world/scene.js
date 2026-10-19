@@ -8,6 +8,7 @@ import { SPRITES } from "../svg/sprites.js";
 import { lookTraits } from "../svg/figures.js";
 import { BOARD_COLS, STICKY } from "../svg/office.js";
 import { drawSky } from "../svg/sky.js";
+import { doorOpen, drawDoorOpen } from "./physics.js";
 
 /* ---------- scene ---------- */
 // the floor (decor.js: parquet, tiles, carpet… and a rug under each row of desks), drawn once per scale and setting
@@ -41,7 +42,8 @@ export function drawRoomWall(t, room = "office", iso = false) {
   if (!iso) { drawSky(374, 12, t); hub.drawWindow(room, 368, 4); ART.glints.draw(368, 4); }  // in isometric view, windows are bought (build.js)
   if (mine && !iso) { hub.drawShelf(t); hub.drawEmployee(t); }  // in isometric view: objects bought (build.js)
   // door
-  hub.doorSprite(room).draw(mine ? DOOR.x - 14 : 492, 20);
+  const dx = mine ? DOOR.x - 14 : 492;  // it opens when someone goes through (world/physics.js)
+  drawDoorOpen(() => hub.doorSprite(room).draw(dx, 20), dx, 20, iso ? doorOpen(room, dx + 15) : 0);
   px(mine ? DOOR.x - 13 : 493, 10, 28, 8, "#f7f7f7"); text(mine ? `☕ REPOS ${hub.loungers.size}` : "← MON BUREAU", mine ? DOOR.x + 1 : 507, 10.6, "#081746", 4, "center");
 }
 export function coffeeState(t, mine = true) {
@@ -143,6 +145,18 @@ export function stepOf(state, x, y) {
 }
 // what keeps a person alive when nothing happens: breathing, a blink now and then, each at its own beat (its look)
 const beat = look => { let h = 0; for (const c of `${look.skin}${look.hair}${look.shirt}${look.style}`) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 4000; };
+// a cup in hand: now and then brought to the lips (standing still or seated), else held at chest height
+export const cupHold = (still, seed, t) => still && Math.floor((t + seed * 977) / 2400) % 4 === 0 ? "sip" : "cup";
+// what a dev walking around has in hand: its papers for the MMX cabinet, its coffee, the ticket it just picked
+export function devHold(e, still, t) {
+  if (e.pose === "water") return "pour";
+  if (e.carry) return e.carry;
+  if (e.pose === "give" && e.cup) return "cup";
+  if (e.errand && e.pose !== "file") return "papers";
+  if (e.cup) return cupHold(still, hash(e.who || ""), t);
+  if (e.emptyCup && e.pose !== "coffee") return "cup";  // its empty cup, back to the machine
+  return e.picked && !e.asking && !e.leaving && !still ? "ticket" : "";
+}
 export function drawPerson(x, y, look, opts = {}) {
   let walk;
   if (opts.step != null) {  // the walk cycle: 8 poses over two steps; the body up when the legs pass, down on each step
@@ -152,14 +166,21 @@ export function drawPerson(x, y, look, opts = {}) {
   const now = performance.now(), b = beat(look);
   const life = { walk, breath: walk == null && Math.floor((now + b) / 1500) % 2 ? 1 : 0, blink: (now + b * 1.7) % 4300 < 130, talk: !!opts.talk && Math.floor(now / 110) % 2 === 0 };
   const hat = opts.hat || (look === hub.CHIEF_LOOK ? hub.chiefHat() : look.team ? hub.shop.hat : "");  // opts.hat: a VR headset…
-  const o = { frame: (opts.frame || 0) % 2, back: !!opts.back, seated: !!opts.seated, arms: opts.arms || "down", tux: !!opts.tux, smile: !!opts.smile, hat };
+  const o = { frame: (opts.frame || 0) % 2, back: !!opts.back, seated: !!opts.seated, arms: opts.arms || "down", tux: !!opts.tux, smile: !!opts.smile, hat }, hold = opts.hold || "";
   // the isometric view: in volume, turned toward where they go or look (opts.dir: a 2D direction; else facing us, or
   // the wall when seen from behind), a quarter turn at a time (svg/iso.js IsoAvatar)
   if (isoDrawing() && !opts.flat) {  // (flat: a portrait on the wall stays a picture)
     const d = opts.dir;
     let rot = o.back ? 2 : 0;
     if (d && (d[0] || d[1])) rot = Math.abs(d[0]) > Math.abs(d[1]) ? (d[0] > 0 ? 1 : 3) : (d[1] > 0 ? 0 : 2);
-    if (!ART.isoavatar.draw(x, y, { look: lookTraits(look), rot, frame: o.frame, seated: o.seated, arms: o.arms, tux: o.tux, smile: o.smile, hat: o.hat, ...life })) return drawPersonPx(x, y, look, opts);
+    if (!ART.isoavatar.draw(x, y, { look: lookTraits(look), rot, frame: o.frame, seated: o.seated, arms: o.arms, tux: o.tux, smile: o.smile, hat: o.hat, hold, ...life })) return drawPersonPx(x, y, look, opts);
+    if ((hold === "cup" || hold === "sip") && !hub.focusMode) {  // a hot coffee: a thin steam over the cup
+      const [mx, my, mz] = hold === "sip" ? [0.6, 4.7, (o.seated ? 4 : 8) + 13] : [4.9, 5.2, (o.seated ? 4 : 8) + 8.6], [rx, ry] = [[mx, my], [my, -mx], [-mx, -my], [-my, mx]][rot];
+      const cx = x + (rx - ry) * 0.6, cy = y + (rx + ry) * 0.3 - mz;
+      raw.drawn = true; ctx.save();
+      for (let i = 0; i < 3; i++) { const k = ((performance.now() / 1400) + i / 3) % 1; ctx.globalAlpha = 0.4 * Math.sin(Math.PI * k); ctx.fillStyle = "#f4f4fa"; ctx.beginPath(); ctx.arc((cx + Math.sin(k * 6 + i * 2) * 0.8) * S, (cy - 1 - k * 6) * S, (0.5 + k * 0.9) * S, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
     if (o.arms === "baton") {  // the baton in the raised hand
       const [hx, hy] = [[4.9, 0], [0, -4.9], [-4.9, 0], [0, 4.9]][rot], top = (o.seated ? 4 : 8) + 16 + (o.frame ? 2 : 0), hp = { x: x + (hx - hy) * 0.6, y: y + (hx + hy) * 0.3 - top };
       raw.drawn = true; ctx.strokeStyle = "#f4f2ea"; ctx.lineWidth = Math.max(1, S * 0.6); ctx.beginPath();
@@ -167,7 +188,12 @@ export function drawPerson(x, y, look, opts = {}) {
     }
     return;
   }
-  if (!ART.person.draw(x, y, { look: lookTraits(look), ...o })) return drawPersonPx(x, y, look, opts);  // svg/figures.js
+  if (!ART.person.draw(x, y, { look: lookTraits(look), ...o, arms: o.arms === "reach" ? "type" : o.arms })) return drawPersonPx(x, y, look, opts);  // svg/figures.js
+  if (hold === "cup" || hold === "sip") { px(x + 4, y - 13, 2.5, 3, "#f4f2ea"); px(x + 4, y - 13, 2.5, 0.8, "#6d4a2e"); }  // what is in hand, flat
+  else if (hold === "papers") for (let k = 0; k < 3; k++) px(x + 3 + k * 0.8, y - 14 - k * 1.2, 5, 4, k % 2 ? "#fff7b8" : "#f4f2ea");
+  else if (hold === "ticket") px(x + 4, y - 13, 3.5, 3.5, "#fff7b8");
+  else if (hold === "book") px(x - 3, y - 9, 6, 3.5, "#ff6b6b");
+  else if (hold === "mic") { px(x - 5, y - 17, 1.2, 4, "#2b2b33"); px(x - 5.4, y - 18.4, 2, 2, "#9aa0ad"); }
   if (o.arms === "baton") {
     const lift = o.frame ? -3 : 0, ty = y - 12;
     ctx.strokeStyle = "#f4f2ea"; ctx.lineWidth = Math.max(1, S * 0.6); ctx.beginPath();
@@ -236,8 +262,10 @@ export function drawDeskScreen(d, ent, t) {
 
 // how much higher a bubble or a mood goes over someone's head: the people in volume are taller (iso/engine.js)
 export const headroom = (k = 9) => isoDrawing() ? k : 0;
-export function bubble(x, y, msg, color = "#f4f2ea", fg = "#1c1c24") {
+// who: the speaker, for their voice (world/sounds.js); without it, the voice comes from the words; null: silent
+export function bubble(x, y, msg, color = "#f4f2ea", fg = "#1c1c24", who = "") {
   if (!msg) return;
+  hub.onBubble?.(x, y, msg, who);
   font(4.6);
   // a long line goes on two, cut at the space nearest the middle
   let lines = [msg];

@@ -61,6 +61,10 @@ function notifyChanges() {
       if (!prev) continue;
       const chiefRow = a.id.startsWith("chief:"), who = chiefRow ? "La session principale" : crew.ids[a.id] || specialty(a.type);
       const target = chiefRow ? "chief" : a.id;
+      // their sound (world/sounds.js), in the page too: a doorbell, two low notes, a fanfare, a broken CI, a spiral
+      const ring = now.q && now.q !== prev.q ? "question" : chiefRow ? "" : now.status !== prev.status && now.status === "blocked" ? "blocked"
+        : now.status !== prev.status && now.status === "done" ? "deliver" : now.ci === "failed" && prev.ci !== "failed" ? "ci" : now.stuck && !prev.stuck ? "stuck" : "";
+      if (ring) hub.sfx?.(ring);
       if (now.q && now.q !== prev.q) notify(`❓ ${who} a une question`, a.question.question, s.id, target, true, a.question);
       if (chiefRow) continue;
       if (now.status !== prev.status && now.status === "blocked") notify(`⛔ ${who} est bloqué`, a.lastError || a.action, s.id, target, true);

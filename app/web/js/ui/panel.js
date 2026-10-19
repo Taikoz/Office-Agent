@@ -46,8 +46,8 @@ cv.addEventListener("wheel", ev => {
   ev.preventDefault();
   flipBoard(pg.st, ev.deltaY > 0 ? 1 : -1);
 }, { passive: false });
-cv.addEventListener("mousemove", ev => { const p = canvasPoint(ev); laser.x = p.x; laser.y = p.y; laser.over = true; if (match) { match.mouseY = p.y; match.mouseX = p.x; } const id = hit(ev); cat.hover = id === "cat"; cv.classList.toggle("hover", !!id); cv.classList.toggle("hover-store", id === "store"); });
-cv.addEventListener("mouseleave", () => { cv.classList.remove("hover-store"); cat.hover = false; laser.over = false; if (match) match.mouseY = match.mouseX = null; });
+cv.addEventListener("mousemove", ev => { const p = canvasPoint(ev); laser.x = p.x; laser.y = p.y; laser.over = true; if (match) { match.mouseY = p.y; match.mouseX = p.x; } const id = hit(ev); hub.setHover?.(id, ev); cat.hover = id === "cat"; cv.classList.toggle("hover", !!id); cv.classList.toggle("hover-store", id === "store"); });
+cv.addEventListener("mouseleave", () => { hub.hideHover?.(); cv.classList.remove("hover-store"); cat.hover = false; laser.over = false; if (match) match.mouseY = match.mouseX = null; });
 cv.addEventListener("click", ev => {
   if (hub.ISO.takeDrag()) return;  // the scene was dragged (iso/engine.js camera), not clicked
   hub.closePie();

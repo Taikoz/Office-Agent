@@ -1,6 +1,7 @@
 // A client visits the office: greet them (click) before they leave, and they may sign a bonus; nobody came: a
 // disappointed client.
 
+import { walkStep } from "../world/motion.js";
 import { hub } from "../hub.js";
 import { CHIEF_NAME, DOOR, HAIRS, SKINS, TEAM, badge, chief, hash, px, text } from "../core/core.js";
 import { bubble, drawPerson, headroom, stepOf } from "../world/scene.js";
@@ -27,8 +28,7 @@ class ClientVisit extends Happening {
     const v = this.visitor; if (!v) return;
     if (v.path.length) {
       hub.routeAhead(v.path, v.x, v.y, "office");  // around the furniture (world/route.js)
-      const tgt = v.path[0], dx = tgt.x - v.x, dy = tgt.y - v.y, dist = Math.hypot(dx, dy), sp = 0.04 * dt;
-      if (dist > sp) { v.x += dx / dist * sp; v.y += dy / dist * sp; } else { v.x = tgt.x; v.y = tgt.y; v.path.shift(); }
+      walkStep(v, v.path, dt, 0.04, "office");  // with some weight, making way (world/motion.js)
       if (!v.path.length && v.phase === "in") { v.phase = "wait"; v.say = "Bonjour, je viens voir l'avancement !"; v.sayUntil = t + 4000; }
       if (!v.path.length && v.phase === "out") this.visitor = null;
       return;
@@ -47,7 +47,7 @@ class ClientVisit extends Happening {
     px(v.x + 4, v.y - 9, 4, 3, "#5c3d27");  // briefcase
     badge(v.x, v.y + 2, "CLIENT", "#d6a77f");
     if (v.phase === "wait") { const left = Math.max(0, Math.ceil((v.until - t) / 1000)); text(`⏳ ${left} s`, v.x, v.y - 32, "#fbaa08", 4.4, "center"); }
-    if (t < v.sayUntil) bubble(v.x, v.y - 24 - headroom(), v.say, "#f4f2ea");
+    if (t < v.sayUntil) bubble(v.x, v.y - 24 - headroom(), v.say, "#f4f2ea", undefined, v.name);
   }
   hit(x, y) { const v = this.visitor; return !!v && Math.abs(x - v.x) <= 7 && y >= v.y - 22 && y <= v.y + 3; }
   // the chief goes to greet them: a bonus, and everyone is proud

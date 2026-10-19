@@ -115,7 +115,7 @@ export function partyItems(t, G, items) {
 export function partyOver(t, G) {
   if (!party.mine) return;
   for (const f of party.folks.values()) {
-    const fn = () => { badge(f.x, f.y + 2, `🌐 ${f.n}`, "#3bc4ff"); if (t < f.until) bubble(f.x, f.y - 24 - headroom(), f.say, "#fff3c4", "#081746"); };
+    const fn = () => { badge(f.x, f.y + 2, `🌐 ${f.n}`, "#3bc4ff"); if (t < f.until) bubble(f.x, f.y - 24 - headroom(), f.say, "#fff3c4", "#081746", f.n); };
     if (G) G.put(f.x, f.y, f.x, f.y, 0, fn); else fn();
   }
 }

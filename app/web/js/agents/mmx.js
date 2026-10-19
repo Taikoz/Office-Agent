@@ -47,6 +47,7 @@ function dispatch(items) {
 function fileItems(e) {
   if (!e.errand) return;
   for (const it of e.errand.items) inTransit[it.kind] = Math.max(0, inTransit[it.kind] - 1);
+  hub.trashAdd?.(4 * e.errand.items.length);  // the drafts thrown away (world/upkeep.js)
   e.errand = null;
 }
 

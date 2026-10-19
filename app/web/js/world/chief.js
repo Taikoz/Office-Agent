@@ -1,5 +1,6 @@
 // The chief: podium, coffee and console breaks.
 
+import { walkStep } from "./motion.js";
 import { hub, provide } from "../hub.js";
 import { CHIEF_NAME, COFFEE, DESKS, DOOR, LANE, badge, chief, curSession, px, roomSize } from "../core/core.js";
 import { OFFICE_SPOTS, spotsOf } from "./place.js";
@@ -57,7 +58,7 @@ export function chiefToOffice(next = "podium") {
   chief.lspot = null;
   chief.lpath = [...via, { x: via[0]?.x ?? chief.lx, y: hub.LOUNGE_CORRIDOR }, { x: hub.LD.x, y: hub.LOUNGE_CORRIDOR }, { ...hub.LD, on: () => {
     chief.room = "office"; chief.x = DOOR.x; chief.y = DOOR.y + 2; chief.lpath = [];
-    chiefGo(next, next === "coffee" ? c => { c.coffeeUntil = performance.now() + 6000; hub.smoke(COFFEE.x, 56, "#d5eeff"); } : undefined);
+    chiefGo(next, next === "coffee" ? c => { c.coffeeUntil = performance.now() + 6000; hub.smoke(COFFEE.x, 56, "#d5eeff"); hub.usedCoffee?.(); } : undefined);
     if (hub.view === "lounge") hub.setView("office");
   } }];
 }
@@ -97,33 +98,30 @@ function stepChief(dt, t) {
     if (!chief.lpath.length && chief.loungeNext) { const fn = chief.loungeNext; chief.loungeNext = null; fn(); }  // what he came for (chiefUseItem)
     if (!chief.lpath.length) return;
     hub.routeAhead(chief.lpath, chief.lx, chief.ly, "lounge");
-    const tgt = chief.lpath[0], dx = tgt.x - chief.lx, dy = tgt.y - chief.ly, dist = Math.hypot(dx, dy), sp = 0.05 * dt;
-    if (dist > sp) { chief.lx += dx / dist * sp; chief.ly += dy / dist * sp; return; }
-    chief.lx = tgt.x; chief.ly = tgt.y; chief.lpath.shift();
-    if (tgt.on) tgt.on(chief);
+    const tgt = walkStep(chief, chief.lpath, dt, 0.05, "lounge", "lx", "ly");  // with some weight (world/motion.js)
+    if (tgt?.on) tgt.on(chief);
     return;
   }
   if (!chief.path.length) return;
   hub.routeAhead(chief.path, chief.x, chief.y, "office");
-  const tgt = chief.path[0], dx = tgt.x - chief.x, dy = tgt.y - chief.y, dist = Math.hypot(dx, dy), sp = 0.05 * dt;
-  if (dist > sp) { chief.x += dx / dist * sp; chief.y += dy / dist * sp; return; }
-  chief.x = tgt.x; chief.y = tgt.y; chief.path.shift();
-  if (tgt.on) tgt.on(chief);
+  const tgt = walkStep(chief, chief.path, dt, 0.05, "office");
+  if (tgt?.on) tgt.on(chief);
 }
 
 // the chief in the break room, drawn among the team (y-sorted by the lounge)
 export function drawChiefLounge(t) {
   const walking = chief.lpath.length > 0, act = !walking && chief.lspot?.act, g = chief.gesture && t < chief.gesture.until ? chief.gesture.pose : {};
-  const pose = { ...(act?.pose || {}), ...(act && chief.lspot.back ? { back: true } : {}), ...(walking ? {} : g) };
+  const svc = chief.at === "service" && !walking ? chief.svc : null;  // looking after an object (world/upkeep.js)
+  const pose = { ...(act?.pose || {}), ...(act && chief.lspot.back ? { back: true } : {}), ...(walking ? {} : g), ...(svc ? { arms: svc.kind === "thirst" ? "down" : "reach", hold: svc.kind === "thirst" ? "pour" : "" } : {}) };
   drawPerson(chief.lx, chief.ly, CHIEF_LOOK, { tux: true, smile: true, frame: Math.floor(t / (walking ? 180 : 300)), step: walking ? stepOf(chief.lstep ||= {}, chief.lx, chief.ly) : null, talk: t < (chief.until || 0),
-    seated: !!pose.seated, back: !!pose.back || (walking && chief.lpath[0].y < chief.ly), arms: pose.arms || "down",
-    dir: walking ? [chief.lpath[0].x - chief.lx, chief.lpath[0].y - chief.ly] : chief.lspot?.face });
+    seated: !!pose.seated, back: !!pose.back || (walking && chief.lpath[0].y < chief.ly), arms: pose.arms || "down", hold: chief.carry && !svc ? chief.carry : walking ? "" : pose.hold || "",
+    dir: walking ? [chief.lpath[0].x - chief.lx, chief.lpath[0].y - chief.ly] : svc ? svc.dir : chief.lspot?.face });
 }
 export function drawChiefLoungeOver(t) {
   const y = chief.ly + (chief.lspot?.act?.pose?.seated && !chief.lpath.length ? -3 : 2);
   badge(chief.lx, y, CHIEF_NAME.toUpperCase(), "#fbaa08");
   hub.drawEmotion(CHIEF_NAME, chief.lx, chief.ly - 25 - headroom(7), t);
-  if (t < (chief.until || 0) && chief.bubble) bubble(chief.lx, chief.ly - 24 - headroom(), chief.bubble, "#fbaa08", "#081746");
+  if (t < (chief.until || 0) && chief.bubble) bubble(chief.lx, chief.ly - 24 - headroom(), chief.bubble, "#fbaa08", "#081746", CHIEF_NAME);
 }
 
 // gaming corner under the board: TV on a low cabinet, console, beanbag

@@ -5,7 +5,7 @@ import { hub } from "../hub.js";
 import { CAB, CHIEF_NAME, DESKS, DOOR, H, W, fillScreen, badge, chief, clip, ctx, curSession, current, cv, drawerUntil, ents, hash, inTransit, mmx, px, selected, specialty, text, typeColor } from "../core/core.js";
 import { ART } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
-import { bubble, coffeeState, drawBoard, drawCabinet, drawDesk, drawDeskScreen, drawPerson, drawRoom, drawRoomWall, floorCanvas, hitBoardPager, headroom, stepOf } from "../world/scene.js";
+import { bubble, coffeeState, cupHold, devHold, drawBoard, drawCabinet, drawDesk, drawDeskScreen, drawPerson, drawRoom, drawRoomWall, floorCanvas, hitBoardPager, headroom, stepOf } from "../world/scene.js";
 import { crew, moodLine } from "../sims/crew.js";
 import { CHIEF_LOOK, chiefWalk, consolePlaying, drawConsole, drawConsoleScreen } from "../world/chief.js";
 import { drawLaser, laser } from "../world/fun.js";
@@ -41,27 +41,29 @@ class OfficeRoom extends Room {
     }
     const onPodium = chief.at === "podium" && !chief.path.length, walking = chief.path.length > 0;
     const gaming = chief.at === "console" && !chief.path.length, asleep = gaming && ch?.idle > 900;
+    const svc = chief.at === "service" && !walking ? chief.svc : null;  // looking after an object (world/upkeep.js)
     if (layer !== "over") {
       const waving = onPodium && !ch?.question && (t < chief.wave || (ch && !ch.finished && ch.idle < 20));
       if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), step: walking ? stepOf(chief, chief.x, chief.y) : null, talk: t < (chief.until || 0), smile: !asleep,
-        arms: waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length ? "up" : "down", back: gaming || (walking && chief.path[0].y < chief.y), seated: gaming,
-        dir: walking ? [chief.path[0].x - chief.x, chief.path[0].y - chief.y] : null });
-      if (chief.cup) { px(chief.x + 4, chief.y - 13, 2.5, 3, "#f4f2ea"); px(chief.x + 4, chief.y - 13, 2.5, 0.8, "#6d4a2e"); }
+        arms: svc ? (svc.kind === "thirst" ? "down" : "reach") : t < (chief.cheerUntil || 0) && !walking ? "up" : waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length && !chief.cup ? "reach" : "down", back: gaming || (walking && chief.path[0].y < chief.y) || (chief.at === "coffee" && !walking && !chief.cup), seated: gaming,
+        hold: svc?.kind === "thirst" ? "pour" : chief.carry ? chief.carry : chief.cup && !waving && !gaming ? (t < (chief.cheerUntil || 0) ? "cup" : cupHold(!walking, 7, t)) : "",  // his coffee: made at the machine (hands on it), then in hand, a sip now and then
+        dir: walking ? [chief.path[0].x - chief.x, chief.path[0].y - chief.y] : svc ? svc.dir : null });
     }
     if (layer === "body") return;
     text(CHIEF_NAME.toUpperCase(), chief.x, chief.y + (onPodium ? 7 : 2), "#fbaa08", 4.6, "center");
     const cx = chief.x, cy = chief.y + 2;
     let say = "";
-    if (ch?.question) { bubble(cx, cy - 25 - headroom(), `? ${clip(ch.question.question, 38)}`, "#fbaa08", "#081746"); say = null; }
+    if (ch?.question) { bubble(cx, cy - 25 - headroom(), `? ${clip(ch.question.question, 38)}`, "#fbaa08", "#081746", CHIEF_NAME); say = null; }
     else if (asking.length) say = asking.length > 1 ? `${asking.length} questions → à toi de trancher !` : "Question de l'équipe → à toi !";
     else if (t < (chief.until || 0)) say = chief.bubble;
+    else if (svc) say = { scale: "🧽 je détartre…", thirst: "💧 j'arrose…", desk: "🧺 je débarrasse…", drop: "🧺 et hop !" }[svc.kind];
     else if (!session) say = "Personne au bureau.";
     else if (chief.at === "coffee") say = "☕ petite pause";
     else if (gaming) say = asleep ? "zZz…" : (t / 1000) % 14 < 3 ? "GG !" : "🎮 appelle-moi si besoin";
     else if (ch.finished || ch.idle > 120) say = ch.idle > 900 ? "zZz…" : chiefPhrase() || "J'attends tes ordres.";  // his catchphrase (chiefedit.js)
     else if (ents.get("chief")?.agent.solo) say = `${ents.get("chief").who} est dessus 👍`;
     else if (say !== null) say = clip(ch.action, 40);
-    if (say) bubble(cx, cy - 25 - headroom(), say);
+    if (say) bubble(cx, cy - 25 - headroom(), say, undefined, undefined, CHIEF_NAME);
   }
   // a dev: seated at work (its desk's bubble, badge, boss, bell) or walking (what it carries, its bubble)
   drawEnt(e, t, session, layer = "all") {
@@ -98,29 +100,27 @@ class OfficeRoom extends Room {
       if (mood) { msg = mood; bg = "#d5eeff"; }
       if (t < (e.fxUntil || 0)) { msg = e.fxMsg; bg = FX_BG[e.fxKind] || bg; fg = e.fxKind === "fail" ? "#fff" : "#1c1c24"; }
       if (waitsReview) hub.drawReviewSign(e.desk.x + 12, e.desk.y - 20, t);
-      else bubble(e.desk.x, e.desk.y - 16, msg, bg, fg);
+      else bubble(e.desk.x, e.desk.y - 16, msg, bg, fg, st === "working" && bg === "#f4f2ea" ? null : e.who);  // the work itself goes on in silence (the keyboards)
       return;
     }
     const paused = !!e.pauseUntil, still = paused || !e.path.length;
     if (body) {
-      drawPerson(e.x, e.y, e.look, { frame: still ? 0 : f, step: still ? null : stepOf(e, e.x, e.y), back: ["pick", "file", "coffee", "standup", "pair"].includes(e.pose) || (!still && e.path[0].y < e.y), dir: still ? null : [e.path[0].x - e.x, e.path[0].y - e.y],
-        arms: e.pose === "pick" || e.pose === "file" ? "up" : "down" });
-      if (e.errand && e.pose !== "file") {  // carries its papers to the MMX cabinet
-        const n = Math.min(3, e.errand.items.length);
-        for (let k = 0; k < n; k++) px(e.x + 3 + k * 0.8, e.y - 14 - k * 1.2, 5, 4, k % 2 ? "#fff7b8" : "#f4f2ea");
-      } else if (e.cup) { px(e.x + 4, e.y - 13, 2.5, 3, "#f4f2ea"); px(e.x + 4, e.y - 13, 2.5, 0.8, "#6d4a2e"); }  // coffee cup
-      else if (e.picked && !e.asking && !e.leaving && !still) px(e.x + 4, e.y - 13, 3.5, 3.5, "#fff7b8");  // carries its ticket
+      drawPerson(e.x, e.y, e.look, { frame: still ? (e.pose === "coffee" ? f : 0) : f, step: still ? null : stepOf(e, e.x, e.y), back: ["pick", "file", "coffee", "standup", "pair"].includes(e.pose) || (!still && e.path[0].y < e.y), dir: still ? e.faceDir || null : [e.path[0].x - e.x, e.path[0].y - e.y],
+        arms: e.pose === "pick" || e.pose === "file" ? "up" : e.pose === "coffee" && !e.cup ? "reach" : "down",  // at the machine: hands on it
+        hold: devHold(e, still, t) });  // its papers for MMX, its coffee, its ticket
     }
     if (!over) return;
     if (e.errand && e.pose !== "file" && !still) bubble(e.x, e.y - 24 - headroom(), `→ MMX : ${e.errand.label}`);
-    if (e.pose === "coffee") bubble(e.x, e.y - 24 - headroom(), a.status === "blocked" ? "☕ je souffle un coup" : "☕ pause café", "#d6a77f");
+    if (e.pose === "coffee") bubble(e.x, e.y - 24 - headroom(), e.helping ? "☕ un café pour un collègue" : a.status === "blocked" ? "☕ je souffle un coup" : "☕ pause café", "#d6a77f", undefined, e.who);
+    if (e.pose === "water") bubble(e.x, e.y - 24 - headroom(), "💧 j'arrose", "#a8d8ff");
+    if (e.pose === "give") bubble(e.x, e.y - 24 - headroom(), "☕ tiens, pour toi", "#d6a77f", undefined, e.who);
     if (e.pose === "file") bubble(e.x, e.y - 24 - headroom(), e.errand?.pendingOnly ? `${e.errand.label} → à valider` : `Je range ${e.errand?.label || ""}`, "#51cf66");
-    if (e.pose === "pick") bubble(e.x, e.y - 24 - headroom(), a.ticket ? `Je prends ${a.ticket}` : "Je prends ce ticket");
-    if (e.pose === "alarm") bubble(e.x, e.y - 24 - headroom(), "🚨 faille critique !", "#ff6b6b", "#fff");
-    if (e.pose === "cake" && Math.floor(t / 2500) % 3 === 0) bubble(e.x, e.y - 24 - headroom(), ["🎂 miam", "bravo !", "🎉"][hash(e.who || "") % 3], "#f4c2d7");
-    if (e.pose === "pair" && Math.floor(t / 4000) % 3 === 0) bubble(e.x, e.y - 24 - headroom(), hub.pairBubble(e), "#b48cff");
+    if (e.pose === "pick") bubble(e.x, e.y - 24 - headroom(), a.ticket ? `Je prends ${a.ticket}` : "Je prends ce ticket", undefined, undefined, e.who);
+    if (e.pose === "alarm") bubble(e.x, e.y - 24 - headroom(), "🚨 faille critique !", "#ff6b6b", "#fff", e.who);
+    if (e.pose === "cake" && Math.floor(t / 2500) % 3 === 0) bubble(e.x, e.y - 24 - headroom(), ["🎂 miam", "bravo !", "🎉"][hash(e.who || "") % 3], "#f4c2d7", undefined, e.who);
+    if (e.pose === "pair" && Math.floor(t / 4000) % 3 === 0) bubble(e.x, e.y - 24 - headroom(), hub.pairBubble(e), "#b48cff", undefined, e.who);
     if (e.asking && !e.path.length) {
-      bubble(e.x, e.y - 24 - headroom(), `? ${clip(a.question?.question || "question", 30)}`, "#fbaa08", "#081746");
+      bubble(e.x, e.y - 24 - headroom(), `? ${clip(a.question?.question || "question", 30)}`, "#fbaa08", "#081746", e.who);
       if (a.ticket) text(a.ticket, e.x, e.y + 7.5, "#d5eeff", 4.2, "center");
     }
     badge(e.x, e.y + 2, e.who ? nameTag(e.who) : specialty(a.type), typeColor(a.type));

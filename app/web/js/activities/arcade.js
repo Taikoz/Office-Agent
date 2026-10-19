@@ -13,6 +13,6 @@ class ArcadeActivity extends Activity {
   }
 }
 new ArcadeActivity({ id: "arcade", label: "joue à l'arcade", icon: "🕹️", task: "Joue à l'arcade",
-  pose: { arms: "type", back: true }, fx: { ennui: -3 }, serves: ["fun"], sport: true,
+  pose: { arms: "reach", back: true }, fx: { ennui: -3 }, serves: ["fun"], sport: true,
   chief: { fx: { ennui: -20 }, line: "Une partie 🎮" },
   lines: ["Nouveau record !", "Encore une pièce…"], want: { label: "Battre son record à l'arcade", pay: 60, pts: 50 } });

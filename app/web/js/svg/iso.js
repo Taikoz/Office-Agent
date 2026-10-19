@@ -1001,7 +1001,9 @@ class IsoAvatar extends SvgArt {
   image(state) {  // a new pose not ready yet: the same person at rest meanwhile (no flicker while it loads)
     return super.image(state) || (state.walk != null || state.blink || state.talk || state.breath ? super.image({ ...state, walk: undefined, blink: false, talk: false, breath: 0 }) : null);
   }
-  body({ look, rot = 0, frame = 0, seated = false, arms = "down", tux = false, smile = false, hat = "", walk, breath = 0, blink = false, talk = false }) {
+  // hold: what is in the hand (cup, sip: the cup at the lips, papers, ticket, plate, book: in both hands, mic, paddle);
+  // arms "reach": both hands forward on a machine (a button pressed one hand then the other)
+  body({ look, rot = 0, frame = 0, seated = false, arms = "down", tux = false, smile = false, hat = "", walk, breath = 0, blink = false, talk = false, hold = "" }) {
     const { block, svg } = blocks(rot);
     const outfit = look.outfit || (tux ? "tux" : "tshirt"), dark = outfit === "tux";
     const shirt = dark ? (look.outfit ? look.shirt : "#1c1c24") : look.shirt, skin = look.skin, hair = look.hair;
@@ -1037,8 +1039,41 @@ class IsoAvatar extends SvgArt {
       else if (pose === "wave") { block(x, -1, 1.8, 2.2, zt + 6 + f * 2, 8, shirt); block(x, -1, 1.8, 2.2, zt + 14 + f * 2, 1.6, skin); }
       else { const s2 = seated || ph == null ? 0 : Math.sin(ph) * side * 0.75; block(x, -1 + s2, 1.8, 2.2, zt + 1.6 + bz, 7.6, shirt); block(x, -1 + s2, 1.8, 2.2, zt + bz, 1.6, skin); }  // the arms swing against the legs
     };
-    arm(-1, arms === "up" ? "up" : arms === "type" ? "type" : "down");
-    arm(1, arms === "up" ? "up" : arms === "type" ? "type" : arms === "baton" ? "wave" : "down");
+    // a hand forward at chest height (carrying, pressing a button): the upper arm down, the forearm out, the hand
+    const fore = (x, z, len = 3.2) => { block(x, -1, 1.8, 2.2, z, Math.max(2, zt + 9.2 + bz - z), shirt); block(x, 1.2, 1.8, len, z, 1.8, shirt); block(x, 1.2 + len, 1.8, 1.4, z, 1.8, skin); };
+    const za = zt + 4.6 + bz;  // the forearm's height
+    if (arms === "reach") {
+      for (const side of [-1, 1]) { const x = side < 0 ? -5.8 : 4, press = (side < 0 ? f : 1 - f) * 0.8; fore(x, za + 1.2 + press, 3.8); }
+    } else if (hold === "tray") {  // both hands under a tray of empty cups
+      fore(-5.8, za + 0.6, 3); fore(4, za + 0.6, 3);
+      block(-4.8, 3.4, 9.6, 4, za + 2.4, 0.5, "#8a6a4a", [["top", 0.3, 0.3, 9, 3.4, "#a8845a"]]);
+      for (const [x, y] of [[-3.6, 4], [-0.6, 5], [2.2, 4.2]]) block(x, y, 1.8, 1.8, za + 2.9, 2.2, "#f4f2ea", [["top", 0.3, 0.3, 1.2, 1.2, "#b08a60"]]);
+    } else if (hold === "pour") {  // the watering can held out, tipped
+      arm(-1, "down"); fore(4, za + 2.2, 3.6);
+      block(3.6, 4.2, 2.8, 3.4, za + 2.4, 3, "#3f9e5a", [["top", 0.4, 0.4, 2, 2.6, "#2f7a45"]]); block(4.4, 7.6, 1, 3, za + 1.6, 1, "#3f9e5a"); block(4.2, 10.4, 1.4, 0.8, za + 0.8, 1.4, "#2f7a45");
+    } else if (hold === "book") {
+      fore(-5.8, za + 0.8, 3); fore(4, za + 0.8, 3);
+      block(-4.6, 3.6, 9.2, 3.6, za + 2.6, 0.7, "#c0392b", [["top", 0.3, 0.3, 4.1, 3, "#f4f2ea"], ["top", 4.8, 0.3, 4.1, 3, "#ece8e0"], ["top", 4.5, 0, 0.2, 3.6, "#7a1f1f"]]);  // open, pages up
+    } else if (hold === "sip" || hold === "mic") {  // to the lips
+      arm(-1, arms === "up" ? "up" : "down");
+      block(4, -1, 1.8, 2.2, zt + 5.6 + bz, 4, shirt); block(2.8, 1.2, 1.8, 1.8, zt + 6.2 + bz, 4.6, shirt); block(1.8, 3.6, 1.6, 1.8, zt + 10.2 + bz, 1.6, skin);
+      if (hold === "sip") block(-0.6, 3.6, 2.4, 2.2, zh + 0.6, 2.6, "#f4f2ea", [["front", 0, 1.2, 2.4, 0.7, "#d6a77f"]]);  // the cup, tilted to the mouth
+      else { block(-0.2, 3.7, 1.3, 1.3, zh - 1, 2.8, "#2b2b33"); block(-0.45, 3.45, 1.8, 1.8, zh + 1.8, 1.6, "#9aa0ad", [["top", 0.3, 0.3, 1.2, 1.2, "#c9ccd6"]]); }
+    } else if (hold) {
+      arm(-1, arms === "up" ? "up" : "down");
+      const zz = hold === "paddle" ? za + (f ? 1.2 : 0) : za; fore(4, zz);
+      const cx = 4.9, cy = 5.1, z = zz + 1.8;  // on the hand
+      if (hold === "cup") block(cx - 1.1, cy - 0.9, 2.2, 2.2, z - 0.6, 2.6, "#f4f2ea", [["top", 0.35, 0.35, 1.5, 1.5, "#5a3a22"], ["front", 0, 0.8, 2.2, 0.7, "#d6a77f"], ["right", 0.6, 0.8, 1, 1, "#e6e2d8"]]);
+      else if (hold === "papers") { block(cx - 3.2, cy - 2, 5.4, 4, z, 1.2, "#f4f2ea", [["top", 0.5, 0.6, 4.2, 0.35, "#9aa0ad"], ["top", 0.5, 1.5, 3.4, 0.35, "#9aa0ad"], ["top", 0.5, 2.4, 3.8, 0.35, "#9aa0ad"]]); block(cx - 2.6, cy - 1.4, 2, 2, z + 1.2, 0.3, "#fff7b8"); }
+      else if (hold === "ticket") block(cx - 1.5, cy - 1.2, 3, 2.6, z, 0.5, "#fff7b8", [["top", 0.4, 0.5, 2.2, 0.3, "#c9a24b"], ["top", 0.4, 1.3, 1.6, 0.3, "#c9a24b"]]);
+      else if (hold === "plate") { block(cx - 2.2, cy - 1.8, 4.4, 4.4, z, 0.5, "#f4f2ea"); block(cx - 1, cy - 0.6, 2, 2, z + 0.5, 1, "#e0a040", [["top", 0.3, 0.3, 1.4, 0.6, "#d64545"]]); }
+      else if (hold === "bag") { block(cx - 1.8, cy - 1.6, 3.6, 3.4, z - 6.6, 5, "#1f2329", [["front", 0.6, 3.2, 2.4, 0.5, "#3a3f48"]]); block(cx - 0.6, cy - 0.4, 1.2, 1, z - 1.6, 1.4, "#1f2329"); }  // a full bin bag
+      else if (hold === "can") { block(cx - 1.4, cy - 1.6, 2.8, 3.4, z - 4.2, 3.2, "#3f9e5a", [["top", 0.4, 0.4, 2, 2.6, "#2f7a45"]]); block(cx - 0.5, cy + 1.8, 1, 2.6, z - 2.2, 0.9, "#3f9e5a"); block(cx - 0.3, cy - 0.6, 0.6, 2, z - 1, 0.6, "#2f7a45"); }  // a watering can, hanging from the hand
+      else if (hold === "paddle") { block(cx - 0.4, cy - 0.6, 0.8, 1.8, z - 0.9, 0.8, "#8a6a4a"); block(cx - 1.7, cy + 1.1, 3.4, 3.2, z - 1.2, 0.6, "#d64545", [["top", 0.3, 0.3, 2.8, 2.6, "#e85555"]]); }
+    } else {
+      arm(-1, arms === "up" ? "up" : arms === "type" ? "type" : "down");
+      arm(1, arms === "up" ? "up" : arms === "type" ? "type" : arms === "baton" ? "wave" : "down");
+    }
     // the head: the face on its front, the ears on its sides, the hair over it and down its back
     const face = [], b = look.beard, gl = look.glasses === true ? "square" : look.glasses;
     if (blink) face.push(["front", 1.4, 4.0, 1.2, 0.35, "#1a1a1a"], ["front", 4.4, 4.0, 1.2, 0.35, "#1a1a1a"]);

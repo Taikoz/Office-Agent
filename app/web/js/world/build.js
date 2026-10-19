@@ -64,6 +64,7 @@ export function drawRoomItems(room, t, layer = "rug") {
     else if (layer === "wall" && d.kind === "wall" && (it.side || "back") === "back") wallItem(it, t, "back");
     else if (layer === "leftwall" && d.kind === "wall" && it.side === "left") wallItem(it, t, "left");
   }
+  if (layer === "rug") hub.floorShade?.(room, t);  // the sun through the windows, the shadows (iso/rooms.js), over the rugs, under the furniture
 }
 // a wall object, clickable where it is drawn (a left-wall one too)
 function wallItem(it, t, side) { drawItem(it, t); if (hub.ISO.drawing) hub.ISO.wallRegion(side, itemRect(it), it.uid); }
@@ -120,12 +121,13 @@ function itemPieItems(uid, sub) {
   if (defOf(it.type).role === "console") out.unshift(["play", "🎮", "Jouer à la console"]);
   if (defOf(it.type).role === "podium") out.unshift(["podium", "🎤", "Retour au podium"]);
   if (defOf(it.type).role === "conftable") out.unshift(["meet", "🤝", "Réunir l'équipe"]);
+  out.push(...(hub.upkeepPie?.(it) || []));  // clean, water, clear (world/upkeep.js)
   return out;
 }
 function itemPieCenter(uid) {
   const it = itemByUid(uid); if (!it) return "";
   const d = defOf(it.type);
-  return `<b>${esc(d.name)}</b><span class="muted">${esc(styleOf(it).name)}</span>${d.center(it)}`;
+  return `<b>${esc(d.name)}</b><span class="muted">${esc(styleOf(it).name)}</span>${d.center(it)}${hub.upkeepCenter?.(it) || ""}`;
 }
 function itemPieAction(uid, id) {
   const it = itemByUid(uid); if (!it) return;
@@ -133,6 +135,7 @@ function itemPieAction(uid, id) {
   if (id === "play" && defOf(it.type).role === "console") return hub.chiefOrder("console");  // a computer's "play": its own (items/furniture.js)
   if (id === "podium") return hub.chiefOrder("podium");
   if (id === "meet") return hub.startMeeting();
+  if (hub.upkeepAct?.(it, id)) return;
   defOf(it.type).act(it, id);  // js/items/
 }
 // the chief on a free computer: he walks to the desk, sits and plays a while, then goes back to his podium
@@ -148,9 +151,16 @@ function chiefToPc(slot) {
   if (hub.chiefBusyNow()) return say(CHIEF_NAME, "Pas maintenant, l'équipe a besoin de moi !");
   if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }
+// the lamps of a save from before the automatic ones (items/lamp.js): all on automatic, once
+function lampsAuto() {
+  if (furni.lampsAuto) return;
+  furni.lampsAuto = true;
+  for (const it of furni.items) if (defOf(it.type)?.light) delete it.on;
+  saveBuild();
+}
 let started = false;
 function stepBuild(t) {
-  if (!started) { started = true; starterKit(); }
+  if (!started) { started = true; lampsAuto(); starterKit(); }
   syncKitchen();
   if (chief.pendingOffice && chief.room === "office") { const fn = chief.pendingOffice; chief.pendingOffice = null; fn(); }
   if (chief.at === "pc" && !chief.path.length && (t > chief.pcUntil || hub.chiefBusyNow())) chiefGo("podium");
@@ -328,7 +338,7 @@ function placeAt(type, style, spot, room, rot) {
   if (d.unique && furni.items.some(i => i.type === type)) { toast("MODE ACHAT", `Un seul ${d.name.toLowerCase()}`, "Déplace celui qui est déjà là."); return false; }
   if (hub.lockedFor?.(d)) { toast("MODE ACHAT", "Pas encore débloqué", `Niveau ${hub.unlockOf(d)} du bureau requis.`); return false; }
   if (!spend(d.price, d.name)) return false;
-  const it = { uid: ++furni.seq, type, style, room, rot: d.kind === "wall" ? 0 : rot, ...spot, ...(d.light ? { on: true } : {}) };
+  const it = { uid: ++furni.seq, type, style, room, rot: d.kind === "wall" ? 0 : rot, ...spot };  // a lamp: automatic (on in the evening, items/lamp.js)
   furni.items.push(it); saveBuild(); sfx("achievement");
   dustAt(it);
   if (d.workstation && it.slot != null) { const n = TEAM[it.slot]; crewAdd(n, { moral: 15 }); toast("MODE ACHAT", `${n} a un bureau`, "Ajoute un ordinateur dessus et une chaise devant."); }
@@ -386,7 +396,14 @@ export function giftPlace(type, room) {
   return false;
 }
 const dust = [];
-export function dustAt(it) { const r = itemRect(it), wall = defOf(it.type).kind === "wall"; for (let i = 0; i < 12; i++) dust.push({ x: r.x + Math.random() * r.w, y: wall ? 76 : r.y + r.h - Math.random() * 4, born: performance.now(), vx: (Math.random() - 0.5) * 0.02 }); }
+// a puff of dust when a piece of furniture lands: blown out from under it, rising, spreading, fading (drawn below)
+export function dustAt(it) {
+  const r = itemRect(it), wall = defOf(it.type).kind === "wall", cx = r.x + r.w / 2, cy = wall ? 76 : r.y + r.h / 2, n = Math.min(34, 14 + Math.round((r.w + r.h) / 3));
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, edge = wall ? [r.x + Math.random() * r.w, 76] : [cx + Math.cos(a) * r.w / 2, cy + Math.sin(a) * r.h / 2];
+    dust.push({ x: edge[0], y: edge[1], born: performance.now(), vx: Math.cos(a) * (0.008 + Math.random() * 0.014), vy: wall ? 0 : Math.sin(a) * (0.006 + Math.random() * 0.01), rise: 4 + Math.random() * 9, s: 0.8 + Math.random() * 1.4, life: 700 + Math.random() * 600 });
+  }
+}
 
 function buyClick(p) {
   const room = hub.curRoom();
@@ -481,7 +498,11 @@ function isoTopOf(it) {
   return P(r.x + r.w / 2, r.y + r.h / 2, (ART[d.art]?.H || 20) + d.baseZ(it));
 }
 export function drawBuyOverlayIso(room, t, G) {
-  for (let i = dust.length - 1; i >= 0; i--) { const p = dust[i], k = (t - p.born) / 900; if (k > 1) { dust.splice(i, 1); continue; } ctx.globalAlpha = 1 - k; G.put(p.x, p.y, p.x, Math.max(72, p.y), 0, () => px(p.x + p.vx * (t - p.born), p.y - k * 8, 1.2, 1.2, "#f4f2ea")); ctx.globalAlpha = 1; }
+  for (let i = dust.length - 1; i >= 0; i--) {
+    const p = dust[i], age = t - p.born, k = age / (p.life || 900); if (k > 1) { dust.splice(i, 1); continue; }
+    const ease = 1 - (1 - k) * (1 - k), x = p.x + (p.vx || 0) * age * (1 - k * 0.5), y = p.y + (p.vy || 0) * age * (1 - k * 0.5), s = (p.s || 1.2) * (1 + k * 1.6);
+    ctx.globalAlpha = 0.75 * (1 - k); G.put(x, y, x, Math.max(72, y), 0, () => px(x - s / 2, y - ease * (p.rise || 8) - s / 2, s, s, k < 0.3 ? "#f4f2ea" : "#d8d2c4")); ctx.globalAlpha = 1;
+  }
   if (!buy.on) return;
   fillScreen("rgba(20,18,28,.14)");
   const outline = (r, col, side = null, z = 0) => {

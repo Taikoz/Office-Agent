@@ -21,6 +21,7 @@ import { drawSocialOver } from "../social/people.js";
 import { buy, defOf, drawBuyOverlay, drawBuyOverlayIso, drawItem, drawRoomItems, hitItem, itemsIn, renderBuy, roomDepthItems, toggleBuy } from "../world/build.js";
 import { drawPartyOver, emptyLoungeText } from "../sims/days.js";
 import { Room } from "./base.js";
+import { doorOpen, drawDoorOpen } from "../world/physics.js";
 
 class LoungeRoom extends Room {
   // the doors to the rooms built in construction mode (construct.js); not built yet: under work tape, a click opens the
@@ -29,7 +30,7 @@ class LoungeRoom extends Room {
   constructor() { super("lounge", "☕ Repos"); }
   drawDoor(d) {
     const built = hub.con.rooms.includes(d.room);
-    ART.roomdoor.draw(d.x, 19, { room: d.room, built });
+    drawDoorOpen(() => ART.roomdoor.draw(d.x, 19, { room: d.room, built }), d.x, 19, built ? doorOpen("lounge", d.x + 12) : 0, [2, 2, 20, 46]);
     px(d.x - 2, 12, 28, 6, built ? "#f7f7f7" : "#3a3a44"); text(built ? d.label : "🏗️ BIENTÔT", d.x + 12, 12.6, built ? "#081746" : "#fbaa08", 3.6, "center");
   }
   doorAt(p) {
@@ -75,7 +76,7 @@ class LoungeRoom extends Room {
     for (const l of here) hub.drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25), t);
     drawSocialOver(t);
     if (chief.room === "lounge") drawChiefLoungeOver(t);
-    for (const l of here) if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24), l.say, "#f7f7f7", "#081746");
+    for (const l of here) if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24), l.say, "#f7f7f7", "#081746", l.name);
     if (!here.length) text(emptyLoungeText(), W / 2, 150, "#d5eeff", 5, "center");
     drawPartyOver("lounge", t);
     drawBuyOverlay("lounge", t);
@@ -101,7 +102,7 @@ class LoungeRoom extends Room {
       G.onFloor(() => drawRoomItems("lounge", t, "rug"));
       G.onBackWall(() => {
         px(0, 66.5, roomSize("lounge").w, 3.5, "#1a2340"); px(0, 66.5, roomSize("lounge").w, 0.6, "#2c3a66");  // baseboard
-        doorSprite("lounge").draw(8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
+        drawDoorOpen(() => doorSprite("lounge").draw(8, 20), 8, 20, doorOpen("lounge", 23)); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
         for (const door of LoungeRoom.DOORS) this.drawDoor(door);
         drawRoomItems("lounge", t, "wall");  // the tournament's slate, frames… (objects bought)
       });
@@ -123,7 +124,7 @@ class LoungeRoom extends Room {
     for (const l of here) G.put(l.x, l.y, l.x, l.y, lift(l.spot, l.path.length), () => {
       badge(l.x, l.y + (l.seated ? -3 : 2), nameTag(l.name), selected === `mate:${l.name}` ? "#fbaa08" : "#4090d7");
       hub.drawEmotion(l.name, l.x, l.y - (l.seated ? 20 : 25) - headroom(7), t);
-      if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24) - headroom(), l.say, "#f7f7f7", "#081746");
+      if (t < l.sayUntil) bubble(l.x, l.y - (l.seated ? 22 : 24) - headroom(), l.say, "#f7f7f7", "#081746", l.name);
     });
     drawSocialOver(t);
     if (chiefIn) anchored(chief.lx, chief.ly, () => drawChiefLoungeOver(t));
