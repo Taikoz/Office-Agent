@@ -6,7 +6,7 @@ import { hub, provide } from "../hub.js";
 import { CHIEF_NAME, COFFEE, TEAM, arrivals, chief, curSession, ents, hash, px, specialty, text } from "../core/core.js";
 import { Flag } from "../save/flag.js";
 import { ART } from "../svg/base.js";
-import { lookKey } from "../svg/figures.js";
+import { PORTRAIT_BOX, lookKey } from "../svg/figures.js";
 import { lookFor } from "../agents/entities.js";
 import { clamp, crewAdd, mate, moodWord } from "./crew.js";
 import { CHIEF_LOOK, chiefGo, chiefToOffice } from "../world/chief.js";
@@ -174,7 +174,7 @@ export function simPortrait(name) {
   const hat = chiefSim ? chiefHat() : shop.hat;
   const look = simLook(name), key = `${name}|${lookKey(look)}|${smile}|${hat}`;
   if (!simPortraits.has(key)) {
-    const svg = ART.person.markup({ look, tux: chiefSim, smile, hat }).replace(/viewBox="[^"]*" width="\d+" height="\d+"/, 'viewBox="-7 -25 14 16"');
+    const svg = ART.person.markup({ look, tux: chiefSim, smile, hat }).replace(/viewBox="[^"]*" width="\d+" height="\d+"/, `viewBox="${PORTRAIT_BOX}"`);
     simPortraits.set(key, `<img alt="" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}">`);
   }
   return simPortraits.get(key);

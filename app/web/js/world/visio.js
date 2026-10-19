@@ -9,7 +9,7 @@ import { hub, provide } from "../hub.js";
 import { CHIEF_NAME } from "../core/core.js";
 import { esc } from "../core/data.js";
 import { ART } from "../svg/base.js";
-import { lookTraits } from "../svg/figures.js";
+import { BUST_BOX, lookTraits } from "../svg/figures.js";
 import { CHIEF_LOOK } from "./chief.js";
 import { chiefHat } from "./chiefedit.js";
 import { EMOTE_INFO, call, net } from "./peers.js";
@@ -28,7 +28,7 @@ const imgs = new Map();
 function avatar(look, hat, state) {
   const key = `${JSON.stringify(look)}|${hat}|${state.smile}|${state.arms}|${state.frame}`;
   if (!imgs.has(key)) {
-    const svg = ART.person.markup({ look, tux: true, smile: state.smile, hat, arms: state.arms, frame: state.frame }).replace(/viewBox="[^"]*" width="\d+" height="\d+"/, 'viewBox="-10 -29 20 22"');
+    const svg = ART.person.markup({ look, tux: true, smile: state.smile, hat, arms: state.arms, frame: state.frame }).replace(/viewBox="[^"]*" width="\d+" height="\d+"/, `viewBox="${BUST_BOX}"`);
     imgs.set(key, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
     if (imgs.size > 200) imgs.delete(imgs.keys().next().value);
   }

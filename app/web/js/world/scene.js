@@ -6,6 +6,7 @@ import { isoDrawing } from "../iso/engine.js";
 import { ART, shade } from "../svg/base.js";
 import { SPRITES } from "../svg/sprites.js";
 import { lookTraits } from "../svg/figures.js";
+import { handPoint } from "../svg/people.js";
 import { BOARD_COLS, STICKY } from "../svg/office.js";
 import { drawSky } from "../svg/sky.js";
 import { doorOpen, drawDoorOpen } from "./physics.js";
@@ -36,7 +37,7 @@ export function drawRoom(t, room = "office") {
 // the door (also painted on the right wall of the isometric view)
 export function drawRoomWall(t, room = "office", iso = false) {
   const mine = room === "office", wc = hub.decor[room].wallColor;
-  if (hub.decor[room].wall !== "boiserie") { px(0, 44, W, 0.8, shade(wc, 0.87)); px(0, 44.8, W, 0.5, shade(wc, 1.35)); }  // chair rail on the wall
+  if (hub.wallHasRail(hub.decor[room].wall)) { px(0, 44, W, 0.8, shade(wc, 0.87)); px(0, 44.8, W, 0.5, shade(wc, 1.35)); }  // chair rail on the wall
   px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828"); px(0, 69.4, W, 0.6, "#1a130e");  // baseboard
   // window: sky following the real hour and the weather of today's tests (svg/sky.js drawSky)
   if (!iso) { drawSky(374, 12, t); hub.drawWindow(room, 368, 4); ART.glints.draw(368, 4); }  // in isometric view, windows are bought (build.js)
@@ -175,14 +176,14 @@ export function drawPerson(x, y, look, opts = {}) {
     if (d && (d[0] || d[1])) rot = Math.abs(d[0]) > Math.abs(d[1]) ? (d[0] > 0 ? 1 : 3) : (d[1] > 0 ? 0 : 2);
     if (!ART.isoavatar.draw(x, y, { look: lookTraits(look), rot, frame: o.frame, seated: o.seated, arms: o.arms, tux: o.tux, smile: o.smile, hat: o.hat, hold, ...life })) return drawPersonPx(x, y, look, opts);
     if ((hold === "cup" || hold === "sip") && !hub.focusMode) {  // a hot coffee: a thin steam over the cup
-      const [mx, my, mz] = hold === "sip" ? [0.6, 4.7, (o.seated ? 4 : 8) + 13] : [4.9, 5.2, (o.seated ? 4 : 8) + 8.6], [rx, ry] = [[mx, my], [my, -mx], [-mx, -my], [-my, mx]][rot];
-      const cx = x + (rx - ry) * 0.6, cy = y + (rx + ry) * 0.3 - mz;
+      const st = { seated: o.seated, arms: o.arms, hold, frame: o.frame }, [hx, hy] = handPoint(st, rot >= 2, rot === 1 || rot === 2, hold === "sip" ? "mouth" : "near");
+      const cx = x + hx, cy = y + hy - (hold === "sip" ? 1 : 2.2);
       raw.drawn = true; ctx.save();
       for (let i = 0; i < 3; i++) { const k = ((performance.now() / 1400) + i / 3) % 1; ctx.globalAlpha = 0.4 * Math.sin(Math.PI * k); ctx.fillStyle = "#f4f4fa"; ctx.beginPath(); ctx.arc((cx + Math.sin(k * 6 + i * 2) * 0.8) * S, (cy - 1 - k * 6) * S, (0.5 + k * 0.9) * S, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
     }
     if (o.arms === "baton") {  // the baton in the raised hand
-      const [hx, hy] = [[4.9, 0], [0, -4.9], [-4.9, 0], [0, 4.9]][rot], top = (o.seated ? 4 : 8) + 16 + (o.frame ? 2 : 0), hp = { x: x + (hx - hy) * 0.6, y: y + (hx + hy) * 0.3 - top };
+      const [hx, hy] = handPoint({ seated: o.seated, arms: "baton", frame: o.frame }, rot >= 2, rot === 1 || rot === 2), hp = { x: x + hx, y: y + hy };
       raw.drawn = true; ctx.strokeStyle = "#f4f2ea"; ctx.lineWidth = Math.max(1, S * 0.6); ctx.beginPath();
       ctx.moveTo(hp.x * S, hp.y * S); ctx.lineTo((hp.x + 4) * S, (hp.y - 5) * S); ctx.stroke();
     }

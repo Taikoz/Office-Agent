@@ -5,6 +5,7 @@
 
 import { ART, SvgArt, shade } from "./base.js";
 import { FOOT_LINEUP } from "./lounge.js";
+import { personSvg } from "./people.js";
 
 const K = 0.6;
 const n2 = v => +v.toFixed(2);
@@ -999,185 +1000,15 @@ function blocks(rot) {
 // the team and the chief: modeled facing +y (toward the viewer's left); rot 0 faces +y (down-left, we see the face),
 // 1 faces +x (down-right, the face on its right side), 2 faces -y and 3 faces -x (we see the back)
 class IsoAvatar extends SvgArt {
-  constructor() { super("isoavatar", 24, 42, { outline: 0.45, pad: 1 }); }
-  box() { return [-12, -34, 24, 42]; }
-  under({ seated = false }) { return seated ? "" : `<ellipse cx="0" cy="0" rx="6" ry="2.4" fill="#000" fill-opacity=".25"/>`; }
-  // walk: the step of the walk cycle (0-7: legs swinging, the foot coming forward lifted, the arms the other way;
-  // none: standing still, legs together); breath 0/1 (the chest a little higher); blink (eyes shut); talk (mouth open)
+  constructor() { super("isoavatar", 24, 48, { outline: 0.22, pad: 1 }); }
+  box() { return [-12, -40, 24, 48]; }
+  under({ seated = false }) { return seated ? "" : `<ellipse cx="0" cy="0" rx="4.4" ry="1.7" fill="#000" fill-opacity=".25"/>`; }
   image(state) {  // a new pose not ready yet: the same person at rest meanwhile (no flicker while it loads)
     return super.image(state) || (state.walk != null || state.blink || state.talk || state.breath ? super.image({ ...state, walk: undefined, blink: false, talk: false, breath: 0 }) : null);
   }
-  // hold: what is in the hand (cup, sip: the cup at the lips, papers, ticket, plate, book: in both hands, mic, paddle);
-  // arms "reach": both hands forward on a machine (a button pressed one hand then the other)
-  body({ look, rot = 0, frame = 0, seated = false, arms = "down", tux = false, smile = false, hat = "", walk, breath = 0, blink = false, talk = false, hold = "" }) {
-    const { block, svg } = blocks(rot);
-    const outfit = look.outfit || (tux ? "tux" : "tshirt"), dark = outfit === "tux";
-    const shirt = dark ? (look.outfit ? look.shirt : "#1c1c24") : look.shirt, skin = look.skin, hair = look.hair;
-    const pants = look.pants || "#2f3550", shoes = look.shoes || "#17141c", tie = look.tie || "#d64545", beardC = look.beardColor || hair;
-    const st = look.style || 0, bald = st === 5, f = frame % 2;
-    const ph = walk != null ? (walk % 8) / 8 * 2 * Math.PI : null, bz = breath ? 0.35 : 0;
-    const zt = seated ? 4 : 8, zh = zt + 9.5 + bz - (arms === "type" && f ? 0.3 : 0);  // the body's bottom, the head's bottom (a nod while typing)
-    // legs and shoes (seated: the thighs forward, the shins down)
-    const robe = outfit === "robe" || outfit === "kimono", suit = outfit === "flight", legs = robe ? shade(shirt, 0.9) : suit ? shirt : pants;  // a wizard's robe: down to the shoes; a flight suit: all of a piece
-    if (seated) {
-      for (const x of [-3.4, 0.4]) { block(x, -0.5, 3, 6.5, 2.4, 3, legs); block(x, 5, 3, 2, 0, 3, legs); block(x - 0.1, 6, 3.2, 2, 0, 1.4, shoes); }
-    } else if (robe) {
-      for (const [x, side] of [[-3.4, 1], [0.4, -1]]) { const s2 = ph == null ? 0 : Math.sin(ph) * 1.2 * side; block(x - 0.1, -1.4 + s2, 3.2, 4, 0, 1.4, shoes); }
-      block(-4.4, -2.8, 8.8, 5.6, 0.9, zt - 0.6, shirt, [["front", 4, 0, 0.8, zt - 0.6, tie], ["front", 0, 0, 8.8, 0.7, shade(shirt, 0.7)]]);
-    } else {
-      // walking: each leg swings forward and back, the one coming forward lifted; standing: side by side
-      for (const [x, side] of [[-3.4, 1], [0.4, -1]]) {
-        const s2 = ph == null ? 0 : Math.sin(ph) * 1.7 * side, lift = ph == null ? 0 : Math.max(0, Math.cos(ph) * side) * 0.9;
-        block(x, -1.4 + s2, 3, 3, 1.4 + lift, zt - 1.4 - lift, pants); block(x - 0.1, -1.4 + s2, 3.2, 4, lift, 1.4, shoes);
-      }
-    }
-    // the body, its front by outfit
-    const front = [];
-    if (outfit === "tux") front.push(["front", 3, 3, 2, 6, "#f4f2ea"], ["front", 2.6, 8, 2.8, 1.2, tie], ["front", 3.7, 5, 0.6, 0.6, "#1c1c24"], ["front", 3.7, 6.6, 0.6, 0.6, "#1c1c24"]);
-    else if (outfit === "suit") front.push(["front", 3, 5, 2, 4.5, "#f4f2ea"], ["front", 3.5, 2, 1, 7, tie], ["front", 0.6, 1, 0.8, 8, shade(shirt, 0.75)], ["front", 6.6, 1, 0.8, 8, shade(shirt, 0.75)]);
-    else if (outfit === "shirt") front.push(["front", 3, 8, 2, 1.5, shade(skin, 0.84)], ["front", 3.7, 6, 0.6, 0.6, shade(shirt, 0.6)], ["front", 3.7, 4, 0.6, 0.6, shade(shirt, 0.6)], ["front", 3.7, 2, 0.6, 0.6, shade(shirt, 0.6)]);
-    else if (outfit === "hoodie") front.push(["front", 2, 7.5, 4, 2, shade(shirt, 0.85)], ["front", 3, 8.5, 2, 1, shade(skin, 0.84)], ["front", 2.6, 4.6, 0.5, 3, "#f4f2ea"], ["front", 4.9, 4.6, 0.5, 3, "#f4f2ea"], ["front", 1.6, 0.6, 4.8, 2.6, shade(shirt, 0.82)]);
-    else if (outfit === "polo") front.push(["front", 3, 8, 2, 1.5, shade(skin, 0.84)], ["front", 1.8, 8.2, 1.4, 1.3, shade(shirt, 1.3)], ["front", 4.8, 8.2, 1.4, 1.3, shade(shirt, 1.3)], ["front", 3.7, 6.4, 0.6, 0.6, shade(shirt, 0.6)]);
-    else if (suit) front.push(["front", 2.2, 4.4, 3.6, 2.8, "#1a222c"], ["front", 2.6, 5.4, 0.8, 0.8, "#00e5ff"], ["front", 3.8, 5.4, 0.8, 0.8, "#ff3df2"], ["front", 0, 0, 0.8, 9.5, tie], ["front", 7.2, 0, 0.8, 9.5, tie], ["front", 1.6, 8.6, 4.8, 0.9, shade(shirt, 0.8)]);  // the chest panel, the stripes, the collar
-    else if (outfit === "vampire") front.push(["front", 2.8, 4.6, 2.4, 4.9, "#f4f2ea"], ["front", 3.4, 7.6, 1.2, 1, tie], ["front", 1.2, 0, 0.8, 9.5, shade(shirt, 0.7)], ["front", 6, 0, 0.8, 9.5, shade(shirt, 0.7)]);  // the jabot, the brooch, the lapels
-    else if (outfit === "hawaii") front.push(["front", 3, 8.2, 2, 1.3, shade(skin, 0.84)], ["front", 2.2, 8.4, 1.2, 1.1, shade(shirt, 1.2)], ["front", 4.6, 8.4, 1.2, 1.1, shade(shirt, 1.2)],
-      ...[[0.8, 6.4], [5.4, 7], [2.6, 4.4], [6.2, 3], [1, 1.6], [4, 1.2], [3.6, 6.6]].map(([x, z], k) => ["front", x, z, 1.2, 1.2, k % 2 ? "#f4f2ea" : tie]));  // the open collar, the flowers
-    else if (outfit === "kimono") front.push(["front", 2.6, 6.6, 2.8, 2.9, "#f4f2ea"], ["front", 3.8, 4.2, 0.6, 5.3, shade(shirt, 0.7)], ["front", 0, 2.2, 8, 2.2, tie], ["front", 3.4, 2.5, 1.2, 1.2, shade(tie, 0.7)], ["front", 1.2, 6.6, 1.2, 2.9, shade(shirt, 0.85)], ["front", 5.6, 6.6, 1.2, 2.9, shade(shirt, 0.85)]);  // the collars, the overlap, the obi
-    else if (outfit === "pirate") front.push(["front", 2.8, 4.4, 2.4, 5.1, "#f4f2ea"], ["front", 0, 1.4, 8, 1.4, tie], ["front", 1.4, 4.4, 0.6, 0.6, "#e8c23a"], ["front", 6, 4.4, 0.6, 0.6, "#e8c23a"],
-      ["front", 1.4, 6.4, 0.6, 0.6, "#e8c23a"], ["front", 6, 6.4, 0.6, 0.6, "#e8c23a"], ["front", 2.2, 3, 0.5, 6.5, shade(shirt, 0.7)], ["front", 5.3, 3, 0.5, 6.5, shade(shirt, 0.7)]);  // the jabot, the sash, the buttons, the lapels
-    else if (robe) front.push(["front", 3.6, 0, 0.8, 9.5, tie], ["front", 2.2, 7.4, 3.6, 2.1, shade(shirt, 0.8)], ["front", 3.4, 8.2, 1.2, 1, "#d4a640"]);  // the trim, the collar, the clasp
-    else front.push(["front", 3, 8.2, 2, 1.3, shade(skin, 0.84)], ["front", 1.6, 0.4, 4.8, 0.8, shade(shirt, 0.8)]);
-    block(-4, -2.4, 8, 4.8, zt, 9.5 + bz, shirt, [...front, ...(dark ? [] : [["back", 1, 8.6, 6, 0.9, shade(shirt, 0.8)]])]);
-    block(-1.2, -1.2, 2.4, 2.4, zt + 9.5 + bz, 0.6, shade(skin, 0.84));  // the neck
-    if (outfit === "pirate" && !seated) block(-4.3, -2.6, 8.6, 5.2, zt - 4, 4, shirt, [["front", 3.9, 0, 0.8, 4, shade(pants, 0.9)], ["front", 0, 3.4, 8.6, 0.6, shade(shirt, 0.7)]]);  // the coat's tails, open in front
-    if (look.lei) block(-3.4, -1.8, 6.8, 4.4, zt + 8.4 + bz, 1.2, "#ff6a8a", [["front", 0, 0, 1.4, 1.2, "#ffd23a"], ["front", 2.8, 0, 1.4, 1.2, "#f4f2ea"], ["front", 5.4, 0, 1.4, 1.2, "#ff8a3a"], ["right", 1.4, 0, 1.4, 1.2, "#ffd23a"], ["left", 1.4, 0, 1.4, 1.2, "#ff8a3a"]]);  // a garland of flowers
-    if (look.katana) { block(-4.9, -3.2, 0.7, 8, zt + 2.6 + bz, 0.8, "#1c1c24"); block(-4.9, 4.8, 0.7, 2.6, zt + 2.8 + bz, 0.7, "#8f1f2a"); block(-5.1, 4.4, 1.1, 0.5, zt + 2.4 + bz, 1.4, "#c9a040"); }  // a katana at the hip
-    if (look.parrot) {  // a red macaw on the right shoulder
-      const z = zt + 9.5 + bz;
-      block(2.6, -0.9, 1.8, 1.7, z, 2.6, "#d8332a", [["front", 0.3, 0.3, 1.2, 1.4, "#2a6ad0"], ["right", 0.2, 0.3, 1.2, 1.6, "#2a6ad0"]]);
-      block(2.8, -0.3, 1.4, 1.4, z + 2.6, 1.4, "#d8332a", [["front", 0.2, 0.5, 0.5, 0.5, "#f4f2ea"], ["right", 0.6, 0.5, 0.5, 0.5, "#1a1a1a"]]);
-      block(3.2, 1.1, 0.6, 0.7, z + 2.8, 0.7, "#2a2a30"); block(3, -1.6, 1, 0.8, z - 2, 2.4, "#2a6ad0");
-    }
-    if (outfit === "vampire") {  // a vampire's cape down the back, black outside, its high collar lined in red behind the head
-      const lo = "#14141a", z0 = seated ? zt : zt - 6;
-      block(-4.6, -3.5, 9.2, 1, z0, zt + 9.5 + bz - z0, lo, [["back", 0, 0, 9.2, 0.7, tie]]);
-      block(-4.2, -3.2, 8.4, 0.8, zt + 9.5 + bz, 4.5, tie, [["back", 0, 0, 8.4, 4.5, lo]]);
-    }
-    if (look.jetpack) {  // a jetpack on the back: two tanks, a light, flames under it while walking
-      block(-3.2, -4.9, 6.4, 2.6, zt + 2, 8, "#9aa6b4", [["back", 1, 6, 4.4, 0.8, "#00e5ff"]]);
-      for (const x of [-2.8, 1]) { block(x, -4.7, 1.8, 1.8, zt + 0.6, 1.4, "#2a3340"); if (ph != null) block(x + 0.4, -4.3, 1, 1, zt - 1.6, 2.2, "#ff9a3b"); }
-    }
-    if (look.scarf) {  // a striped scarf: around the neck, one end down the front
-      const [sa, sb = "#f4f2ea"] = String(look.scarf).split(",");
-      block(-2.6, -2.6, 5.2, 5.2, zt + 8.4 + bz, 1.8, sa, [["front", 1, 0, 0.8, 1.8, sb], ["front", 2.8, 0, 0.8, 1.8, sb], ["left", 1.6, 0, 0.8, 1.8, sb]]);
-      block(0.6, 2.4, 1.6, 0.7, zt + 3.4 + bz, 5.2, sa, [["front", 0, 1, 1.6, 0.7, sb], ["front", 0, 3, 1.6, 0.7, sb], ["front", 0, 0, 1.6, 0.4, sb]]);
-    }
-    // arms
-    const arm = (side, pose) => {
-      const x = side < 0 ? -5.8 : 4;
-      if (pose === "up") { block(x, -1, 1.8, 2.2, zt + 7, 9, shirt); block(x, -1, 1.8, 2.2, zt + 16, 1.6, skin); }
-      else if (pose === "type") { block(x, -1, 1.8, 2.4, zt + 4, 5.5, shirt); block(x, 1.4, 1.8, 3.6, zt + 4 + (side < 0 ? f : 1 - f) * 0.8, 1.8, shirt); block(x, 5, 1.8, 1.4, zt + 4 + (side < 0 ? f : 1 - f) * 0.8, 1.8, skin); }
-      else if (pose === "wave") { block(x, -1, 1.8, 2.2, zt + 6 + f * 2, 8, shirt); block(x, -1, 1.8, 2.2, zt + 14 + f * 2, 1.6, skin); }
-      else { const s2 = seated || ph == null ? 0 : Math.sin(ph) * side * 0.75; block(x, -1 + s2, 1.8, 2.2, zt + 1.6 + bz, 7.6, shirt); block(x, -1 + s2, 1.8, 2.2, zt + bz, 1.6, skin); }  // the arms swing against the legs
-    };
-    // a hand forward at chest height (carrying, pressing a button): the upper arm down, the forearm out, the hand
-    const fore = (x, z, len = 3.2) => { block(x, -1, 1.8, 2.2, z, Math.max(2, zt + 9.2 + bz - z), shirt); block(x, 1.2, 1.8, len, z, 1.8, shirt); block(x, 1.2 + len, 1.8, 1.4, z, 1.8, skin); };
-    const za = zt + 4.6 + bz;  // the forearm's height
-    if (arms === "reach") {
-      for (const side of [-1, 1]) { const x = side < 0 ? -5.8 : 4, press = (side < 0 ? f : 1 - f) * 0.8; fore(x, za + 1.2 + press, 3.8); }
-    } else if (hold === "tray") {  // both hands under a tray of empty cups
-      fore(-5.8, za + 0.6, 3); fore(4, za + 0.6, 3);
-      block(-4.8, 3.4, 9.6, 4, za + 2.4, 0.5, "#8a6a4a", [["top", 0.3, 0.3, 9, 3.4, "#a8845a"]]);
-      for (const [x, y] of [[-3.6, 4], [-0.6, 5], [2.2, 4.2]]) block(x, y, 1.8, 1.8, za + 2.9, 2.2, "#f4f2ea", [["top", 0.3, 0.3, 1.2, 1.2, "#b08a60"]]);
-    } else if (hold === "pour") {  // the watering can held out, tipped
-      arm(-1, "down"); fore(4, za + 2.2, 3.6);
-      block(3.6, 4.2, 2.8, 3.4, za + 2.4, 3, "#3f9e5a", [["top", 0.4, 0.4, 2, 2.6, "#2f7a45"]]); block(4.4, 7.6, 1, 3, za + 1.6, 1, "#3f9e5a"); block(4.2, 10.4, 1.4, 0.8, za + 0.8, 1.4, "#2f7a45");
-    } else if (hold === "book") {
-      fore(-5.8, za + 0.8, 3); fore(4, za + 0.8, 3);
-      block(-4.6, 3.6, 9.2, 3.6, za + 2.6, 0.7, "#c0392b", [["top", 0.3, 0.3, 4.1, 3, "#f4f2ea"], ["top", 4.8, 0.3, 4.1, 3, "#ece8e0"], ["top", 4.5, 0, 0.2, 3.6, "#7a1f1f"]]);  // open, pages up
-    } else if (hold === "sip" || hold === "mic") {  // to the lips
-      arm(-1, arms === "up" ? "up" : "down");
-      block(4, -1, 1.8, 2.2, zt + 5.6 + bz, 4, shirt); block(2.8, 1.2, 1.8, 1.8, zt + 6.2 + bz, 4.6, shirt); block(1.8, 3.6, 1.6, 1.8, zt + 10.2 + bz, 1.6, skin);
-      if (hold === "sip") block(-0.6, 3.6, 2.4, 2.2, zh + 0.6, 2.6, "#f4f2ea", [["front", 0, 1.2, 2.4, 0.7, "#d6a77f"]]);  // the cup, tilted to the mouth
-      else { block(-0.2, 3.7, 1.3, 1.3, zh - 1, 2.8, "#2b2b33"); block(-0.45, 3.45, 1.8, 1.8, zh + 1.8, 1.6, "#9aa0ad", [["top", 0.3, 0.3, 1.2, 1.2, "#c9ccd6"]]); }
-    } else if (hold) {
-      arm(-1, arms === "up" ? "up" : "down");
-      const zz = hold === "paddle" ? za + (f ? 1.2 : 0) : za; fore(4, zz);
-      const cx = 4.9, cy = 5.1, z = zz + 1.8;  // on the hand
-      if (hold === "cup") block(cx - 1.1, cy - 0.9, 2.2, 2.2, z - 0.6, 2.6, "#f4f2ea", [["top", 0.35, 0.35, 1.5, 1.5, "#5a3a22"], ["front", 0, 0.8, 2.2, 0.7, "#d6a77f"], ["right", 0.6, 0.8, 1, 1, "#e6e2d8"]]);
-      else if (hold === "papers") { block(cx - 3.2, cy - 2, 5.4, 4, z, 1.2, "#f4f2ea", [["top", 0.5, 0.6, 4.2, 0.35, "#9aa0ad"], ["top", 0.5, 1.5, 3.4, 0.35, "#9aa0ad"], ["top", 0.5, 2.4, 3.8, 0.35, "#9aa0ad"]]); block(cx - 2.6, cy - 1.4, 2, 2, z + 1.2, 0.3, "#fff7b8"); }
-      else if (hold === "ticket") block(cx - 1.5, cy - 1.2, 3, 2.6, z, 0.5, "#fff7b8", [["top", 0.4, 0.5, 2.2, 0.3, "#c9a24b"], ["top", 0.4, 1.3, 1.6, 0.3, "#c9a24b"]]);
-      else if (hold === "plate") { block(cx - 2.2, cy - 1.8, 4.4, 4.4, z, 0.5, "#f4f2ea"); block(cx - 1, cy - 0.6, 2, 2, z + 0.5, 1, "#e0a040", [["top", 0.3, 0.3, 1.4, 0.6, "#d64545"]]); }
-      else if (hold === "bag") { block(cx - 1.8, cy - 1.6, 3.6, 3.4, z - 6.6, 5, "#1f2329", [["front", 0.6, 3.2, 2.4, 0.5, "#3a3f48"]]); block(cx - 0.6, cy - 0.4, 1.2, 1, z - 1.6, 1.4, "#1f2329"); }  // a full bin bag
-      else if (hold === "can") { block(cx - 1.4, cy - 1.6, 2.8, 3.4, z - 4.2, 3.2, "#3f9e5a", [["top", 0.4, 0.4, 2, 2.6, "#2f7a45"]]); block(cx - 0.5, cy + 1.8, 1, 2.6, z - 2.2, 0.9, "#3f9e5a"); block(cx - 0.3, cy - 0.6, 0.6, 2, z - 1, 0.6, "#2f7a45"); }  // a watering can, hanging from the hand
-      else if (hold === "paddle") { block(cx - 0.4, cy - 0.6, 0.8, 1.8, z - 0.9, 0.8, "#8a6a4a"); block(cx - 1.7, cy + 1.1, 3.4, 3.2, z - 1.2, 0.6, "#d64545", [["top", 0.3, 0.3, 2.8, 2.6, "#e85555"]]); }
-      else if (hold === "pint") { block(cx - 1.1, cy - 1.1, 2.2, 2.2, z - 0.6, 3.6, "#f2b632", [["front", 0.2, 0.4, 1.8, 2.4, "#f7c948"], ["right", 0.6, 0.4, 1, 2.4, "#c8902a"]]); block(cx - 1.1, cy - 1.1, 2.2, 2.2, z + 3, 0.8, "#fffaf0"); }  // a pint, its foam
-      else if (hold === "cocktail") { block(cx - 0.2, cy - 0.2, 0.4, 0.4, z - 0.6, 2, "#dfeaf2"); block(cx - 1.2, cy - 1.2, 2.4, 2.4, z + 1.4, 1.6, "#ff7aa8", [["top", 0.3, 0.3, 1.8, 1.8, "#ffa8c8"]]); block(cx + 0.6, cy - 0.4, 0.3, 0.3, z + 3, 1.6, "#fbaa08"); }  // a stemmed glass, its umbrella
-    } else {
-      arm(-1, arms === "up" ? "up" : arms === "type" ? "type" : "down");
-      arm(1, arms === "up" ? "up" : arms === "type" ? "type" : arms === "baton" ? "wave" : "down");
-      if (look.wand && arms === "down" && !seated) { block(4.6, 1, 0.5, 4.4, zt + 0.4 + bz, 0.5, "#5a3a24"); block(4.6, 5.2, 0.5, 0.5, zt + 0.4 + bz, 0.5, "#fff3b0"); }  // the wand, held out
-      else if (look.wand && arms === "up") block(4.6, -0.6, 0.5, 0.5, zt + 17.6, 4.4, "#5a3a24");  // raised high
-    }
-    // the head: the face on its front, the ears on its sides, the hair over it and down its back
-    const face = [], b = look.beard, gl = look.glasses === true ? "square" : look.glasses;
-    if (blink) face.push(["front", 1.4, 4.0, 1.2, 0.35, "#1a1a1a"], ["front", 4.4, 4.0, 1.2, 0.35, "#1a1a1a"]);
-    else face.push(["front", 1.4, 3.6, 1.2, 1.4, "#1a1a1a"], ["front", 4.4, 3.6, 1.2, 1.4, "#1a1a1a"], ["front", 1.6, 4.4, 0.5, 0.5, "#ffffff"], ["front", 4.6, 4.4, 0.5, 0.5, "#ffffff"]);
-    face.push(["front", 0.6, 2.4, 1.1, 0.7, "#e88a8a"], ["front", 5.3, 2.4, 1.1, 0.7, "#e88a8a"]);
-    if (b === "stubble") face.push(["front", 0.4, 0.2, 6.2, 2.6, shade(beardC, 1.2)]);
-    else if (b === "short") face.push(["front", 0.4, 0.2, 6.2, 2, beardC]);
-    else if (b === "full") face.push(["front", 0.2, 0, 6.6, 3.4, beardC]);
-    else if (b === "goatee") face.push(["front", 2.6, 0, 1.8, 2, beardC]);
-    if (b === "mustache" || b === "goatee" || b === "full") face.push(["front", 2, 2.4, 3, 0.8, shade(beardC, 0.85)]);
-    face.push(talk ? ["front", 2.7, 1.1, 1.6, 1.3, "#5a1e1e"] : smile ? ["front", 2.6, 1.6, 1.8, 0.7, "#7a2b2b"] : ["front", 2.9, 1.6, 1.2, 0.6, "#8a4a4a"]);
-    if (gl === "sun") face.push(["front", 0.9, 3.4, 2.4, 1.9, "#1c1c24"], ["front", 3.7, 3.4, 2.4, 1.9, "#1c1c24"], ["front", 3.2, 4.2, 0.6, 0.5, "#1c1c24"]);
-    else if (gl === "patch") face.push(["front", 0.9, 3.2, 2.4, 2.2, "#1c1c24"], ["front", 0, 5.3, 7, 0.4, "#1c1c24"], ["left", 0, 5.3, 7, 0.4, "#1c1c24"], ["right", 0, 5.3, 7, 0.4, "#1c1c24"]);
-    else if (gl) face.push(["front", 0.9, 5, 2.4, 0.5, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 3.7, 5, 2.4, 0.5, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 0.9, 3.2, 2.4, 0.4, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 3.7, 3.2, 2.4, 0.4, gl === "round" ? "#7a5a2e" : "#1c1c24"], ["front", 3.2, 4.4, 0.6, 0.4, "#1c1c24"]);
-    const ear = shade(skin, 0.84);
-    face.push(["left", 2.6, 2.6, 1.6, 2, ear], ["right", 2.6, 2.6, 1.6, 2, ear]);
-    if (!bald) face.push(["front", 0, 6.4, 7, 1.6, hair], ["left", 0, 3.6, 5, 4.4, hair], ["right", 2, 3.6, 5, 4.4, hair], ["back", 0, 0, 7, 8, hair], ["left", 0, 0, 2.4, 3.6, hair], ["right", 4.6, 0, 2.4, 3.6, hair]);
-    else face.push(["left", 0, 3, 2.4, 2, hair], ["right", 4.6, 3, 2.4, 2, hair], ["back", 0, 2.6, 7, 2, hair]);
-    if (st === 4) face.push(["front", 0, 5.2, 4.4, 1.4, hair]);
-    block(-3.5, -3.5, 7, 7, zh, 8, skin, face);
-    if (!bald) block(-3.7, -3.9, 7.4, 7.4, zh + 8, 1.4, [shade(hair, 1.12), hair, shade(hair, 0.75)], [["top", 1.2, 1.2, 2.2, 1.2, shade(hair, 1.25)]]);
-    if (st === 2) block(-3.7, -4.2, 7.4, 1.2, zh - 2.6, 3, hair);                                            // long: down the back
-    if (st === 6) { block(-3.7, -4.4, 7.4, 1.4, zh - 7, 7.6, hair); block(-4.1, -3.6, 0.6, 5, zh - 3, 6, hair); block(3.5, -3.6, 0.6, 5, zh - 3, 6, hair); }  // very long
-    if (st === 1) for (const x of [-2.6, -0.4, 1.8]) block(x, -1, 1.4, 1.4, zh + 9.4, 1.6, hair);                                   // spikes
-    if (st === 3) block(-1.4, -1.4, 2.8, 2.8, zh + 9.4, 2.2, hair);                                                                 // a tuft
-    if (st === 7) block(-1.4, -4.8, 2.8, 2.4, zh + 6, 2.8, hair);                                                                    // a bun
-    if (st === 8) block(-0.8, -3.6, 1.6, 7, zh + 9.4, 2.6, hair);                                                                    // a crest
-    // hats
-    if (hat === "cap") { block(-3.9, -3.9, 7.8, 7.8, zh + 8, 2.4, "#081746", [["front", 3.2, 0.6, 1.4, 1.2, "#fbaa08"]]); block(-3, 3.9, 6, 3, zh + 8, 0.6, "#081746"); }
-    else if (hat === "beanie") { block(-4, -4, 8, 8, zh + 7, 3.4, "#ff6b6b", [["front", 0, 0, 8, 1, "#c92a2a"]]); block(-0.9, -0.9, 1.8, 1.8, zh + 10.4, 1.6, "#f7f7f7"); }
-    else if (hat === "party") { block(-2.4, -2.4, 4.8, 4.8, zh + 9.4, 2, "#b48cff"); block(-1.4, -1.4, 2.8, 2.8, zh + 11.4, 2, "#b48cff"); block(-0.6, -0.6, 1.2, 1.2, zh + 13.4, 1.4, "#fbaa08"); }
-    else if (hat === "crown") { block(-3.4, -3.4, 6.8, 6.8, zh + 9.2, 1.4, "#fbaa08"); for (const [x, y] of [[-3.4, -3.4], [2.2, -3.4], [-3.4, 2.2], [2.2, 2.2]]) block(x, y, 1.2, 1.2, zh + 10.6, 1.6, "#fbaa08"); }
-    else if (hat === "straw") { block(-5.2, -5.2, 10.4, 10.4, zh + 8.2, 0.7, "#e2c27a"); block(-3.4, -3.4, 6.8, 6.8, zh + 8.9, 3, "#d9b86a", [["front", 0, 0.4, 6.8, 0.9, "#e8402a"], ["left", 0, 0.4, 6.8, 0.9, "#e8402a"], ["right", 0, 0.4, 6.8, 0.9, "#e8402a"], ["back", 0, 0.4, 6.8, 0.9, "#e8402a"]]); }
-    else if (hat === "kasa") {  // the conical straw hat
-      for (const [r, z, h, c] of [[6.6, 7.4, 0.6, "#c9a45a"], [5, 8, 1.2, "#d9b86a"], [3.4, 9.2, 1.2, "#d9b86a"], [1.9, 10.4, 1.1, "#e2c27a"], [0.7, 11.5, 0.8, "#e2c27a"]]) block(-r, -r, 2 * r, 2 * r, zh + z, h, c);
-    }
-    else if (hat === "hachimaki") { block(-3.75, -3.75, 7.5, 7.5, zh + 5.6, 1.3, "#f4f2ea", [["front", 3, 0.15, 1.5, 1, "#d8302a"]]); block(-1, -4.7, 2, 1, zh + 3.8, 2.4, "#f4f2ea"); }
-    else if (hat === "tricorne") {  // three sides of the brim turned up, a gold braid, a little skull in front
-      const c = "#1c1c24", gold = "#c9a040";
-      block(-3.4, -3.4, 6.8, 6.8, zh + 8.2, 3.4, "#14141a"); block(-5, -5, 10, 10, zh + 8.2, 0.7, c);
-      block(-5, -4, 1, 8, zh + 8.9, 2.2, c, [["left", 0, 1.8, 8, 0.4, gold]]); block(4, -4, 1, 8, zh + 8.9, 2.2, c, [["right", 0, 1.8, 8, 0.4, gold]]);
-      block(-4, 4, 8, 1, zh + 8.9, 1.8, c, [["front", 0, 1.4, 8, 0.4, gold], ["front", 3.4, 0.4, 1.2, 0.9, "#f4f2ea"]]);
-    }
-    else if (hat === "tophat") { block(-5, -5, 10, 10, zh + 8.2, 0.8, "#14141a"); block(-3.3, -3.3, 6.6, 6.6, zh + 9, 6, "#1c1c24", [["front", 0, 0.6, 6.6, 1.2, "#8f1f2a"], ["left", 0, 0.6, 6.6, 1.2, "#8f1f2a"], ["back", 0, 0.6, 6.6, 1.2, "#8f1f2a"], ["right", 0, 0.6, 6.6, 1.2, "#8f1f2a"]]); }
-    else if (hat === "fedora") { block(-5, -5, 10, 10, zh + 8.4, 0.8, "#4a3826"); block(-3.4, -3.4, 6.8, 6.8, zh + 9.2, 3, "#5c4632", [["front", 0, 0, 6.8, 0.8, "#1c1c24"]]); }
-    else if (hat === "vr") { block(-4.3, -4.3, 8.6, 8.6, zh + 3.4, 2.8, "#1c1c22", [["front", 0.8, 0.5, 7, 1.6, "#3bc4ff"]]); block(-4.4, -4.4, 8.8, 8.8, zh + 6.6, 0.6, "#2a2a33"); }
-    else if (hat === "helmet") {  // the astronaut's helmet: a collar, a glass bubble over the head, a glint
-      block(-4.4, -4.4, 8.8, 8.8, zh - 1.6, 1.2, "#c9d2dc");
-      block(-4.9, -4.9, 9.8, 9.8, zh - 0.4, 11, ["#d8f2ff55", "#bfe9ff44", "#9fd0ee44"], [["front", 1, 5.6, 2.2, 3.4, "#ffffff66"]]);
-    }
-    else if (hat === "visor") { block(-3.75, -3.75, 7.5, 7.5, zh + 4.8, 0.8, "#2a3340"); block(-3.9, 3.3, 7.8, 0.7, zh + 3.2, 2.2, "#00e5ff", [["front", 0, 1.4, 7.8, 0.5, "#e8ffff"]]); }
-    else if (hat === "wizard") {  // the pointed hat: a wide brim, a gold band, a bent tip, a star
-      const c = "#2a2350";
-      block(-5.2, -5.2, 10.4, 10.4, zh + 8.2, 0.8, c); block(-3.4, -3.4, 6.8, 6.8, zh + 9, 3, c, [["front", 0, 0, 6.8, 0.9, "#d4a640"], ["front", 2.6, 1.4, 1.2, 1.2, "#ffe14d"]]);
-      block(-2.4, -2.6, 4.8, 4.8, zh + 12, 3, c); block(-1.5, -2, 3, 3, zh + 15, 2.6, c); block(-0.8, -2.6, 1.6, 1.6, zh + 17.6, 1.6, c); block(-0.6, -3.8, 1.2, 1.4, zh + 18.6, 0.9, c);
-    }
-    else if (hat === "headset") { block(-3.9, -0.6, 7.8, 1.2, zh + 9.4, 0.8, "#2a2a33"); block(-4.4, -1.2, 0.9, 2.4, zh + 2, 3, "#2a2a33"); block(3.5, -1.2, 0.9, 2.4, zh + 2, 3, "#2a2a33"); }
-    return svg();
-  }
+  // drawn flat (svg/people.js): rot 0 faces down-left (from the front, turned left), 1 down-right (the same, mirrored),
+  // 2 up-right (from behind, mirrored), 3 up-left (from behind)
+  body(state) { const rot = state.rot || 0; return personSvg(state, { view: rot >= 2 ? "back" : "front", mirror: rot === 1 || rot === 2 }); }
 }
 ART.isoavatar = new IsoAvatar();
 

@@ -1,132 +1,25 @@
 // Who walks around: the team and the chief (PersonArt), Brume the cat, Biscuit the dog, and the plumbob over a head.
 
 import { ART, Figure, R, SvgArt, shade } from "./base.js";
+import { personSvg } from "./people.js";
 
 // people (outlined, shaded, 9 hair styles, glasses, beards, outfits, hats), standing on their feet
-// look: skin, hair, shirt, style (hair 0-8), glasses (true / "square" / "round" / "sun"), and for a custom sim (the chief, chief.js):
+// look: sex ("f" or a man), skin, hair, shirt, style (hair 0-8), glasses (true / "square" / "round" / "sun"), and for a custom sim (the chief, chief.js):
 // outfit (tux, suit, shirt, hoodie, tshirt, polo), tie, pants, shoes, beard (stubble, short, full, mustache, goatee)
 // the visible traits of a look (the cache key of its images; a look also carries other fields)
-const LOOK_TRAITS = ["skin", "hair", "shirt", "style", "glasses", "outfit", "tie", "pants", "shoes", "beard", "beardColor", "scarf", "wand", "jetpack", "parrot", "katana", "lei"];
+const LOOK_TRAITS = ["sex", "skin", "hair", "shirt", "style", "glasses", "outfit", "tie", "pants", "shoes", "beard", "beardColor", "scarf", "wand", "jetpack", "parrot", "katana", "lei"];
 export const lookTraits = look => Object.fromEntries(LOOK_TRAITS.map(k => [k, look[k]]));
 export const lookKey = look => LOOK_TRAITS.map(k => look[k]).join("|");
+// the person in 2D (portraits, the chief's editor, the faces of the HUD): the same drawing as in the office (svg/people.js),
+// from the front or from behind; a portrait crops its head and shoulders (PORTRAIT_BOX)
 class PersonArt extends Figure {
-  constructor() { super("person", 9, 25, 18, 26, { outline: 0.45 }); }
-  shadow({ seated = false }) { return seated ? null : [4.5, 0.9, 0.28]; }
-  body({ look, frame = 0, back = false, seated = false, arms = "down", tux = false, smile = false, hat = "" }) {
-    const outfit = look.outfit || (tux ? "tux" : "tshirt"), dark = outfit === "tux";
-    const shirt = dark ? (look.outfit ? look.shirt : "#1c1c24") : look.shirt, sh = shade(shirt, 0.72), skin = look.skin, skd = shade(skin, 0.84), hair = look.hair, hl = shade(hair, 1.45);
-    const pants = outfit === "flight" ? shirt : look.pants || "#2f3550", shoes = look.shoes || "#17141c", tie = look.tie || "#d64545", beardC = look.beardColor || hair;
-    const ty = -12, hy = -19, st = look.style || 0, bald = st === 5;
-    let g = "";
-    const robe = outfit === "robe" || outfit === "kimono";
-    if (!seated && robe) {  // the robe down to the shoes, its trim, the shoes peeking
-      const lo = frame % 2 ? 1 : -1;
-      g += R(-3.4, -1 + Math.min(0, lo) * 0.5, 2.6, 1.1, shoes) + R(0.8, -1 - Math.max(0, lo) * 0.5, 2.6, 1.1, shoes);
-      g += `<path fill="${shirt}" d="M-4 -5.4H4L4.8 -0.6H-4.8Z"/>` + R(2.6, -5.4, 1.6, 4.8, sh) + R(-4.8, -1.2, 9.6, 0.6, sh) + (back ? "" : R(-0.4, -5.4, 0.8, 4.8, tie));
-    } else if (!seated) {
-      const lo = frame % 2 ? 1 : -1;
-      g += R(-3, -5, 2, 5 + Math.min(0, lo), pants) + R(1, -5, 2, 5 - Math.max(0, lo), pants) + R(-1.6, -5, 0.6, 3, shade(pants, 0.75)) + R(2.4, -5, 0.6, 3, shade(pants, 0.75));
-      g += R(-3.6, -1 + Math.min(0, lo), 2.6, 1.1, shoes) + R(1, -1 - Math.max(0, lo), 2.6, 1.1, shoes);
-    }
-    // hood behind the head
-    if (outfit === "hoodie" && back) g += R(-3.4, hy + 3.6, 6.8, 4, shade(shirt, 0.85));
-    // torso
-    g += R(-4, ty, 8, 7, shirt) + R(2.8, ty, 1.2, 7, sh) + R(-4, ty + 6.2, 8, 0.8, sh);
-    if (!back) {
-      if (outfit === "tux") g += R(-1, ty, 2, 4.5, "#f4f2ea") + R(-0.3, ty + 2.2, 0.6, 0.6, "#1c1c24") + R(-0.3, ty + 3.6, 0.6, 0.6, "#1c1c24") + R(-2.2, ty, 4.4, 1.5, tie) + R(-0.5, ty, 1, 1.5, shade(tie, 0.8));
-      else if (outfit === "suit") g += `<path fill="#f4f2ea" d="M-1.6 ${ty}h3.2l-1.6 3.4z"/>` + R(-0.5, ty + 0.4, 1, 4.6, tie) + R(-0.7, ty + 0.2, 1.4, 1, shade(tie, 0.8)) + R(-2.6, ty, 0.6, 4, sh) + R(2, ty, 0.6, 4, sh);
-      else if (outfit === "shirt") g += `<path fill="${shade(shirt, 1.25)}" d="M-2.4 ${ty}h1.8l-0.6 1.6zM0.6 ${ty}h1.8l-1.2 1.6z"/>` + R(-1, ty, 2, 1, skd) + [1.8, 3.4, 5].map(y => R(-0.3, ty + y, 0.6, 0.6, shade(shirt, 0.6))).join("");
-      else if (outfit === "hoodie") g += R(-2.6, ty, 5.2, 1.6, shade(shirt, 0.85)) + R(-1, ty, 2, 1, skd) + R(-1.2, ty + 1.4, 0.4, 2.2, "#f4f2ea") + R(0.8, ty + 1.4, 0.4, 2.2, "#f4f2ea") + R(-2.2, ty + 4, 4.4, 2, sh);
-      else if (outfit === "flight") g += R(-1.8, ty + 1.4, 3.6, 2.4, "#1a222c") + R(-1.4, ty + 2, 0.8, 0.8, "#00e5ff") + R(0.4, ty + 2, 0.8, 0.8, "#ff3df2") + R(-4, ty, 0.7, 7, tie) + R(3.3, ty, 0.7, 7, tie) + R(-2.2, ty, 4.4, 0.9, sh);
-      else if (outfit === "vampire") g += R(-1.2, ty, 2.4, 3.6, "#f4f2ea") + R(-0.8, ty + 1, 1.6, 0.4, "#d8d4c8") + R(-0.8, ty + 2.2, 1.6, 0.4, "#d8d4c8") + R(-0.5, ty + 0.2, 1, 1, tie) + R(-2.6, ty, 0.6, 5, sh) + R(2, ty, 0.6, 5, sh);
-      else if (outfit === "hawaii") g += [[-3, 1], [1.2, 0.4], [-1.4, 3.6], [2.2, 4.4], [-3.2, 5.4], [0.2, 2.2]].map(([x, y], k) => `<circle cx="${x}" cy="${ty + y}" r=".75" fill="${k % 2 ? "#f4f2ea" : tie}"/><circle cx="${x}" cy="${ty + y}" r=".25" fill="#f0c040"/>`).join("")
-        + `<path fill="${shade(shirt, 1.2)}" d="M-2.4 ${ty}h1.8l-0.6 1.6zM0.6 ${ty}h1.8l-1.2 1.6z"/>` + R(-1, ty, 2, 1, skd);  // the flowers, the open collar
-      else if (outfit === "kimono") g += `<path fill="#f4f2ea" d="M-2.2 ${ty}L0 ${ty + 3.4}L2.2 ${ty}Z"/><path fill="none" stroke="${sh}" stroke-width=".5" d="M-2.2 ${ty}L1.4 ${ty + 4.2}"/>` + R(-4, ty + 4.2, 8, 2, tie) + R(-0.7, ty + 4.5, 1.4, 1.4, shade(tie, 0.7));  // the collars crossed, the obi and its cord
-      else if (outfit === "pirate") g += R(-1.2, ty, 2.4, 4.2, "#f4f2ea") + R(-0.8, ty + 0.8, 1.6, 0.4, "#d8d4c8") + R(-0.8, ty + 2, 1.6, 0.4, "#d8d4c8") + R(-4, ty + 4.4, 8, 1.3, tie)
-        + [-2.7, 2.1].map(x => R(x, ty + 0.8, 0.6, 0.6, "#e8c23a") + R(x, ty + 2.6, 0.6, 0.6, "#e8c23a")).join("") + R(-2.2, ty, 0.6, 4.4, sh) + R(1.6, ty, 0.6, 4.4, sh);  // the jabot, the buttons, the sash
-      else if (robe) g += R(-0.4, ty, 0.8, 7, tie) + `<path fill="${sh}" d="M-2.4 ${ty}h4.8l-2.4 2.2z"/>` + R(-0.7, ty + 0.4, 1.4, 1, "#d4a640");
-      else if (outfit === "polo") g += R(-1, ty, 2, 1.2, skd) + R(-2.4, ty, 1.4, 1.2, shade(shirt, 1.3)) + R(1, ty, 1.4, 1.2, shade(shirt, 1.3)) + R(-0.3, ty + 1.4, 0.6, 0.6, shade(shirt, 0.6)) + R(-0.3, ty + 2.6, 0.6, 0.6, shade(shirt, 0.6));
-      else g += R(-1, ty, 2, 1.2, skd) + R(-2.2, ty, 1.2, 1.4, shade(shirt, 1.25)) + R(1, ty, 1.2, 1.4, shade(shirt, 1.25));
-    }
-    // a vampire's cape: its edges lined in red down the sides, a high collar behind the head (the back: all cape)
-    if (outfit === "vampire") g += (back ? "" : R(-5.4, ty - 0.6, 1.4, 12.2, "#14141a") + R(4, ty - 0.6, 1.4, 12.2, "#14141a") + R(-4.4, ty, 0.5, 11, tie) + R(3.9, ty, 0.5, 11, tie))
-      + `<path fill="${tie}" d="M-4.4 ${ty + 0.4}L-5.4 ${hy + 3.4}L-2.6 ${ty}ZM4.4 ${ty + 0.4}L5.4 ${hy + 3.4}L2.6 ${ty}Z"/>`;
-    // a captain's coat: its long tails below the waist
-    if (outfit === "pirate") g += back ? R(-4.2, ty + 6.4, 8.4, 4.2, shade(shirt, 0.9)) + R(-0.3, ty + 6.4, 0.6, 4.2, sh) : R(-4.4, ty + 6.4, 1.8, 4.4, shirt) + R(2.6, ty + 6.4, 1.8, 4.4, sh);
-    // arms
-    const arm = (x, y, h, hy2) => R(x, y, 2, h, shirt) + R(x + (x < 0 ? 0 : 1.4), y, 0.6, h, sh) + R(x, hy2, 2, 1.6, skin);
-    if (arms === "up") g += arm(-6, ty - 5, 6, ty - 6.4) + arm(4, ty - 5, 6, ty - 6.4);
-    else if (arms === "type") { const a = frame % 2; g += arm(-6, ty + 1, 4, ty - 1 + a) + arm(4, ty + 1, 4, ty - a); }
-    else if (arms === "baton") { const lift = frame % 2 ? -3 : 0; g += arm(-6, ty + 1, 5, ty + 6) + arm(4, ty - 2 + lift, 6, ty - 3.4 + lift); }
-    else g += arm(-6, ty + 1, 6, ty + 7) + arm(4, ty + 1, 6, ty + 7);
-    if (look.wand && !back) g += arms === "up" ? R(4.7, ty - 11, 0.6, 5, "#5a3a24") + R(4.6, ty - 11.6, 0.8, 0.8, "#fff3b0") : arms !== "type" && !seated ? `<path stroke="#5a3a24" stroke-width=".6" stroke-linecap="round" d="M5.2 ${ty + 8}l3 -3.4"/>` + R(7.8, ty + 4.2, 0.8, 0.8, "#fff3b0") : "";
-    if (outfit === "vampire" && back) g += R(-5.4, ty - 0.6, 10.8, 12.4, "#14141a") + R(-5.4, ty + 11.2, 10.8, 0.6, tie);
-    if (look.jetpack) g += back ? R(-3.2, ty + 0.6, 6.4, 6, "#9aa6b4") + R(-2.4, ty + 1.4, 4.8, 0.8, "#00e5ff") + R(-2.8, ty + 6.6, 1.8, 1.2, "#2a3340") + R(1, ty + 6.6, 1.8, 1.2, "#2a3340")
-      : R(-3.4, ty, 0.8, 5, "#2a3340") + R(2.6, ty, 0.8, 5, "#2a3340");  // the tanks from behind, the straps from the front
-    if (look.lei && !back) g += [-3, -2, -1, 0, 1, 2, 3].map((x, k) => `<circle cx="${x}" cy="${ty + 0.6 + (3 - Math.abs(x)) * 0.45}" r=".75" fill="${["#ff6a8a", "#ffd23a", "#ff8a3a", "#f4f2ea"][k % 4]}"/>`).join("");  // a garland of flowers
-    if (look.katana) g += `<path stroke="#1c1c24" stroke-width=".9" stroke-linecap="round" d="M${back ? 5 : -5.6} ${ty + 9}L${back ? 1 : -1.4} ${ty + 4.6}"/>` + `<path stroke="#8f1f2a" stroke-width=".9" d="M${back ? 1 : -1.4} ${ty + 4.6}L${back ? -0.4 : 0} ${ty + 3}"/>` + R(back ? 0.6 : -1.9, ty + 4.2, 1.2, 0.6, "#c9a040");  // a katana at the hip
-    if (look.parrot) {  // a red macaw on the right shoulder (on the left one, seen from behind)
-      const px = back ? -4.4 : 4.4, d = back ? -1 : 1;
-      g += R(px - 0.4 * d, ty - 0.6, 0.8, 3.6, "#2a6ad0") + `<ellipse cx="${px}" cy="${ty - 1.6}" rx="1.3" ry="2" fill="#d8332a"/>` + R(px - 0.2 * d - (d < 0 ? 0.9 : 0), ty - 2.2, 0.9, 1.8, "#2a6ad0")
-        + `<circle cx="${px + 0.3 * d}" cy="${ty - 3.9}" r="1.15" fill="#d8332a"/>` + (back ? "" : R(px + 0.3, ty - 4.3, 0.7, 0.6, "#f4f2ea") + R(px + 0.6, ty - 4.2, 0.3, 0.3, "#1a1a1a") + `<path fill="#2a2a30" d="M${px + 1.2} ${ty - 4.2}q1.1 0 .9 1.2l-.9 -.4z"/>`);
-    }
-    if (look.scarf) {  // a striped scarf around the neck, one end down the front
-      const [sa, sb = "#f4f2ea"] = String(look.scarf).split(",");
-      g += R(-3.2, ty - 0.8, 6.4, 1.8, sa) + [-2.2, -0.2, 1.8].map(x => R(x, ty - 0.8, 0.7, 1.8, sb)).join("");
-      if (!back) g += R(0.8, ty + 1, 1.6, 4.8, sa) + R(0.8, ty + 2.2, 1.6, 0.6, sb) + R(0.8, ty + 3.8, 1.6, 0.6, sb) + R(0.8, ty + 5.4, 1.6, 0.4, sb);
-    }
-    // head
-    if (back) {
-      g += R(-3.6, hy + 3, 0.7, 1.6, skd) + R(2.9, hy + 3, 0.7, 1.6, skd) + R(-1.5, hy + 6.2, 3, 0.9, skd);
-      g += bald ? R(-3.2, hy - 0.2, 6.4, 6.5, skin) + R(-3.2, hy + 4, 6.4, 1.6, hair) : R(-3.2, hy - 0.6, 6.4, 6.9, hair) + R(-2, hy - 0.4, 2.4, 0.6, hl);
-      if (st === 2) g += R(-3.4, hy + 4, 6.8, 4.4, hair);
-      if (st === 6) g += R(-3.6, hy + 4, 7.2, 6.6, hair) + R(-3.6, hy + 9.8, 7.2, 0.8, shade(hair, 0.8));
-    } else {
-      g += R(-3, hy, 6, 7, skin) + R(-3, hy + 6, 6, 1, skd) + R(-3.6, hy + 3, 0.7, 1.6, skd) + R(2.9, hy + 3, 0.7, 1.6, skd);
-      g += R(-2, hy + 3.4, 1, 1.2, "#1a1a1a") + R(1, hy + 3.4, 1, 1.2, "#1a1a1a") + R(-1.7, hy + 3.5, 0.4, 0.4, "#fff") + R(1.3, hy + 3.5, 0.4, 0.4, "#fff");
-      g += R(-2.7, hy + 5, 1, 0.6, "#e88a8a", ' fill-opacity=".55"') + R(1.7, hy + 5, 1, 0.6, "#e88a8a", ' fill-opacity=".55"');
-      const b = look.beard;
-      if (b === "stubble") g += R(-3, hy + 4.8, 6, 2.2, beardC, ' fill-opacity=".35"');
-      else if (b === "short") g += R(-3, hy + 5.2, 6, 1.8, beardC) + R(-3, hy + 4, 0.8, 1.4, beardC) + R(2.2, hy + 4, 0.8, 1.4, beardC);
-      else if (b === "full") g += R(-3.2, hy + 4, 6.4, 3.4, beardC) + R(-3.6, hy + 3, 0.8, 2.4, beardC) + R(2.8, hy + 3, 0.8, 2.4, beardC) + R(-1.6, hy + 7.2, 3.2, 0.8, beardC);
-      else if (b === "goatee") g += R(-0.9, hy + 5.8, 1.8, 1.8, beardC);
-      if (b === "mustache" || b === "goatee" || b === "full") g += R(-1.8, hy + 5, 3.6, 0.7, shade(beardC, 0.85));
-      g += smile ? R(-1, hy + 5.7, 2, 0.6, "#7a2b2b") + R(-1.4, hy + 5.2, 0.5, 0.5, "#7a2b2b") + R(0.9, hy + 5.2, 0.5, 0.5, "#7a2b2b") : R(-0.6, hy + 5.8, 1.2, 0.5, "#8a4a4a");
-      const gl = look.glasses === true ? "square" : look.glasses;
-      if (gl === "patch") g += R(-2.6, hy + 3, 2.2, 2, "#1c1c24") + `<path fill="none" stroke="#1c1c24" stroke-width=".4" d="M-3.4 ${hy + 2.2}L-2.4 ${hy + 3.2}M-0.6 ${hy + 3.2}L3.4 ${hy + 1.8}"/>`;
-      else if (gl === "square") g += `<path fill="none" stroke="#1c1c24" stroke-width=".45" d="M-2.6 ${hy + 3}h2v1.8h-2zM0.6 ${hy + 3}h2v1.8h-2zM-0.6 ${hy + 3.6}h1.2"/>`;
-      else if (gl === "round") g += `<g fill="none" stroke="#7a5a2e" stroke-width=".45"><circle cx="-1.5" cy="${hy + 3.9}" r="1.1"/><circle cx="1.5" cy="${hy + 3.9}" r="1.1"/><path d="M-0.4 ${hy + 3.8}h0.8"/></g>`;
-      else if (gl === "sun") g += R(-2.7, hy + 3, 2.2, 1.8, "#1c1c24") + R(0.5, hy + 3, 2.2, 1.8, "#1c1c24") + R(-0.6, hy + 3.4, 1.2, 0.5, "#1c1c24") + R(-2.4, hy + 3.2, 0.7, 0.4, "#ffffff", ' fill-opacity=".5"');
-      if (!bald) g += R(-3.4, hy - 0.6, 6.8, 2.4, hair) + R(-2, hy - 0.4, 2.4, 0.6, hl);
-      else g += R(-3.4, hy + 2, 0.9, 2, hair) + R(2.5, hy + 2, 0.9, 2, hair) + R(-1.6, hy + 0.4, 1.4, 0.6, shade(skin, 1.15));
-      if (st === 2) g += R(-3.6, hy + 1.8, 1.2, 6.6, hair) + R(2.4, hy + 1.8, 1.2, 6.6, hair);
-      else if (st === 6) g += R(-3.8, hy + 1.8, 1.4, 9, hair) + R(2.4, hy + 1.8, 1.4, 9, hair);
-      else if (st === 4) g += R(-3.4, hy + 1.8, 3.6, 1, hair) + R(-3.4, hy + 1.8, 0.8, 1.6, hair);
-      else if (!bald) g += R(-3.4, hy + 1.8, 0.9, 2, hair) + R(2.5, hy + 1.8, 0.9, 2, hair);
-    }
-    if (st === 1) g += R(-3, hy - 1.6, 1.2, 1.1, hair) + R(-0.6, hy - 2.1, 1.2, 1.6, hair) + R(1.8, hy - 1.6, 1.2, 1.1, hair);
-    if (st === 3) g += R(-1.4, hy - 2.7, 2.8, 2.2, hair) + R(-0.8, hy - 2.5, 1, 0.5, hl);
-    if (st === 7) g += `<circle cx="0" cy="${hy - 1.8}" r="1.8" fill="${hair}"/>` + R(-0.6, hy - 2.8, 1, 0.5, hl);
-    if (st === 8) g += R(-0.9, hy - 3.2, 1.8, 3, hair) + R(-0.5, hy - 3.2, 0.6, 2.4, hl);
-    if (hat === "cap") g += R(-3.6, hy - 1.8, 7.2, 2.6, "#081746") + R(-0.6, hy - 1.4, 1.2, 1.2, "#fbaa08") + (back ? "" : R(-0.5, hy + 0.4, 5.4, 1, "#081746"));
-    else if (hat === "beanie") g += R(-3.7, hy - 2.2, 7.4, 3, "#ff6b6b") + R(-3.7, hy + 0.3, 7.4, 1, "#c92a2a") + R(-0.8, hy - 3.4, 1.6, 1.4, "#f7f7f7");
-    else if (hat === "party") g += `<path fill="#b48cff" d="M-2.6 ${hy}L0 ${hy - 5}L2.6 ${hy}Z"/>` + R(-1, hy - 2, 0.8, 0.8, "#fbaa08") + R(0.5, hy - 1, 0.8, 0.8, "#51cf66") + R(-0.6, hy - 5.8, 1.2, 1.2, "#fbaa08");
-    else if (hat === "crown") g += `<path fill="#fbaa08" d="M-3 ${hy + 0.5}V${hy - 2.5}L-1.5 ${hy - 1}L0 ${hy - 3.2}L1.5 ${hy - 1}L3 ${hy - 2.5}V${hy + 0.5}Z"/>` + R(-0.5, hy - 0.8, 1, 1, "#ff6b6b");
-    else if (hat === "helmet") g += `<circle cx="0" cy="${hy + 3.2}" r="5.8" fill="#bfe9ff" fill-opacity=".28" stroke="#e8f6ff" stroke-width=".45"/><path fill="#ffffff" fill-opacity=".45" d="M-3.6 ${hy + 0.6}q1.4 -2.6 4 -3l-.2 .8q-2.2 .6 -3.2 2.6z"/>` + R(-3.8, hy + 7.6, 7.6, 1, "#c9d2dc");
-    else if (hat === "visor") g += back ? R(-3.4, hy + 2.6, 6.8, 0.8, "#2a3340") : R(-3.5, hy + 2.8, 7, 1.9, "#00e5ff") + R(-3.5, hy + 2.8, 7, 0.5, "#e8ffff");
-    else if (hat === "wizard") g += `<path fill="#2a2350" d="M-3.2 ${hy + 0.2}L0.4 ${hy - 7.4}Q2.6 ${hy - 9} 4.2 ${hy - 7.6}Q2.4 ${hy - 7.6} 2 ${hy - 6}L3.2 ${hy + 0.2}Z"/>` + R(-5, hy - 0.2, 10, 1, "#2a2350") + R(-3.1, hy - 1.3, 6.2, 0.9, "#d4a640") + R(-0.8, hy - 4, 1, 1, "#ffe14d");
-    else if (hat === "straw") g += R(-5, hy - 0.2, 10, 1, "#e2c27a") + R(-3, hy - 3.2, 6, 3, "#d9b86a") + R(-3, hy - 1.4, 6, 0.9, "#e8402a") + R(-3, hy - 3.2, 6, 0.4, "#c9a45a");
-    else if (hat === "kasa") g += `<path fill="#d9b86a" stroke="#8a6a2a" stroke-width=".3" d="M-6.6 ${hy + 1.6}L0 ${hy - 3.8}L6.6 ${hy + 1.6}Z"/>` + [-3.4, 0, 3.4].map(x => `<path stroke="#a8884a" stroke-width=".2" d="M0 ${hy - 3.6}L${x} ${hy + 1.4}"/>`).join("") + (back ? "" : `<path fill="none" stroke="#8a6a2a" stroke-width=".3" d="M-2.6 ${hy + 1.6}L-1.6 ${hy + 6.6}M2.6 ${hy + 1.6}L1.6 ${hy + 6.6}"/>`);
-    else if (hat === "hachimaki") g += R(-3.5, hy + 1, 7, 1.3, "#f4f2ea") + (back ? R(-1.2, hy + 1.8, 0.8, 2.6, "#f4f2ea") + R(0.4, hy + 1.8, 0.8, 2.2, "#f4f2ea") : `<circle cx="0" cy="${hy + 1.65}" r=".55" fill="#d8302a"/>`);
-    else if (hat === "tricorne") g += R(-2.6, hy - 4, 5.2, 3.4, "#14141a") + `<path fill="#1c1c24" stroke="#c9a040" stroke-width=".35" d="M-5.2 ${hy + 0.4}Q0 ${hy - 1.2} 5.2 ${hy + 0.4}L3.8 ${hy - 3}Q0 ${hy - 1.6} -3.8 ${hy - 3}Z"/>`
-      + (back ? "" : R(-0.6, hy - 2.2, 1.2, 1, "#f4f2ea") + R(-0.4, hy - 1.9, 0.3, 0.3, "#1c1c24") + R(0.1, hy - 1.9, 0.3, 0.3, "#1c1c24"));
-    else if (hat === "tophat") g += R(-4.4, hy - 0.2, 8.8, 1, "#14141a") + R(-2.8, hy - 5.4, 5.6, 5.2, "#1c1c24") + R(-2.8, hy - 1.6, 5.6, 1, "#8f1f2a") + R(-2.8, hy - 5.4, 5.6, 0.5, "#2a2a36");
-    else if (hat === "fedora") g += R(-4.6, hy - 0.2, 9.2, 1, "#4a3826") + R(-3, hy - 3, 6, 3, "#5c4632") + R(-3, hy - 1, 6, 0.8, "#1c1c24");
-    else if (hat === "headset") g += `<path fill="none" stroke="#2a2a33" stroke-width=".9" d="M-3.6 ${hy + 3}V${hy - 0.4}Q0 ${hy - 3.6} 3.6 ${hy - 0.4}V${hy + 3}"/>` + R(-4.4, hy + 2, 1.6, 2.6, "#2a2a33") + R(2.8, hy + 2, 1.6, 2.6, "#2a2a33") + (back ? "" : `<path fill="none" stroke="#2a2a33" stroke-width=".4" d="M-3.6 ${hy + 4.4}Q-3 ${hy + 6.4} -1 ${hy + 6.2}"/>` + R(-1.4, hy + 5.8, 0.9, 0.9, "#ff6b6b"));
-    return g;
-  }
+  constructor() { super("person", 10, 39, 20, 40, { outline: 0.22 }); }
+  shadow({ seated = false }) { return seated ? null : [3.6, 0.8, 0.28]; }
+  body(state) { return personSvg(state, { view: state.back ? "back" : "front" }); }
 }
 ART.person = new PersonArt();
+// the viewBox of a face (the HUD, the needs panel): the head and the top of the shoulders; of a bust (the visio): to the chest
+export const PORTRAIT_BOX = "-4.6 -31 9.2 10.5", BUST_BOX = "-7.5 -31.5 15 16.5";
 
 
 // Brume: grey tabby, green eyes; poses walk (2 frames), sit (tail sweeping, 2 = blink), sleep; she faces right

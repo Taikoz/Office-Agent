@@ -7,6 +7,7 @@ import { esc } from "./data.js";
 import { closePanel, panel } from "../ui/panel.js";
 import { openOverlay } from "../agents/insight.js";
 import { ART } from "../svg/base.js";
+import { PORTRAIT_BOX } from "../svg/figures.js";
 import { lookFor } from "../agents/entities.js";
 import { TRAITS, traitsOf } from "../sims/moods.js";
 import { CHIEF_LOOK } from "../world/chief.js";
@@ -20,7 +21,7 @@ if (OFFICE_CFG.office) document.title = `${OFFICE_CFG.office} — Agent Office`;
 
 /* ---------- the cards: a face (from the name, like in the office), the traits the name gives ---------- */
 const face = (look, tux = false) => `<img alt="" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(ART.person.markup({ look, tux, smile: true })
-  .replace(/viewBox="[^"]*" width="\d+" height="\d+"/, 'viewBox="-7 -25 14 16"'))}">`;
+  .replace(/viewBox="[^"]*" width="\d+" height="\d+"/, `viewBox="${PORTRAIT_BOX}"`))}">`;
 const devFace = name => face({ ...lookFor(name || "?", null), team: true });
 const traitsChips = name => name ? traitsOf(name).map(id => `<span class="trait" title="${esc(TRAITS[id].desc)}">${TRAITS[id].icon} ${esc(TRAITS[id].name)}</span>`).join("") : `<span class="muted">un prénom…</span>`;
 const devCard = (n, i) => `<div class="dev" data-i="${i}"><div class="face">${devFace(n)}</div><div class="body"><span class="desk">Bureau ${i + 1}</span>

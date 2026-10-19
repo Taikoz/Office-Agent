@@ -25,7 +25,7 @@ export let OX = 30 + (FY1 - FY) * IK, OY = 52;  // the back corner of its floor,
 export const P = (x, y, z = 0) => ({ x: OX + (x - (y - FY)) * IK, y: OY + (x + (y - FY)) * IK / 2 - z });
 
 class IsoView {
-  constructor() { this.regions = []; this.room = ""; this.cams = new Map(); this.z = 0.8; this.cam = { x: 0, y: 0 }; }
+  constructor() { this.regions = []; this.room = ""; this.cams = new Map(); this.z = 0.8; this.cam = { x: 0, y: 0 }; this.under = 0; }
   get drawing() { return isoNow === this; }
   // a frame of a room: its size, its camera (the back layer, the world and the canvas over them move with it)
   begin(room) {
@@ -45,8 +45,10 @@ class IsoView {
   clampCam() {
     const b = this.bounds(), vw = W / this.z, vh = H / this.z, c = this.cam;
     c.x = b.w <= vw ? (b.w - vw) / 2 : Math.max(-20, Math.min(b.w - vw + 20, c.x));
-    c.y = b.h <= vh ? (b.h - vh) / 2 : Math.max(-14, Math.min(b.h - vh + 40, c.y));  // room under the HUD at the bottom
+    c.y = b.h <= vh && !this.under ? (b.h - vh) / 2 : Math.max(-14, Math.min(b.h - vh + 40 + this.under / this.z, c.y));  // room under the HUD at the bottom (under: a panel over it)
   }
+  // the camera moved so that a point of the world shows at (fx, fy) of the screen, e.g. above the buy mode's panel
+  lookAt(p, fx = 0.5, fy = 0.5) { this.cam.x = p.x - W / this.z * fx; this.cam.y = p.y - H / this.z * fy; this.clampCam(); }
   // a point of the screen (scene units) in the world, and back
   toWorld(sx, sy) { return { x: sx / this.z + this.cam.x, y: sy / this.z + this.cam.y }; }
   toScreen(p) { return { x: (p.x - this.cam.x) * this.z, y: (p.y - this.cam.y) * this.z }; }
@@ -182,6 +184,7 @@ class IsoView {
   // floor canvas (y 70..232, rugs included); walls: false for a terrace
   shell({ wall, wallColor = "#888", floor, walls = true }) {
     const poly = (pts, fill) => { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p.x * S, p.y * S) : ctx.moveTo(p.x * S, p.y * S)); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); };
+    if (walls) this.screen(() => hub.drawBackdrop?.(this.room, ctx));  // a themed room: its landscape around it (world/backdrops.js)
     poly([P(0, FY1), P(FX1, FY1), P(FX1, FY1, -5), P(0, FY1, -5)], "#2a1f18");  // the floor's thickness
     poly([P(FX1, FY), P(FX1, FY1), P(FX1, FY1, -5), P(FX1, FY, -5)], "#1a130e");
     if (floor) this.onFloor(() => ctx.drawImage(floor, 0, Math.round(FY * S)));

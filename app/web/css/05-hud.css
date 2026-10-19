@@ -227,6 +227,36 @@
   #buy .bitem.paint { align-items: stretch; gap: 4px; } #buy .pswatches { display: flex; flex-wrap: wrap; gap: 3px; }
   #buy .psw { padding: 0; width: 34px; height: 24px; border: 2px solid transparent; border-radius: 4px; overflow: hidden; background: none; cursor: pointer; }
   #buy .psw img { display: block; width: 100%; height: 100%; image-rendering: pixelated; } #buy .psw.on { border-color: var(--accent); } #buy .psw:hover { border-color: #9dffb5; }
+  /* a pattern's card: the sample fills the picture (a door stands in it); the theme's whole look on two columns */
+  #buy .bpic.wall, #buy .bpic.floor { padding: 0; overflow: hidden; background: #1c1c24; }
+  #buy .bpic.wall img, #buy .bpic.floor img { width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; }
+  #buy .bpic.door { background: linear-gradient(#cfc8bb 0 82%, #8f8f8f 82%); } #buy .bpic.door img { height: 84px; }
+  #buy .bpic.big.door img { height: 112px; }
+  #buy .psw.door { width: 24px; height: 40px; } #buy .bdetail .pswatches { gap: 5px; margin-top: 3px; } #buy .bdetail .psw:not(.door) { width: 46px; height: 32px; }
+  #buy .bcard.pack { grid-column: span 2; border-color: #c9a24b; background: linear-gradient(135deg, #3a2e1e, var(--panel)); }
+  #buy .bpack { display: flex; gap: 4px; height: 92px; } #buy .bpack img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: 7px; image-rendering: pixelated; }
+  #buy .bpack img.door { flex: none; width: 44px; object-fit: contain; background: linear-gradient(#cfc8bb 0 82%, #8f8f8f 82%); }
+  #buy .bdetail .bpack { flex: none; height: 110px; }
+  #buy .bprice s.was { color: var(--dim); font-size: 15px; }
+  /* the selected pattern: the picture with its "trying on" badge, the colours right under the name */
+  #buy .bpaintpic { position: relative; flex: none; } #buy .bdetail.paint .bpic.big { height: 100px; }
+  #buy .blive { position: absolute; top: 6px; left: 6px; padding: 0 8px; font-size: 14px; color: #dff1ff; background: #1f75becc; border-radius: 999px; box-shadow: 0 1px 4px #0006; cursor: help; animation: blive 1.6s ease-in-out infinite; }
+  @keyframes blive { 50% { background: #1f75be88; } } @media (prefers-reduced-motion: reduce) { #buy .blive { animation: none; } }
+  #buy .bmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; } #buy .bwas { color: var(--dim); font-size: 15px; }
+  #buy .bdetail .bacts .bx { flex: none; width: 34px; padding: 0; color: var(--muted); }
+  #buy .bdetail .bacts .bx:hover { color: #ff9a9a; border-color: #ff9a9a; }
+  /* a theme's banner: one line, then its shelves as chips that jump to them */
+  #buy .btheme { grid-template-columns: auto auto 1fr; gap: 2px 10px; padding: 6px 12px; }
+  #buy .btheme .ic { grid-row: auto; font-size: 26px; } #buy .btheme b { white-space: nowrap; }
+  #buy .btheme .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #buy .bchips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+  #buy .bchip { padding: 0 9px; font-size: 15px; line-height: 1.5; color: #f4efe2; background: #ffffff14; border: 1px solid #d4a64088; border-radius: 999px; }
+  #buy .bchip:hover:not([disabled]) { background: #d4a64033; border-color: #ffe14d; }
+  #buy .bsec { scroll-margin-top: 4px; }
+  /* the tabs: a slim dark scrollbar (the wheel scrolls them too), faded at the edges */
+  #buy .bcats { scrollbar-color: #ffffff2a transparent; padding-bottom: 3px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 18px), transparent); padding-left: 6px; }
+  #buy .bcats::-webkit-scrollbar { height: 5px; } #buy .bcats::-webkit-scrollbar-thumb { background: #ffffff2a; border-radius: 3px; } #buy .bcats::-webkit-scrollbar-track { background: transparent; }
+  @media (max-width: 1100px) { #buy .bchip span { display: none; } }
   /* the game on a computer (ui/pcgames.js): a window over the office, the pixels big */
   #pcgame { position: fixed; z-index: 40; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px; background: #14141c; border: 3px solid #3a3a46; border-radius: 14px;
     box-shadow: 0 0 0 6px #0008, 0 24px 60px #000c; }
@@ -504,3 +534,17 @@
 .hovertip { position: fixed; z-index: 40; pointer-events: none; display: flex; flex-direction: column; gap: 2px; padding: 5px 9px; border-radius: 8px;
   background: #081746ee; border: 1px solid #fbaa0899; color: #f4f2ea; font: 18px/1.1 "VT323", monospace; box-shadow: 0 4px 14px #0006; max-width: 240px; }
 .hovertip b { color: #fbaa08; font-weight: 400; } .hovertip span { color: #d5eeff; } .hovertip i { color: #9aa0ad; font-style: normal; font-size: 15px; }
+  /* ✨ Tous les thèmes (build.js themesGallery): a card per theme in its colour, its look, how far it is collected */
+  #buy .bgrid.themes { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+  #buy .bthemecard { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 8px; text-align: left; background: linear-gradient(160deg, color-mix(in srgb, var(--th) 22%, var(--panel)), var(--panel) 60%); border-color: color-mix(in srgb, var(--th) 55%, var(--line)); }
+  #buy .bthemecard:hover:not([disabled]) { border-color: var(--th); transform: translateY(-1px); box-shadow: 0 4px 16px color-mix(in srgb, var(--th) 30%, transparent); }
+  #buy .bthemecard .bpack { height: 78px; }
+  #buy .bthemecard .tname { display: flex; align-items: center; gap: 6px; font-size: 20px; color: var(--th); } #buy .bthemecard .tname .ic { font-size: 22px; }
+  #buy .bthemecard .tdesc { font-size: 14px; line-height: 1.15; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #buy .bthemecard .tstat { font-size: 14px; color: var(--dim); }
+  #buy .tprog { display: block; height: 5px; background: #0005; border-radius: 3px; overflow: hidden; } #buy .tprog i { display: block; height: 100%; background: var(--th, var(--accent)); border-radius: 3px; }
+  /* a theme's banner in its colour, its progress on the right */
+  #buy .btheme[style] { grid-template-columns: auto auto 1fr auto; border-color: var(--th); background: linear-gradient(100deg, color-mix(in srgb, var(--th) 28%, #1c1c30), #1c1c30 70%); }
+  #buy .btheme[style] b { color: var(--th); }
+  #buy .btheme .tcount { display: flex; align-items: center; gap: 6px; font-size: 15px; color: #d9cfe8; white-space: nowrap; } #buy .btheme .tcount .tprog { width: 70px; }
+  #buy .bcard.paint .bcat { margin-top: -2px; }

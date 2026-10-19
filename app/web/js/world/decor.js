@@ -41,6 +41,29 @@ export const THEME_FLOORS = [
   ["jonc", "Natte de jonc", "plage", ["#d9c08a", "#c9a46a", "#b8a070", "#e8d8b0"]],
 ];
 DECOR_TYPES.floor.push(...THEME_FLOORS.map(([id, label]) => [id, label]));
+// the themes' walls, painted along the whole room, and their doors for the room's door (build.js: in Murs and Portes,
+// and on the theme's shelves): [type, label, theme, its own colours]
+export const THEME_WALLS = [
+  ["pierre", "Pierre de château", "magie", ["#8d8a80", "#c9b48a", "#5a5866", "#7f8a74"]],
+  ["plaques", "Plaques de coque", "scifi", ["#9aa6b4", "#dfe4ea", "#4a5562", "#7a8a7a"]],
+  ["damas", "Damas et boiseries", "manoir", ["#4a1a2a", "#1e3a2a", "#3a1e4a", "#24202a"]],
+  ["borde", "Bordé goudronné", "pirate", ["#7a5232", "#9a6a3a", "#3a2a1e", "#8a8478"]],
+  ["shoji", "Shōji", "japon", ["#3a2a1e", "#c9a46a", "#1c1c22"]],
+  ["cabine", "Rayures de cabine", "plage", ["#3a8ad0", "#e8402a", "#5ac8a8", "#f0c040"]],
+  ["bambou", "Bambou", "plage", ["#c9b06a", "#8a6a3a", "#e0cc8a"]],
+];
+export const THEME_DOORS = [
+  ["ogive", "Porte ogivale cloutée", "magie", ["#4a2f1e", "#5c3d27", "#2a2026"]],
+  ["sas", "Sas coulissant", "scifi", ["#9aa6b4", "#dfe4ea", "#4a5562"]],
+  ["heurtoir", "Porte au heurtoir", "manoir", ["#2a1c1a", "#3a2418", "#4a2018"]],
+  ["cale", "Porte de cale", "pirate", ["#7a5232", "#9a6a3a", "#3a2a1e"]],
+  ["fusumadoor", "Fusuma à la vague", "japon", ["#3a2a1e", "#c9a46a", "#1c1c22"]],
+  ["cabinedoor", "Porte de cabine", "plage", ["#3a8ad0", "#e8402a", "#5ac8a8", "#f0c040"]],
+];
+DECOR_TYPES.wall.push(...THEME_WALLS.map(([id, label]) => [id, label]));
+DECOR_TYPES.door.push(...THEME_DOORS.map(([id, label]) => [id, label]));
+// a theme's wall has its own chair rail, cornice or beam: the room's is not drawn over it (world/scene.js)
+export const wallHasRail = type => type !== "boiserie" && !THEME_WALLS.some(w => w[0] === type);
 const WOODS = [["Chêne", "#8a6a4a"], ["Noyer", "#5c3d27"], ["Érable", "#c9a06a"], ["Merisier", "#9a4f2e"], ["Wengé", "#3b2a20"],
   ["Bouleau", "#d8c3a0"], ["Laqué blanc", "#e6e2d8"], ["Laqué noir", "#2a2a33"]];
 export const DECOR_COLORS = {
@@ -51,6 +74,8 @@ export const DECOR_COLORS = {
   doorColor: [...WOODS.map(w => w[1]), "#081746", "#2f6e3c", "#8f2b46", "#7a8094"],
 };
 export const floorColors = type => THEME_FLOORS.find(f => f[0] === type)?.[3] || DECOR_COLORS.floorColor.slice(0, 8);
+export const wallColors = type => THEME_WALLS.find(f => f[0] === type)?.[3] || DECOR_COLORS.wallColor.slice(0, 8);
+export const doorColors = type => THEME_DOORS.find(f => f[0] === type)?.[3] || DECOR_COLORS.doorColor.slice(0, 8);
 const DECOR_ROWS = [  // [type key, color key, label]; the wood has named presets instead of types
   ["wall", "wallColor", "Murs"], ["floor", "floorColor", "Sol"], [null, "wood", "Bois"],
   ["rug", "rugColor", "Tapis"], ["curtain", "curtainColor", "Rideaux"], ["door", "doorColor", "Porte"],
@@ -466,6 +491,7 @@ function roomWallCanvas(room) {
   } else if (d.wall === "papier") {
     const m = shade(base, lum(base) > 0.5 ? 0.85 : 1.25);
     for (let y = 4, r = 0; y < 70; y += 8, r++) for (let x = r % 2 ? 6 : 0; x < W; x += 12) p.poly([[x, y - 2], [x + 2, y], [x, y + 2], [x - 2, y]], m);
+  } else if (paintThemeWall(p, W, 70, d.wall, base)) { /* a theme's wall */
   } else if (d.wall === "boiserie") {  // wainscot in the furniture wood below the chair rail
     const wood = d.wood;
     rect(0, 40, W, 30, shade(wood, 0.85)); rect(0, 40, W, 1.2, shade(wood, 1.15));
@@ -477,6 +503,141 @@ function roomWallCanvas(room) {
 }
 export function drawWall(room) { ctx.drawImage(roomWallCanvas(room), 0, 0); }
 
+// the themes' walls (THEME_WALLS) on a strip w × h (the room's is 70 high; a buy mode sample 32); false: not one of them
+function paintThemeWall(p, w, h, type, base) {
+  const { rect, poly, ellipse } = p, rnd = decorRnd, rail = Math.round(h * 0.57);
+  if (type === "pierre") {  // dressed stone: courses of blocks, the mortar in the joints, a little moss on the green stone
+    rect(0, 0, w, h, shade(base, 0.6));
+    for (let row = 0, y = 0; y < h; row++, y += 8) for (let x = -rnd(row * 7) * 14, k = 0; x < w; k++) {
+      const bw = 13 + Math.floor(rnd(row * 61 + k) * 9), c = shade(base, 0.86 + rnd(row * 37 + k * 3) * 0.24);
+      rect(x + 0.5, y + 0.5, bw - 1, 7, c); rect(x + 0.5, y + 0.5, bw - 1, 0.7, shade(c, 1.14)); rect(x + 0.5, y + 6.8, bw - 1, 0.7, shade(c, 0.78));
+      if (rnd(row * 13 + k * 5) > 0.82) rect(x + 2 + rnd(k) * (bw - 6), y + 2 + rnd(row) * 3, 2.5, 0.4, shade(c, 0.72));  // a chip
+      if (base === "#7f8a74" && y > h * 0.55 && rnd(row * 29 + k) > 0.6) ellipse(x + rnd(k * 3) * bw, y + 6.5, 2.4, 1, "rgba(70, 110, 50, 0.55)");
+      x += bw;
+    }
+  } else if (type === "plaques") {  // riveted hull plates, a vent now and then, a strip of light along the wall
+    rect(0, 0, w, h, shade(base, 0.62));
+    for (let y = 0, row = 0; y < h; y += 22, row++) for (let x = row % 2 ? -12 : 0, k = 0; x < w; x += 24, k++) {
+      const c = shade(base, 0.92 + rnd(row * 41 + k) * 0.12);
+      rect(x + 0.4, y + 0.4, 23.2, 21.2, c); rect(x + 0.4, y + 0.4, 23.2, 0.6, shade(c, 1.18)); rect(x + 0.4, y + 21, 23.2, 0.6, shade(c, 0.75));
+      for (const [rx, ry] of [[2, 2], [21.4, 2], [2, 19.4], [21.4, 19.4]]) { rect(x + rx, y + ry, 0.8, 0.8, shade(c, 1.35)); rect(x + rx + 0.4, y + ry + 0.4, 0.4, 0.4, shade(c, 0.6)); }
+      if (rnd(row * 17 + k * 7) > 0.84) { rect(x + 6, y + 6, 12, 9, shade(c, 0.5)); for (let s = 0; s < 4; s++) rect(x + 6.5, y + 7 + s * 2, 11, 1, shade(c, 1.1)); }  // a vent
+    }
+    rect(0, rail - 1.6, w, 3.2, shade(base, 0.45)); rect(0, rail - 0.7, w, 1.4, "#7fe6ff"); rect(0, rail - 0.2, w, 0.4, "#e8fcff");  // the light strip
+    rect(0, rail - 2.6, w, 1, "rgba(127, 230, 255, 0.18)"); rect(0, rail + 1.6, w, 1, "rgba(127, 230, 255, 0.18)");
+  } else if (type === "damas") {  // damask paper, torn here and there, over dark wood panels; a cornice
+    const m = shade(base, 1.45), wood = "#2a1c1a";
+    for (let y = 6, r = 0; y < rail; y += 10, r++) for (let x = r % 2 ? 7 : 0; x < w; x += 14) {
+      poly([[x, y - 3.4], [x + 2.2, y], [x, y + 3.4], [x - 2.2, y]], m); rect(x - 0.4, y - 4.6, 0.8, 0.8, m); rect(x - 0.4, y + 3.8, 0.8, 0.8, m);
+      ellipse(x - 3, y, 0.7, 1.4, m); ellipse(x + 3, y, 0.7, 1.4, m);
+    }
+    for (let i = 0; i < Math.round(w / 90); i++) {  // the torn paper: the old plaster shows through
+      const x = rnd(i * 31 + 3) * (w - 14), y = 6 + rnd(i * 19 + 1) * (rail - 18);
+      poly([[x, y], [x + 7, y + 1.5], [x + 12, y + 0.5], [x + 10, y + 5], [x + 4, y + 7], [x + 1, y + 4]], "#8a7a6a");
+      poly([[x + 7, y + 1.5], [x + 12, y + 0.5], [x + 9, y + 3]], shade(base, 0.7));
+    }
+    rect(0, 0, w, 3, wood); rect(0, 3, w, 0.8, shade(wood, 1.6)); rect(0, 3.8, w, 0.6, "rgba(0, 0, 0, 0.4)");  // the cornice
+    rect(0, rail, w, h - rail, shade(wood, 1.1)); rect(0, rail, w, 1.4, shade(wood, 1.9)); rect(0, rail + 1.4, w, 0.5, "#120c0a");
+    for (let x = 3; x < w; x += 20) { rect(x, rail + 4, 16, h - rail - 9, shade(wood, 0.8)); rect(x + 1, rail + 5, 14, h - rail - 11, shade(wood, 1.25)); rect(x + 1, rail + 5, 14, 0.5, shade(wood, 1.7)); }
+  } else if (type === "borde") {  // tarred strakes, their butts pinned with treenails, a wale, a rope rail
+    for (let y = 0, row = 0; y < h; y += 6, row++) {
+      for (let x = -rnd(row * 11) * 50, k = 0; x < w; k++) {
+        const len = 38 + Math.floor(rnd(row * 53 + k) * 34), c = shade(base, 0.84 + rnd(row * 23 + k * 7) * 0.26);
+        rect(x, y, len, 6, c); rect(x, y, len, 0.5, shade(c, 1.15)); rect(x, y + 5.4, len, 0.6, "#1a120c"); rect(x + len - 0.5, y, 0.5, 6, "#1a120c");
+        rect(x + len - 2.4, y + 1.6, 0.9, 0.9, shade(c, 0.6)); rect(x + len - 2.4, y + 3.6, 0.9, 0.9, shade(c, 0.6));  // the treenails
+        x += len;
+      }
+      for (let k = 0; k < w / 30; k++) if (rnd(row * 7 + k * 13) > 0.7) rect(rnd(row + k * 3) * w, y + 2 + rnd(k) * 2, 6, 0.3, shade(base, 0.7));  // the grain
+    }
+    rect(0, rail, w, 3.4, shade(base, 0.55)); rect(0, rail, w, 0.6, shade(base, 0.9)); rect(0, rail + 3.4, w, 0.6, "#1a120c");  // the wale
+    const ry = Math.round(h * 0.32);
+    for (let x = 0; x < w; x += 2) { poly([[x, ry + 1.6], [x + 1.2, ry], [x + 2.2, ry], [x + 1, ry + 1.6]], x % 4 ? "#c9a46a" : "#a0804a"); }  // the rope rail
+    rect(0, ry + 1.6, w, 0.4, "rgba(0, 0, 0, 0.35)");
+  } else if (type === "shoji") {  // posts of the wood colour, rice paper on a fine lattice, a low kick panel, the lintel
+    const wood = base, paper = "#efe8d6", top = 9, kick = Math.round(h * 0.82);
+    rect(0, 0, w, top - 2.5, "#e4dcc6"); rect(0, top - 2.5, w, 2.5, wood); rect(0, top - 2.5, w, 0.5, shade(wood, 1.3));  // the plaster, the lintel
+    rect(0, top, w, kick - top, paper);
+    for (let x = 0; x < w; x += 24) {
+      rect(x, top, 2, h - top, wood); rect(x, top, 0.5, h - top, shade(wood, 1.3));  // a post
+      for (let gx = x + 2 + 5.5; gx < x + 24; gx += 5.5) rect(gx, top, 0.6, kick - top, shade(wood, 1.1));
+      for (let gy = top + 7; gy < kick; gy += 7) rect(x + 2, gy, 22, 0.6, shade(wood, 1.1));
+    }
+    rect(0, kick, w, h - kick, shade(wood, 0.92)); rect(0, kick, w, 0.8, shade(wood, 1.3));
+    for (let i = 0; i < 4; i++) rect(0, top + 1 + i, w, 1, `rgba(255, 244, 214, ${0.12 - i * 0.03})`);  // the light through the paper
+  } else if (type === "cabine") {  // painted planks in stripes, a scalloped valance
+    const white = "#f4f2ea";
+    for (let x = 0, k = 0; x < w; x += 6, k++) { const c = k % 2 ? white : base; rect(x, 0, 6, h, c); rect(x, 0, 0.5, h, shade(c, 1.08)); rect(x + 5.6, 0, 0.4, h, shade(c, 0.72)); }
+    for (let x = 0; x < w; x += 2) if (rnd(x * 1.7) > 0.93) rect(x, 8 + rnd(x) * (h - 16), 1.4, 0.4, "rgba(255, 255, 255, 0.5)");  // the paint flaking
+    rect(0, 0, w, 3, base); rect(0, 3, w, 0.5, shade(base, 0.7));
+    for (let x = 0; x < w; x += 6) { ellipse(x + 3, 3.2, 3, 2.2, base); ellipse(x + 3, 3.2, 1, 0.8, white); }  // the valance
+  } else if (type === "bambou") {  // close canes with their nodes, lashings of rope, a thatched coping
+    for (let x = 0, k = 0; x < w; x += 4, k++) {
+      const c = shade(base, 0.86 + rnd(k * 17) * 0.24);
+      rect(x, 0, 4, h, c); rect(x + 0.6, 0, 0.8, h, shade(c, 1.2)); rect(x + 3.4, 0, 0.6, h, shade(c, 0.65));
+      for (let y = 4 + rnd(k * 7) * 12; y < h; y += 13 + rnd(k * 3 + y) * 4) { rect(x, y, 4, 0.9, shade(c, 0.7)); rect(x, y + 0.9, 4, 0.4, shade(c, 1.25)); }
+    }
+    for (const y of [Math.round(h * 0.3), Math.round(h * 0.78)]) for (let x = 0; x < w; x += 4) { rect(x + 1, y, 2, 2.4, "#6a4a2a"); rect(x + 1, y, 2, 0.6, "#a07a4a"); }
+    for (let x = 0; x < w; x += 1.5) rect(x, 0, 1.5, 4 + rnd(x * 2.3) * 2.5, shade("#b89a5a", 0.8 + rnd(x * 5.1) * 0.35));  // the thatch
+  } else return false;
+  return true;
+}
+
+// the themes' doors (THEME_DOORS), 30 × 50 like the room's: the frame from 2 to 28, the leaf in 4, 4, 22, 44
+function themeDoorSvg(style, c) {
+  const hi = shade(c, 1.25), lo = shade(c, 0.72), dk = shade(c, 0.55);
+  if (style === "ogive") {  // in a stone arch, a pointed door of planks, iron straps and studs, a ring
+    let b = `<path fill="#8d8a80" d="M0 50V16Q0 1 15 0Q30 1 30 16V50Z"/><path fill="#6a675e" d="M2 50V17Q2 3 15 2Q28 3 28 17V50Z"/>`
+      + `<path fill="${c}" d="M4 48V18Q4 5 15 4Q26 5 26 18V48Z"/>`;
+    for (let x = 9.5; x < 26; x += 5.5) b += `<rect x="${x}" y="5" width="0.6" height="43" fill="${lo}"/>`;
+    for (const y of [16, 38]) { b += `<rect x="4" y="${y}" width="22" height="2.2" fill="#2a2a2e"/>`; for (let x = 6; x < 26; x += 4) b += `<rect x="${x}" y="${y + 0.6}" width="1" height="1" fill="#8a8a90"/>`; }
+    return b + `<circle cx="20" cy="28" r="2.2" fill="none" stroke="#3a3a40" stroke-width="0.9"/><rect x="19.4" y="25.2" width="1.2" height="1.2" fill="#3a3a40"/>`
+      + `<path fill="#a8a498" d="M14 0h2v2h-2zM0 24h2v1H0zM28 30h2v1h-2z"/>`;
+  }
+  if (style === "sas") {  // two sliding halves, a frame in safety stripes, a light over it
+    let b = `<rect x="0" y="0" width="30" height="50" fill="#2a3340"/>`;
+    for (let k = 0; k < 25; k++) b += `<rect x="0" y="${k * 2}" width="2" height="2" fill="${k % 2 ? "#1c1c22" : "#f0c020"}"/><rect x="28" y="${k * 2}" width="2" height="2" fill="${k % 2 ? "#f0c020" : "#1c1c22"}"/>`
+      + (k < 15 ? `<rect x="${k * 2}" y="0" width="2" height="2" fill="${k % 2 ? "#1c1c22" : "#f0c020"}"/>` : "");
+    b += `<rect x="2" y="2" width="26" height="48" fill="#1c222c"/><rect x="4" y="4" width="11" height="44" fill="${c}"/><rect x="15" y="4" width="11" height="44" fill="${shade(c, 0.92)}"/>`
+      + `<rect x="14.6" y="4" width="0.8" height="44" fill="${dk}"/><rect x="4" y="4" width="22" height="0.8" fill="${hi}"/>`
+      + `<rect x="7" y="10" width="5" height="12" rx="1" fill="#1a2a3a"/><rect x="18" y="10" width="5" height="12" rx="1" fill="#1a2a3a"/><rect x="7.5" y="10.5" width="1.4" height="5" fill="#7fe6ff" fill-opacity=".5"/>`
+      + `<rect x="4" y="30" width="22" height="1.2" fill="#f0c020"/><rect x="4" y="32" width="22" height="1.2" fill="#1c1c22"/>`
+      + `<rect x="12" y="0" width="6" height="1.6" fill="#7fe6ff"/>`;
+    return b;
+  }
+  if (style === "heurtoir") {  // a heavy door of dark panels, iron hinges, a brass ring knocker
+    return `<rect x="2" y="2" width="26" height="48" fill="#120c0a"/><rect x="4" y="4" width="22" height="44" fill="${c}"/>`
+      + `<rect x="0" y="0" width="30" height="2.4" fill="#1a1210"/><path fill="#3a2a22" d="M0 0h30v1H0z"/>`
+      + `<rect x="7" y="7" width="7" height="16" fill="${lo}"/><rect x="16" y="7" width="7" height="16" fill="${lo}"/><rect x="7" y="27" width="7" height="18" fill="${lo}"/><rect x="16" y="27" width="7" height="18" fill="${lo}"/>`
+      + `<rect x="7.6" y="7.6" width="5.8" height="14.8" fill="${hi}"/><rect x="16.6" y="7.6" width="5.8" height="14.8" fill="${hi}"/><rect x="7.6" y="27.6" width="5.8" height="16.8" fill="${hi}"/><rect x="16.6" y="27.6" width="5.8" height="16.8" fill="${hi}"/>`
+      + `<rect x="4" y="9" width="6" height="1.6" fill="#2a2a2e"/><rect x="4" y="40" width="6" height="1.6" fill="#2a2a2e"/>`
+      + `<circle cx="15" cy="22" r="2.8" fill="none" stroke="#c9a24b" stroke-width="0.9"/><rect x="14" y="18.6" width="2" height="1.6" fill="#c9a24b"/>`
+      + `<rect x="21" y="25" width="1.6" height="2.4" fill="#c9a24b"/><path fill="#d8d4cc" fill-opacity=".5" d="M24 4l2 0l0 3zM25 4.6l1-0.6"/>`;
+  }
+  if (style === "cale") {  // planks, iron bands, a small barred window, a latch
+    let b = `<rect x="2" y="2" width="26" height="48" fill="#1a120c"/><rect x="4" y="4" width="22" height="44" fill="${c}"/>`;
+    for (let x = 4; x < 26; x += 5.5) b += `<rect x="${x}" y="4" width="5.5" height="44" fill="${shade(c, 0.9 + (x % 3) * 0.06)}"/><rect x="${x + 5}" y="4" width="0.5" height="44" fill="${dk}"/>`;
+    for (const y of [9, 38]) b += `<rect x="4" y="${y}" width="22" height="2.4" fill="#3a3a3e"/><rect x="5" y="${y + 0.7}" width="1" height="1" fill="#8a8a90"/><rect x="24" y="${y + 0.7}" width="1" height="1" fill="#8a8a90"/>`;
+    return b + `<rect x="10" y="15" width="10" height="8" fill="#0d0a12"/><rect x="10" y="15" width="10" height="8" fill="none" stroke="#3a3a3e" stroke-width="0.8"/>`
+      + `<rect x="13" y="15" width="0.8" height="8" fill="#5a5a60"/><rect x="16.2" y="15" width="0.8" height="8" fill="#5a5a60"/>`
+      + `<rect x="20" y="27" width="4" height="1.4" fill="#5a5a60"/><rect x="22.6" y="26" width="1.4" height="3.4" fill="#3a3a3e"/>`;
+  }
+  if (style === "fusumadoor") {  // two painted sliding panels in a lacquered frame: the great wave, a cloud of gold, round pulls
+    return `<rect x="2" y="2" width="26" height="48" fill="${dk}"/><rect x="4" y="4" width="22" height="44" fill="${c}"/>`
+      + `<rect x="5" y="5" width="9.6" height="42" fill="#e8dcc0"/><rect x="15.4" y="5" width="9.6" height="42" fill="#e4d6b8"/>`
+      + `<path fill="#e0b84a" fill-opacity=".8" d="M6 9h6q2 0 2 2h-8zM17 12h6q1.6 0 1.6 1.6h-7.6z"/>`
+      + `<path fill="#1f4a8a" d="M5 47V36q4-6 8-2q-3 0-3 3q2-2 4-1V47zM15.4 47V38q4-5 9.6-1V47z"/><path fill="#f4f2ea" d="M7 36q3-3 6-1q-2 0-3 2zM17 37q3-2 6 0q-2 0-3 1z"/>`
+      + `<circle cx="12.6" cy="27" r="1.2" fill="${dk}"/><circle cx="17.4" cy="27" r="1.2" fill="${dk}"/><rect x="14.6" y="4" width="0.8" height="44" fill="${dk}"/>`;
+  }
+  if (style === "cabinedoor") {  // the striped planks of a beach hut, a heart cut out, a valance on top
+    let b = `<rect x="2" y="2" width="26" height="48" fill="${dk}"/>`;
+    for (let x = 4, k = 0; x < 26; x += 5.5, k++) b += `<rect x="${x}" y="4" width="5.5" height="44" fill="${k % 2 ? "#f4f2ea" : c}"/><rect x="${x + 5.1}" y="4" width="0.4" height="44" fill="#00000033"/>`;
+    b += `<path fill="#0d0a12" d="M15 17l-3-3a1.8 1.8 0 0 1 3-2a1.8 1.8 0 0 1 3 2z"/>`;
+    for (let x = 0; x < 30; x += 5) b += `<path fill="${c}" d="M${x} 0h5v2.4a2.5 2.5 0 0 1-5 0z"/>`;
+    return b + `<rect x="20" y="25" width="3" height="2.5" fill="#c9a24b"/><circle cx="8" cy="34" r="2.2" fill="none" stroke="#e8402a" stroke-width="1"/>`;
+  }
+  return null;
+}
+
 /* ---------- recolored sprites: wood furniture and doors ---------- */
 const WOOD_TONES = { "#a07c58": 1.16, "#8a6a4a": 1, "#765a3e": 0.85, "#6d5238": 0.79, "#5e4630": 0.68, "#4a3826": 0.54 };
 export function woodSprite(name, base) {
@@ -484,9 +645,13 @@ export function woodSprite(name, base) {
   return SPRITES[name].derive(base, svg => svg.replace(/#[0-9a-f]{6}/gi, c => WOOD_TONES[c.toLowerCase()] ? shade(base, WOOD_TONES[c.toLowerCase()]) : c));
 }
 const doorSprites = new Map();
-export function doorSprite(room) {
-  const { door: style, doorColor: c } = decor[room], key = `door:${style}:${c}`;
+export const doorSprite = room => { const d = decor[room] || decor.office; return doorArt(d.door, d.doorColor); };
+// a door of the given style and colour, 30 × 50; its leaf (world/physics.js drawDoorOpen) is in 4, 4, 22, 44
+function doorArt(style, c) {
+  const key = `door:${style}:${c}`;
   if (doorSprites.has(key)) return doorSprites.get(key);
+  const theme = themeDoorSvg(style, c);
+  if (theme) { doorSprites.set(key, new Sprite(key, 30, 50, theme)); return doorSprites.get(key); }
   const hi = shade(c, 1.21), lo = shade(c, 0.77), edge = shade(c, 0.87), fill = shade(c, 1.09);
   let b = `<rect x="2" y="2" width="26" height="46" fill="#061238"/><rect x="4" y="4" width="22" height="44" fill="${c}"/>`
     + `<rect x="4" y="4" width="1" height="44" fill="${hi}"/><rect x="25" y="4" width="1" height="44" fill="${lo}"/>`;
@@ -507,8 +672,20 @@ export function drawWindow(room, x, y) {
   ART.window.draw(x, y, { style: curtain, color: curtainColor });
 }
 
-// a room's walls or floor bought in the buy mode (build.js): kept with the decor
+// a look tried on in the buy mode (build.js): shown in the room, never saved, until it is bought or put back
+let trying = null;  // { room, was: the values it hides }
+export function tryDecor(room, kv) {
+  untryDecor();
+  if (!decor[room]) return;
+  trying = { room, was: Object.fromEntries(Object.keys(kv).map(k => [k, decor[room][k]])) };
+  Object.assign(decor[room], kv);
+}
+export function untryDecor() { if (trying) { Object.assign(decor[trying.room], trying.was); trying = null; } }
+// what a room really has, under what is tried on
+export const decorSaved = room => trying?.room === room ? { ...decor[room], ...trying.was } : decor[room] || DECOR_DEFAULT.office;
+// a room's walls, door or floor bought in the buy mode (build.js): kept with the decor
 export function applyDecor(room, kv) {
+  untryDecor();
   decor[room] = { ...(decor[room] || DECOR_DEFAULT.office), ...kv };
   SaveSlot.get("office-decor").save(decor);
 }
@@ -582,9 +759,10 @@ const swatches = new Map();
 export function decorSwatch(kind, type, color) {
   const key = `${kind}|${type}|${color}`;
   if (swatches.has(key)) return swatches.get(key);
+  if (kind === "door") { const url = doorArt(type, color).url(); swatches.set(key, url); return url; }
   const was = S; const p = decorPainter(48, 32);
   if (kind === "floor") paintFloor(p, 48, 32, type, color);
-  else { p.rect(0, 0, 48, 32, color); paintWallSample(p, type, color); }
+  else { p.rect(0, 0, 48, 32, color); if (!paintThemeWall(p, 48, 32, type, color)) paintWallSample(p, type, color); }
   const url = p.c.toDataURL(); swatches.set(key, url); void was;
   return url;
 }
@@ -598,4 +776,4 @@ function paintWallSample(p, type, base) {
 }
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get decor() { return decor; }, get doorSprite() { return doorSprite; }, get drawWall() { return drawWall; }, get drawWindow() { return drawWindow; }, get roomFloorCanvas() { return roomFloorCanvas; }, get woodSprite() { return woodSprite; } });
+provide({ get decor() { return decor; }, get doorSprite() { return doorSprite; }, get wallHasRail() { return wallHasRail; }, get drawWall() { return drawWall; }, get drawWindow() { return drawWindow; }, get roomFloorCanvas() { return roomFloorCanvas; }, get woodSprite() { return woodSprite; } });
