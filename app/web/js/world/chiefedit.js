@@ -5,7 +5,7 @@
 import { hub, provide } from "../hub.js";
 import { CHIEF_NAME, chief } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
-import { ART } from "../svg/base.js";
+import { personSvg } from "../svg/people.js";
 import { CHIEF_LOOK } from "./chief.js";
 import { shop } from "./shop.js";
 import { esc } from "../core/data.js";
@@ -51,6 +51,7 @@ const CAS = {
   tie: ["#d64545", "#081746", "#fbaa08", "#51cf66", "#b48cff", "#1c1c24", "#e98fc4", "#f7f7f7"],
   pants: ["#2f3550", "#1c1c24", "#3a3a48", "#5c4632", "#c9b79c", "#2f6e3c", "#8f2b46", "#e6e2d8"],
   shoes: ["#17141c", "#5c3d27", "#f7f7f7", "#8f2b46", "#4090d7", "#fbaa08"],
+  sex: [["", "Homme"], ["f", "Femme"]],
   style: [[0, "Courts"], [1, "En pétard"], [2, "Mi-longs"], [3, "Houppe"], [4, "Raie de côté"], [5, "Chauve"], [6, "Longs"], [7, "Chignon"], [8, "Crête"]],
   beard: [["", "Rasé"], ["stubble", "3 jours"], ["short", "Courte"], ["full", "Fournie"], ["mustache", "Moustache"], ["goatee", "Bouc"]],
   outfit: [["tux", "Smoking"], ["suit", "Costume"], ["shirt", "Chemise"], ["polo", "Polo"], ["hoodie", "Sweat à capuche"], ["tshirt", "T-shirt"], ["robe", "Robe de sorcier"], ["flight", "Combinaison spatiale"], ["vampire", "Cape de vampire"], ["pirate", "Habit de capitaine"], ["kimono", "Kimono"], ["hawaii", "Chemise hawaïenne"]],
@@ -70,43 +71,75 @@ let cas = null;  // the draft being edited: { look, traits, phrase, tab, back, p
 
 export function openCas() {
   cas = { look: { ...CHIEF_LOOK }, traits: [...(chiefStyle.traits?.length === 2 ? chiefStyle.traits : traitsFromName(CHIEF_NAME))], phrase: chiefStyle.phrase || "", tab: "face", back: false, pose: "stand", smile: true };
+  cas.prevOutfit = cas.look.outfit;
   casBox.hidden = false; closePie(); renderCas();
 }
 function closeCas() { casBox.hidden = true; cas = null; }
+// the views of the preview and of the tiles (viewBoxes around the drawing of svg/people.js, the feet at 0, 0)
+const VIEW = { body: "-9 -38 18 39", head: "-7.4 -36.2 14.8 15.4", tileHead: "-4.6 -33.6 9.2 9.8", tileHat: "-4.4 -37 8.8 11.2", tileBody: "-7.6 -32 15.2 33", tileTorso: "-5.6 -31.2 11.2 12.6" };
+const CLOSE_TABS = new Set(["face", "hair"]);
+// an outfit's own colours: shown on its tile, put on when it is chosen (then free to recolour)
+const OUTFIT_LOOK = { tux: { shirt: "#1c1c24", tie: "#d64545" }, suit: { shirt: "#2a3450", tie: "#c0303a" }, shirt: { shirt: "#e8e4dc" }, polo: { shirt: "#2f9e5a" }, hoodie: { shirt: "#8a4ad0" },
+  tshirt: { shirt: "#3a7ad0" }, robe: { shirt: "#2a2350", tie: "#d4a640" }, flight: { shirt: "#e6e8ee", tie: "#00e5ff" }, vampire: { shirt: "#1c1c24", tie: "#8f1f2a" }, pirate: { shirt: "#1e2a4a", tie: "#8f1f2a" },
+  kimono: { shirt: "#22336a", tie: "#c9a040" }, hawaii: { shirt: "#3ab8d8", tie: "#ff6a8a" } };
+const hatOf = look => paidFor("hat", look.hat) ? "" : look.hat || "";
+const figure = (state, viewBox, cls = "") => `<svg class="${cls}" viewBox="${viewBox}" preserveAspectRatio="xMidY${cls === "close" ? "Mid" : "Max"} meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${personSvg(state, { view: state.back ? "back" : "front" })}</svg>`;
 function casPreview() {
-  const pose = POSES.find(p => p[0] === cas.pose)[2], hat = paidFor("hat", cas.look.hat) ? "" : cas.look.hat || "";
-  const svg = ART.person.markup({ look: cas.look, tux: true, smile: cas.smile, back: cas.back, hat, frame: 0, ...pose });
-  return `<img alt="Aperçu du chef" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.replace(/width="\d+" height="\d+"/, 'width="216" height="312"'))}">`;
+  const pose = POSES.find(p => p[0] === cas.pose)[2], close = CLOSE_TABS.has(cas.tab) && !pose.seated;
+  return figure({ look: cas.look, tux: true, smile: cas.smile, back: cas.back, hat: hatOf(cas.look), frame: 0, ...pose }, close ? VIEW.head : VIEW.body, close ? "close" : "");
 }
+// a choice shown as the chief wearing it (a haircut, a hat, an outfit…): a small drawing, its name; locked: to buy first
+const tiles = (key, list, view, locked = () => "") => `<div class="ctiles">${list.map(([v, label]) => {
+  const lock = locked(v), look = { ...cas.look, [key]: key === "style" ? +v : v, ...(key === "outfit" ? OUTFIT_LOOK[v] : {}) }, on = String(cas.look[key] ?? "") === String(v);
+  const state = { look, tux: true, smile: true, hat: key === "hat" ? v : hatOf(cas.look) };
+  return `<button class="ctile${on ? " on" : ""}${lock ? " locked" : ""}" data-cas-set="${key}" data-v="${v}"${lock ? ` disabled title="${esc(lock)}"` : ` title="${esc(label)}"`}>${figure(state, view)}<span>${esc(label)}</span>${lock ? `<i>🔒</i>` : ""}</button>`;
+}).join("")}</div>`;
 const swatches = (key, colors, custom = true) => `<div class="cswatch">${colors.map(c => `<button data-cas-set="${key}" data-v="${c}" class="${cas.look[key] === c ? "on" : ""}" style="--sw:${c}" title="${c}"></button>`).join("")}${custom ? `<label class="cpick" title="Couleur libre"><input type="color" data-cas-color="${key}" value="${/^#[0-9a-f]{6}$/i.test(cas.look[key] || "") ? cas.look[key] : "#888888"}">🎨</label>` : ""}</div>`;
 const choices = (key, list, locked = () => "") => `<div class="cchoice">${list.map(([v, label]) => { const lock = locked(v); return `<button data-cas-set="${key}" data-v="${v}" class="${String(cas.look[key] ?? "") === String(v) ? "on" : ""}"${lock ? ` disabled title="${esc(lock)}"` : ""}>${esc(label)}${lock ? " 🔒" : ""}</button>`; }).join("")}</div>`;
+const sec = (title, body, note = "") => `<section class="csec"><h4>${title}</h4>${body}${note ? `<p class="muted">${note}</p>` : ""}</section>`;
 function casTabHtml() {
-  const L = cas.look;
-  if (cas.tab === "face") return `<h4>PEAU</h4>${swatches("skin", CAS.skin)}<h4>BARBE</h4>${choices("beard", CAS.beard)}${L.beard ? `<h4>COULEUR DE LA BARBE</h4>${swatches("beardColor", ["", ...CAS.hair].filter(Boolean))}` : ""}`;
-  if (cas.tab === "hair") return `<h4>COUPE</h4>${choices("style", CAS.style)}<h4>COULEUR</h4>${swatches("hair", CAS.hair)}`;
-  if (cas.tab === "outfit") return `<h4>TENUE</h4>${choices("outfit", CAS.outfit, lockedMsg("outfit"))}<h4>${L.outfit === "flight" ? "COMBINAISON" : L.outfit === "vampire" ? "HABIT" : L.outfit === "pirate" ? "REDINGOTE" : L.outfit === "kimono" ? "KIMONO" : L.outfit === "hawaii" ? "CHEMISE" : L.outfit === "robe" ? "ROBE" : L.outfit === "tux" || L.outfit === "suit" ? "VESTE" : "HAUT"}</h4>${swatches("shirt", CAS.shirt)}
-    ${["tux", "suit", "robe", "flight", "vampire", "pirate", "kimono", "hawaii"].includes(L.outfit) ? `<h4>${L.outfit === "tux" ? "NŒUD PAPILLON" : L.outfit === "robe" ? "LISERÉ" : L.outfit === "flight" ? "BANDES" : L.outfit === "vampire" ? "DOUBLURE DE LA CAPE" : L.outfit === "pirate" ? "CEINTURE" : L.outfit === "kimono" ? "OBI" : L.outfit === "hawaii" ? "FLEURS" : "CRAVATE"}</h4>${swatches("tie", CAS.tie)}` : ""}<h4>PANTALON</h4>${swatches("pants", CAS.pants)}<h4>CHAUSSURES</h4>${swatches("shoes", CAS.shoes)}`;
-  if (cas.tab === "acc") return `<h4>LUNETTES</h4>${choices("glasses", CAS.glasses, lockedMsg("glasses"))}<h4>CHAPEAU</h4>${choices("hat", CAS.hat, lockedMsg("hat"))}<h4>ÉCHARPE</h4>${choices("scarf", CAS.scarf, lockedMsg("scarf"))}<h4>BAGUETTE</h4>${choices("wand", CAS.wand, lockedMsg("wand"))}<h4>JETPACK</h4>${choices("jetpack", CAS.jetpack, lockedMsg("jetpack"))}<h4>PERROQUET</h4>${choices("parrot", CAS.parrot, lockedMsg("parrot"))}<h4>KATANA</h4>${choices("katana", CAS.katana, lockedMsg("katana"))}<h4>COLLIER DE FLEURS</h4>${choices("lei", CAS.lei, lockedMsg("lei"))}`;
-  return `<h4>DEUX TRAITS</h4><div class="ctraits">${TRAIT_IDS.map(id => { const t = TRAITS[id]; return `<button data-cas-trait="${id}" class="${cas.traits.includes(id) ? "on" : ""}" title="${esc(t.desc)}">${t.icon} ${esc(t.name)}</button>`; }).join("")}</div>
-    <p class="muted">${cas.traits.map(id => `${TRAITS[id].icon} ${esc(TRAITS[id].desc)}`).join("<br>")}</p>
-    <h4>PHRASE FÉTICHE</h4><input id="cas-phrase" maxlength="40" placeholder="J'attends tes ordres." value="${esc(cas.phrase)}" aria-label="Phrase fétiche">
-    <p class="muted">Il la dit sur son podium quand l'équipe n'a besoin de rien.</p>`;
+  const L = cas.look, o = L.outfit;
+  if (cas.tab === "face") return sec("Sexe", tiles("sex", CAS.sex, VIEW.tileTorso)) + sec("Peau", swatches("skin", CAS.skin)) + (L.sex === "f" ? "" : sec("Barbe", tiles("beard", CAS.beard, VIEW.tileHead)))
+    + (L.beard && L.sex !== "f" ? sec("Couleur de la barbe", swatches("beardColor", CAS.hair)) : "") + sec("Lunettes", tiles("glasses", CAS.glasses, VIEW.tileHead, lockedMsg("glasses")));
+  if (cas.tab === "hair") return sec("Coupe", tiles("style", CAS.style, VIEW.tileHead)) + sec("Couleur", swatches("hair", CAS.hair));
+  if (cas.tab === "outfit") {
+    const main = o === "flight" ? "Combinaison" : o === "vampire" ? "Habit" : o === "pirate" ? "Redingote" : o === "kimono" ? "Kimono" : o === "hawaii" ? "Chemise" : o === "robe" ? "Robe" : o === "tux" || o === "suit" ? "Veste" : "Haut";
+    const second = { tux: "Nœud papillon", robe: "Liseré", flight: "Bandes", vampire: "Doublure de la cape", pirate: "Ceinture", kimono: "Obi", hawaii: "Fleurs", suit: "Cravate" }[o];
+    return sec("Tenue", tiles("outfit", CAS.outfit, VIEW.tileBody, lockedMsg("outfit"))) + sec(main, swatches("shirt", CAS.shirt)) + (second ? sec(second, swatches("tie", CAS.tie)) : "")
+      + (["robe", "kimono"].includes(o) ? "" : sec("Pantalon", swatches("pants", CAS.pants))) + sec("Chaussures", swatches("shoes", CAS.shoes));
+  }
+  if (cas.tab === "acc") return sec("Chapeau", tiles("hat", CAS.hat, VIEW.tileHat, lockedMsg("hat"))) + sec("Écharpe", tiles("scarf", CAS.scarf, VIEW.tileTorso, lockedMsg("scarf")))
+    + sec("Et aussi", `<div class="ctiles">${[["wand", "Baguette"], ["jetpack", "Jetpack"], ["parrot", "Perroquet"], ["katana", "Katana"], ["lei", "Collier de fleurs"]].map(([k, label]) => {
+      const lock = paidFor(k, "1"), on = !!L[k], look = { ...L, [k]: on ? "" : "1" };
+      return `<button class="ctile${on ? " on" : ""}${lock ? " locked" : ""}" data-cas-set="${k}" data-v="${on ? "" : "1"}"${lock ? ` disabled title="À acheter dans la garde-robe"` : ` title="${on ? "Retirer" : "Ajouter"} : ${esc(label)}"`}>${figure({ look: { ...L, [k]: "1" }, tux: true, smile: true, hat: hatOf(L), back: k === "jetpack" }, VIEW.tileBody)}<span>${esc(label)}</span>${lock ? "<i>🔒</i>" : on ? "<i>✓</i>" : ""}</button>`;
+    }).join("")}</div>`, "Ce qui est verrouillé 🔒 s'achète dans la garde-robe (🛒 → 🎭 Thèmes).");
+  return sec("Deux traits", `<div class="ctraits">${TRAIT_IDS.map(id => { const t = TRAITS[id]; return `<button data-cas-trait="${id}" class="${cas.traits.includes(id) ? "on" : ""}" title="${esc(t.desc)}"><b>${t.icon}</b>${esc(t.name)}</button>`; }).join("")}</div>`,
+    cas.traits.map(id => `${TRAITS[id].icon} ${esc(TRAITS[id].desc)}`).join("<br>"))
+    + sec("Phrase fétiche", `<input id="cas-phrase" maxlength="40" placeholder="J'attends tes ordres." value="${esc(cas.phrase)}" aria-label="Phrase fétiche">`, "Il la dit sur son podium quand l'équipe n'a besoin de rien.");
 }
 function renderCas() {
   if (!cas) return;
-  casBox.innerHTML = `<div class="chead"><b>👑 Créer ton chef</b><span class="muted">${esc(CHIEF_NAME)}</span><button class="x" data-cas="cancel" title="Annuler (Échap)">×</button></div>
+  const keep = casBox.querySelector(".copts")?.scrollTop || 0, sameTab = casBox.dataset.tab === cas.tab;
+  casBox.innerHTML = `<div class="chead"><b>Créer ton chef</b><span class="cname">${esc(CHIEF_NAME)}</span><span class="ctraitbadges">${cas.traits.map(id => `<span>${TRAITS[id].icon} ${esc(TRAITS[id].name)}</span>`).join("")}</span><button class="x" data-cas="cancel" title="Annuler (Échap)">×</button></div>
     <div class="cbody">
-      <div class="cstage"><div class="cpreview${cas.back ? " back" : ""}">${casPreview()}</div>
-        <div class="cposes"><button data-cas="turn" title="Tourner">↻ ${cas.back ? "De face" : "De dos"}</button>${POSES.map(([id, label]) => `<button data-cas-pose="${id}" class="${cas.pose === id ? "on" : ""}">${label}</button>`).join("")}<button data-cas="smile" class="${cas.smile ? "on" : ""}">${cas.smile ? "😊" : "😐"}</button></div>
-        <div class="ctraitbadges">${cas.traits.map(id => `<span>${TRAITS[id].icon} ${esc(TRAITS[id].name)}</span>`).join("")}</div></div>
+      <div class="cstage"><div class="cpreview">${casPreview()}</div>
+        <div class="cposes"><div class="cseg">${POSES.map(([id, label]) => `<button data-cas-pose="${id}" class="${cas.pose === id ? "on" : ""}">${label}</button>`).join("")}</div>
+          <div class="cseg"><button data-cas="turn" title="Le tourner">↻ ${cas.back ? "De face" : "De dos"}</button><button data-cas="smile" class="${cas.smile ? "on" : ""}" title="Sourire">😊 Sourire</button></div></div></div>
       <div class="cpanel"><nav class="ctabs">${CAS_TABS.map(([id, ic, label]) => `<button data-cas-tab="${id}" class="${cas.tab === id ? "on" : ""}"><span>${ic}</span>${label}</button>`).join("")}</nav>
         <div class="copts">${casTabHtml()}</div></div></div>
     <div class="cfoot"><button data-cas="random">🎲 Aléatoire</button><button data-cas="reset">↺ Par défaut</button><span></span><button data-cas="cancel">Annuler</button><button data-cas="ok" class="ok">✓ Valider</button></div>`;
+  casBox.dataset.tab = cas.tab;
+  if (sameTab) casBox.querySelector(".copts").scrollTop = keep;  // a choice made: the list stays where it was
 }
 const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
 casBox.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b || !cas || b.disabled) return;
-  if (b.dataset.casSet) { const k = b.dataset.casSet; cas.look[k] = k === "style" ? +b.dataset.v : b.dataset.v; if (k === "hat") cas.look.hat = b.dataset.v; return renderCas(); }
+  if (b.dataset.casSet) {
+    const k = b.dataset.casSet; cas.look[k] = k === "style" ? +b.dataset.v : b.dataset.v;
+    if (k === "sex" && b.dataset.v === "f") cas.look.beard = "";  // no beard for a woman
+    if (k === "outfit" && cas.look.outfit !== cas.prevOutfit) Object.assign(cas.look, OUTFIT_LOOK[b.dataset.v] || {});
+    cas.prevOutfit = cas.look.outfit; return renderCas();
+  }
   if (b.dataset.casTab) { cas.tab = b.dataset.casTab; return renderCas(); }
   if (b.dataset.casPose) { cas.pose = b.dataset.casPose; return renderCas(); }
   if (b.dataset.casTrait) {
@@ -120,8 +153,9 @@ casBox.addEventListener("click", ev => {
   if (a === "cancel") return closeCas();
   if (a === "reset") { cas.look = { ...CHIEF_DEFAULT }; cas.traits = [...traitsFromName(CHIEF_NAME)]; cas.phrase = ""; return renderCas(); }
   if (a === "random") {
-    cas.look = { skin: rnd(CAS.skin), hair: rnd(CAS.hair), style: rnd(CAS.style)[0], outfit: rnd(CAS.outfit.filter(([v]) => !paidFor("outfit", v)))[0], shirt: rnd(CAS.shirt), tie: rnd(CAS.tie), pants: rnd(CAS.pants), shoes: rnd(CAS.shoes),
-      beard: rnd(CAS.beard)[0], beardColor: "", glasses: rnd(CAS.glasses.filter(([v]) => !paidFor("glasses", v)))[0], hat: rnd(CAS.hat.filter(([v]) => !paidFor("hat", v)))[0], scarf: "", wand: "", jetpack: "", parrot: "", katana: "", lei: "" };
+    const sex = rnd(CAS.sex)[0];
+    cas.look = { sex, skin: rnd(CAS.skin), hair: rnd(CAS.hair), style: rnd(CAS.style)[0], outfit: rnd(CAS.outfit.filter(([v]) => !paidFor("outfit", v)))[0], shirt: rnd(CAS.shirt), tie: rnd(CAS.tie), pants: rnd(CAS.pants), shoes: rnd(CAS.shoes),
+      beard: sex ? "" : rnd(CAS.beard)[0], beardColor: "", glasses: rnd(CAS.glasses.filter(([v]) => !paidFor("glasses", v)))[0], hat: rnd(CAS.hat.filter(([v]) => !paidFor("hat", v)))[0], scarf: "", wand: "", jetpack: "", parrot: "", katana: "", lei: "" };
     const ids = [...TRAIT_IDS].sort(() => Math.random() - 0.5); cas.traits = ids.slice(0, 2);
     return renderCas();
   }

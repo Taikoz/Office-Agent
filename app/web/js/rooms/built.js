@@ -52,7 +52,7 @@ export class BuiltRoom extends Room {
   // on the wall: the baseboard, the door back to the office, the wall objects
   wallStrip(t) {
     px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828");
-    drawDoorOpen(() => doorSprite("office").draw(8, 20), 8, 20, doorOpen(this.id, 23)); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
+    drawDoorOpen(() => doorSprite(this.id).draw(8, 20), 8, 20, doorOpen(this.id, 23)); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
     drawRoomItems(this.id, t, "wall");
   }
 }

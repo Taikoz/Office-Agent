@@ -74,42 +74,59 @@
   @media (max-width: 760px) { #rooms button { padding: 1px 6px; } }
 
   /* Créer ton chef (chiefedit.js), Create-a-Sim style */
-  #cas { position: fixed; z-index: 32; inset: 64px max(14px, calc(50vw - 560px)) 24px; display: flex; flex-direction: column; overflow: hidden;
-    background: radial-gradient(90% 120% at 25% 40%, #3a5a9a 0%, #1f2f5a 45%, #141a33 100%); border: 2px solid #5a7ac4; border-radius: 20px; box-shadow: 0 24px 70px #000d; }
+  /* Créer ton chef (world/chiefedit.js): a stage with the chief drawn large (zoomed on the head for the face and the
+     hair), the choices as tiles where he wears each one, the colours as swatches, each group in its card */
+  #cas { position: fixed; z-index: 32; inset: 56px max(14px, calc(50vw - 600px)) 20px; display: flex; flex-direction: column; overflow: hidden;
+    background: #11182e; border: 1px solid #ffffff1f; border-radius: 18px; box-shadow: 0 30px 80px #000c, 0 0 0 1px #000; }
   #cas[hidden] { display: none; }
   #cas button { font: inherit; color: var(--text); cursor: pointer; }
-  #cas .chead { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #0006; }
-  #cas .chead b { font-weight: normal; font-size: 26px; color: var(--accent); } #cas .chead .x { margin-left: auto; width: 30px; height: 30px; padding: 0; background: #ffffff1a; border: 0; border-radius: 50%; }
-  #cas .cbody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.3fr); }
-  #cas .cstage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px; }
-  #cas .cpreview { position: relative; display: grid; place-items: end center; width: 260px; height: 340px; }
-  #cas .cpreview::before { content: ""; position: absolute; bottom: 4px; left: 50%; width: 200px; height: 40px; margin-left: -100px; border-radius: 50%; background: radial-gradient(#5a7ac455, transparent 70%); }
-  #cas .cpreview img { position: relative; width: 216px; height: 312px; image-rendering: pixelated; filter: drop-shadow(0 8px 12px #0008); animation: casidle 3s ease-in-out infinite; }
-  @keyframes casidle { 50% { transform: translateY(-4px); } }
-  @media (prefers-reduced-motion: reduce) { #cas .cpreview img { animation: none; } }
-  #cas .cposes, #cas .ctraitbadges { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-  #cas .cposes button { padding: 2px 12px; font-size: 16px; background: #ffffff14; border: 2px solid transparent; border-radius: 999px; } #cas .cposes button.on { border-color: var(--accent); color: var(--accent); }
-  #cas .ctraitbadges span { padding: 1px 10px; font-size: 15px; background: #0005; border: 1px solid #ffffff33; border-radius: 999px; }
-  #cas .cpanel { display: flex; flex-direction: column; min-height: 0; margin: 12px 12px 12px 0; background: #0b1024d9; border: 1px solid #ffffff22; border-radius: 16px; overflow: hidden; }
-  #cas .ctabs { display: flex; gap: 2px; padding: 6px; background: #0006; }
-  #cas .ctabs button { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 4px 2px; font-size: 15px; background: transparent; border: 0; border-radius: 10px; }
-  #cas .ctabs button span { font-size: 22px; } #cas .ctabs button.on { background: #5a7ac4; } #cas .ctabs button:hover:not(.on) { background: #ffffff14; }
-  #cas .copts { flex: 1; overflow-y: auto; padding: 4px 16px 16px; scrollbar-width: thin; }
-  #cas .copts h4 { margin: 14px 0 6px; font-weight: normal; font-size: 16px; letter-spacing: 1px; color: #a9bce8; }
+  #cas .chead { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #ffffff14; background: linear-gradient(180deg, #1a2440, #141c34); }
+  #cas .chead b { font-weight: normal; font-size: 24px; color: var(--accent); letter-spacing: .02em; }
+  #cas .cname { font-size: 16px; color: #c9d4f0; padding: 2px 10px; background: #ffffff0f; border-radius: 999px; }
+  #cas .ctraitbadges { display: flex; gap: 6px; margin-left: 4px; } #cas .ctraitbadges span { padding: 2px 10px; font-size: 14px; color: #c9d4f0; background: #ffffff0a; border: 1px solid #ffffff1f; border-radius: 999px; }
+  #cas .chead .x { margin-left: auto; width: 32px; height: 32px; padding: 0; font-size: 18px; background: #ffffff12; border: 0; border-radius: 50%; } #cas .chead .x:hover { background: #ff6b6b; }
+  #cas .cbody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.25fr); }
+  #cas .cstage { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 14px; padding: 16px 16px 20px;
+    background: radial-gradient(60% 55% at 50% 42%, #3d5a9e 0%, #22335f 55%, #141c34 100%); }
+  #cas .cpreview { position: relative; flex: 1; min-height: 0; width: 100%; display: grid; place-items: end center; }
+  #cas .cpreview::before { content: ""; position: absolute; bottom: 2%; left: 50%; width: 46%; height: 7%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(#00000066, transparent 70%); }
+  #cas .cpreview svg { position: relative; width: 100%; height: 100%; max-height: 560px; filter: drop-shadow(0 6px 10px #0006); animation: casidle 3.4s ease-in-out infinite; }
+  #cas .cpreview svg.close { max-height: 520px; align-self: center; animation: none; }
+  @keyframes casidle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  @media (prefers-reduced-motion: reduce) { #cas .cpreview svg { animation: none; } }
+  #cas .cposes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  #cas .cseg { display: inline-flex; padding: 3px; background: #0b1024b3; border: 1px solid #ffffff1f; border-radius: 999px; }
+  #cas .cseg button { padding: 4px 14px; font-size: 15px; background: transparent; border: 0; border-radius: 999px; color: #c9d4f0; }
+  #cas .cseg button:hover { color: #fff; } #cas .cseg button.on { color: #141c34; background: var(--accent); }
+  #cas .cpanel { display: flex; flex-direction: column; min-height: 0; background: #0e1428; border-left: 1px solid #ffffff14; }
+  #cas .ctabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #ffffff14; }
+  #cas .ctabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 14px; color: #a9bce8; background: transparent; border: 0; border-radius: 10px; }
+  #cas .ctabs button span { font-size: 22px; } #cas .ctabs button.on { color: #fff; background: #2a3c6e; box-shadow: inset 0 -3px 0 var(--accent); } #cas .ctabs button:hover:not(.on) { background: #ffffff0d; }
+  #cas .copts { flex: 1; overflow-y: auto; padding: 12px 14px 18px; scrollbar-width: thin; display: flex; flex-direction: column; gap: 12px; }
+  #cas .csec { padding: 10px 12px 12px; background: #ffffff07; border: 1px solid #ffffff12; border-radius: 14px; }
+  #cas .csec h4 { margin: 0 0 8px; font-weight: normal; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8fa3d6; }
+  #cas .csec p { margin: 8px 0 0; font-size: 14px; line-height: 1.35; }
   #cas .cswatch { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  #cas .cswatch button { width: 34px; height: 34px; padding: 0; background: var(--sw); border: 3px solid #ffffff40; border-radius: 50%; box-shadow: inset 0 -4px 0 #0003; }
-  #cas .cswatch button.on { border-color: var(--accent); box-shadow: 0 0 0 3px #fbaa0855, inset 0 -4px 0 #0003; transform: scale(1.08); }
-  #cas .cpick { position: relative; display: grid; place-items: center; width: 34px; height: 34px; font-size: 16px; background: conic-gradient(#ff6b6b, #fbaa08, #51cf66, #5aa9ff, #b48cff, #ff6b6b); border: 3px solid #ffffff40; border-radius: 50%; cursor: pointer; overflow: hidden; }
+  #cas .cswatch button { width: 30px; height: 30px; padding: 0; background: var(--sw); border: 2px solid #ffffff30; border-radius: 50%; box-shadow: inset 0 -3px 0 #0003; transition: transform .1s; }
+  #cas .cswatch button:hover { transform: scale(1.1); } #cas .cswatch button.on { border-color: #fff; box-shadow: 0 0 0 3px var(--accent), inset 0 -3px 0 #0003; }
+  #cas .cpick { position: relative; display: grid; place-items: center; width: 30px; height: 30px; font-size: 14px; background: conic-gradient(#ff6b6b, #fbaa08, #51cf66, #5aa9ff, #b48cff, #ff6b6b); border: 2px solid #ffffff30; border-radius: 50%; }
   #cas .cpick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  #cas .cchoice, #cas .ctraits { display: flex; flex-wrap: wrap; gap: 6px; }
-  #cas .cchoice button, #cas .ctraits button { padding: 3px 12px; font-size: 16px; background: #ffffff10; border: 2px solid #ffffff22; border-radius: 10px; }
-  #cas .cchoice button.on, #cas .ctraits button.on { background: #5a7ac4; border-color: #a9bce8; } #cas .cchoice button[disabled] { opacity: .45; cursor: not-allowed; }
-  #cas #cas-phrase { width: 100%; padding: 6px 10px; font: inherit; color: var(--text); background: #0006; border: 2px solid #ffffff33; border-radius: 10px; }
-  #cas .copts p { margin: 6px 0; font-size: 15px; line-height: 1.3; }
-  #cas .cfoot { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #0006; }
-  #cas .cfoot span { flex: 1; } #cas .cfoot button { padding: 4px 16px; background: #ffffff14; border: 2px solid #ffffff33; border-radius: 999px; }
-  #cas .cfoot button.ok { color: #1c1c24; background: #5fd38d; border-color: #5fd38d; } #cas .cfoot button:hover { border-color: var(--accent); }
-  @media (max-width: 760px) { #cas .cbody { grid-template-columns: 1fr; overflow-y: auto; } #cas .cpreview { height: 240px; } #cas .cpreview img { width: 150px; height: 216px; } #cas .cpanel { margin: 0 12px 12px; } }
+  #cas .ctiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+  #cas .ctile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 5px; background: linear-gradient(180deg, #2a3a66, #1a2546); border: 2px solid transparent; border-radius: 12px; transition: border-color .1s, transform .1s; }
+  #cas .ctile svg { width: 100%; height: 70px; }
+  #cas .ctile span { font-size: 12.5px; line-height: 1.1; color: #c9d4f0; text-align: center; }
+  #cas .ctile:hover:not([disabled]) { border-color: #ffffff40; transform: translateY(-1px); }
+  #cas .ctile.on { border-color: var(--accent); background: linear-gradient(180deg, #3a4f86, #24325c); } #cas .ctile.on span { color: #fff; }
+  #cas .ctile i { position: absolute; top: 4px; right: 6px; font-style: normal; font-size: 12px; }
+  #cas .ctile.locked { cursor: not-allowed; } #cas .ctile.locked svg { opacity: .4; filter: grayscale(.6); }
+  #cas .ctraits { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+  #cas .ctraits button { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 15px; text-align: left; background: #ffffff0a; border: 2px solid #ffffff14; border-radius: 10px; }
+  #cas .ctraits button b { font-weight: normal; font-size: 18px; } #cas .ctraits button.on { border-color: var(--accent); background: #2a3c6e; }
+  #cas #cas-phrase { width: 100%; padding: 8px 12px; font: inherit; color: var(--text); background: #0b1024; border: 2px solid #ffffff22; border-radius: 10px; } #cas #cas-phrase:focus { border-color: var(--accent); outline: 0; }
+  #cas .cfoot { display: flex; gap: 8px; align-items: center; padding: 10px 16px; border-top: 1px solid #ffffff14; background: #141c34; }
+  #cas .cfoot span { flex: 1; } #cas .cfoot button { padding: 6px 18px; background: #ffffff10; border: 1px solid #ffffff26; border-radius: 999px; }
+  #cas .cfoot button.ok { color: #10261a; background: #5fd38d; border-color: #5fd38d; } #cas .cfoot button:hover { border-color: var(--accent); }
+  @media (max-width: 760px) { #cas .cbody { grid-template-columns: 1fr; overflow-y: auto; } #cas .cstage { min-height: 340px; } #cas .ctraitbadges { display: none; } }
   /* ChiefOS HOLO: the futuristic look (chiefos.js osSkin): dark glass, cyan neon, chamfered corners, scanlines,
      a hexagon dock, a console top bar, a boot sequence; the apps keep their layout through the same variables */
   #chiefos.holo { --ub-orange: #00e5ff; --ub-bg: #06121ee6; --ub-head: #0a1e30f0; --ub-card: #0e2a3e99; --ub-line: #00e5ff40; --ub-text: #d6fbff; --ub-dim: #7fb8c8; --holo2: #ff3df2;

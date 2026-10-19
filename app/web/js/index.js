@@ -125,6 +125,7 @@ import "./items/japon.js";
 import "./items/beach.js";
 import "./world/interact.js";
 import "./world/build.js";
+import "./world/backdrops.js";
 import "./world/place.js";
 import "./world/route.js";
 import "./sims/moods.js";

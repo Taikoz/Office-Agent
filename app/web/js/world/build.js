@@ -5,7 +5,7 @@
 // desk is a dev's work station, chairs are sat on, the coffee machine gives the breaks, the games are played.
 
 import { hub, provide } from "../hub.js";
-import { CAB, CHIEF_NAME, DESKS, DOOR, S, TEAM, W, chief, ctx, cv, ents, fillScreen, hash, px, roomSize, text, typeColor } from "../core/core.js";
+import { CAB, CHIEF_NAME, DESKS, DOOR, H, S, TEAM, W, chief, ctx, cv, ents, fillScreen, hash, px, roomSize, text, typeColor } from "../core/core.js";
 import { SaveSlot } from "../save/slot.js";
 import { IK, OX, OY, P } from "../iso/engine.js";
 import { ART } from "../svg/base.js";
@@ -14,7 +14,7 @@ import { crewAdd } from "../sims/crew.js";
 import { CHIEF_LOOK, chiefGo, chiefToOffice } from "./chief.js";
 import { setView, view } from "./lounge.js";
 import { SHOP, itemOn, jukebox, shop, shopAction, toggleJukebox } from "./shop.js";
-import { DECOR_COLORS, DECOR_TYPES, THEME_FLOORS, applyDecor, decor, decorSwatch, drawTileAnim, floorColors, rugCanvas, tileCanvas } from "./decor.js";
+import { DECOR_TYPES, THEME_DOORS, THEME_FLOORS, THEME_WALLS, applyDecor, decor, decorSaved, decorSwatch, doorColors, drawTileAnim, floorColors, rugCanvas, tileCanvas, tryDecor, untryDecor, wallColors } from "./decor.js";
 import { esc } from "../core/data.js";
 import { canvasPoint } from "../ui/panel.js";
 import { sfx, toast } from "../sims/progress.js";
@@ -35,21 +35,22 @@ export const saveBuild = () => { SaveSlot.get(BUILD_KEY).save(furni); syncAll();
 export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "Chaises"], ["fauteuils", "🛋️", "Fauteuils"], ["canapes", "🛋️", "Canapés"], ["poufs", "🫘", "Poufs"], ["sport", "🏋️", "Sport"], ["bibliotheque", "📖", "Bibliothèque"], ["tables", "🍽️", "Tables"], ["electronique", "🖥️", "Électronique"],
   ["tableaux", "🖼️", "Tableaux"], ["cadres", "🖼️", "Posters"], ["neons", "🌈", "Néons"], ["horloges", "🕰️", "Horloges"], ["rangement", "📚", "Rangement"], ["cafe", "☕", "Café"], ["cuisine", "🍳", "Cuisine"], ["bar", "🍸", "Bar"], ["loisirs", "🎮", "Loisirs"],
   ["plantes", "🪴", "Plantes"], ["deco", "🐠", "Déco"], ["lumiere", "💡", "Lumière"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"],
-  ["murs", "🧱", "Murs"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["cloisons", "🧱", "Cloisons"], ["garde", "🎩", "Garde-robe"]];
+  ["murs", "🧱", "Murs"], ["portes", "🚪", "Portes"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["cloisons", "🧱", "Cloisons"], ["garde", "🎩", "Garde-robe"]];
 // themed collections (the rail's 🎭 Thèmes): an object of a theme has theme: <id> and keeps its own category; inside a
 // theme, its objects by shelf (an object's shelf, else its category's), then the chief's clothes of the wardrobe
-export const THEMES = [{ id: "magie", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef.", deco: "Déco et objets magiques" },
-  { id: "scifi", icon: "🚀", name: "Station spatiale", desc: "Cloisons de vaisseau, porte automatique, baie sur l'espace, ordinateurs du futur, téléporteurs, robot, poste de commandement (ChiefOS en HOLO)… et la combinaison du chef.", deco: "Gadgets et technologie" },
-  { id: "manoir", icon: "🦇", name: "Manoir hanté", desc: "Murs de manoir, porte qui grince, portrait dont les yeux te suivent, bocal à fantômes (les agents bloqués), horloge comtoise, cercueil, orgue du maître (ChiefOS en Crypte)… et la cape du chef.", deco: "Curiosités hantées" },
-  { id: "pirate", icon: "🏴‍☠️", name: "Navire pirate", desc: "Coque à composer, sabord à canon, fenêtre de poupe (une voile par agent en mer), coffre au trésor (les missions livrées), perroquet, kraken (les CI rouges), barre du capitaine (ChiefOS en Galion)… et le tricorne du chef.", deco: "Trésors et curiosités du bord" },
-  { id: "japon", icon: "⛩️", name: "Maison japonaise", desc: "Shōji, fusuma à la grande vague, tokonoma dont le kanji dit l'humeur du bureau, daruma (un par agent), bassin aux carpes koï, jardin zen, torii (les CI vertes), estrade du sensei (ChiefOS en Zen)… et le kimono du chef.", deco: "Objets de la maison" },
-  { id: "plage", icon: "🏖️", name: "Plage & beach club", desc: "Cabines rayées, rideau de coquillages, baie sur l'océan (un surfeur par agent), piscine, château de sable (les tests verts), drapeau de baignade (les CI), crabes (les tests rouges), paillote bar, platines du DJ, poste du maître-nageur (ChiefOS en Tropical)… et la chemise hawaïenne du chef.", deco: "Beach club" }];
+export const THEMES = [{ id: "magie", color: "#d4a640", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef.", deco: "Déco et objets magiques" },
+  { id: "scifi", color: "#5ad0ff", icon: "🚀", name: "Station spatiale", desc: "Cloisons de vaisseau, porte automatique, baie sur l'espace, ordinateurs du futur, téléporteurs, robot, poste de commandement (ChiefOS en HOLO)… et la combinaison du chef.", deco: "Gadgets et technologie" },
+  { id: "manoir", color: "#a77aff", icon: "🦇", name: "Manoir hanté", desc: "Murs de manoir, porte qui grince, portrait dont les yeux te suivent, bocal à fantômes (les agents bloqués), horloge comtoise, cercueil, orgue du maître (ChiefOS en Crypte)… et la cape du chef.", deco: "Curiosités hantées" },
+  { id: "pirate", color: "#d9a066", icon: "🏴‍☠️", name: "Navire pirate", desc: "Coque à composer, sabord à canon, fenêtre de poupe (une voile par agent en mer), coffre au trésor (les missions livrées), perroquet, kraken (les CI rouges), barre du capitaine (ChiefOS en Galion)… et le tricorne du chef.", deco: "Trésors et curiosités du bord" },
+  { id: "japon", color: "#ff6a50", icon: "⛩️", name: "Maison japonaise", desc: "Shōji, fusuma à la grande vague, tokonoma dont le kanji dit l'humeur du bureau, daruma (un par agent), bassin aux carpes koï, jardin zen, torii (les CI vertes), estrade du sensei (ChiefOS en Zen)… et le kimono du chef.", deco: "Objets de la maison" },
+  { id: "plage", color: "#3ad0d8", icon: "🏖️", name: "Plage & beach club", desc: "Cabines rayées, rideau de coquillages, baie sur l'océan (un surfeur par agent), piscine, château de sable (les tests verts), drapeau de baignade (les CI), crabes (les tests rouges), paillote bar, platines du DJ, poste du maître-nageur (ChiefOS en Tropical)… et la chemise hawaïenne du chef.", deco: "Beach club" }];
+BUY_CATS.push(["theme:all", "✨", "Tous les thèmes"]);
 for (const t of THEMES) BUY_CATS.push([`theme:${t.id}`, t.icon, t.name]);
-const SHELVES = [["murs", "🧱", "Murs à composer"], ["sols", "🟨", "Sols"], ["dalles", "🏝️", "Dalles à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
+const SHELVES = [["ambiance", "🎨", "Ambiance de la pièce"], ["murs", "🧱", "Murs à composer"], ["dalles", "🏝️", "Dalles à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
   ["tables", "🍽️", "Tables"], ["bureaux", "🗄️", "Bureaux"], ["ordinateurs", "💻", "Ordinateurs"], ["deco", "✨", "Déco"], ["garde", "🎩", "Garde-robe du chef"]];
 const shelfOf = d => d.shelf || ({ fenetres: "fenetres", tapis: "tapis", lumiere: "lumiere", chaises: "chaises", fauteuils: "chaises", canapes: "chaises", tables: "tables", bureau: "bureaux", electronique: "ordinateurs" }[d.cat]) || "deco";
-const themeOf = c => c?.startsWith("theme:") ? c.slice(6) : null;
-const catCount = c => themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length + THEME_FLOORS.filter(f => f[2] === themeOf(c)).length : CATALOG.filter(d => d.cat === c).length;
+const themeOf = c => c?.startsWith("theme:") && c !== "theme:all" ? c.slice(6) : null;
+const catCount = c => c === "theme:all" ? 0 : PAINT[c] ? DECOR_TYPES[PAINT[c].key].length : themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length + [THEME_FLOORS, THEME_WALLS, THEME_DOORS].reduce((n, l) => n + l.filter(f => f[2] === themeOf(c)).length, 0) : CATALOG.filter(d => d.cat === c).length;
 export const defOf = type => CATALOG.find(d => d.type === type);
 const styleOf = it => { const d = defOf(it.type); return d.styles.find(s => s.id === it.style) || d.styles[0]; };
 export const itemsIn = room => (furni.items || []).filter(it => it.room === room && defOf(it.type));
@@ -209,11 +210,12 @@ export function drawChiefPcScreen(d, t, type = "pc") {
 }
 
 /* ---------- buy mode ---------- */
-export const buy = { on: false, cat: "bureau", sel: null, style: null, rot: 0, placing: null, moving: null, pick: null, mx: -99, my: -99, sx: -99, sy: -99 };
+export const buy = { on: false, cat: "bureau", sel: null, paint: null, style: null, rot: 0, placing: null, moving: null, pick: null, mx: -99, my: -99, sx: -99, sy: -99 };
 const buyBox = document.getElementById("buy"), buyTool = document.getElementById("buytool"), buyBtn = document.getElementById("buybtn");
 export function toggleBuy(open = !buy.on) {
   if (open && view === "visit") return toast("MODE ACHAT", "Tu es en visite", "Rentre à ton bureau pour acheter et placer des objets.");
-  buy.on = open; buy.placing = buy.moving = buy.pick = null;
+  buy.on = open; buy.placing = buy.moving = buy.pick = null; dropPaint();
+  if (!open && hub.ISO) { hub.ISO.under = 0; hub.ISO.clampCam(); }
   document.body.classList.toggle("buy-on", open); buyBox.hidden = !open; buyBtn.classList.toggle("on", open); buyBtn.setAttribute("aria-expanded", open);
   buyTool.hidden = true; closePie(); if (open) { if (view === "game") setView("lounge"); renderBuy(); }
 }
@@ -239,19 +241,67 @@ function rotUrl(def, st, rot) {
   if (!thumbs.has(key)) thumbs.set(key, ART[def.art].url({ ...def.artFor(st, def.thumbState()), ...(rot >= 2 ? { back: true } : {}) }) || thumbUrl(def, st));
   return thumbs.get(key);
 }
-const PAINT = { murs: { key: "wall", color: "wallColor", price: 400, label: "Murs" }, sols: { key: "floor", color: "floorColor", price: 600, label: "Sol" } };
-// types: [type, label] (the floors of a theme on its shelf); a theme's floor has its own colours (decor.js THEME_FLOORS)
-function paintGrid(cat, room, types = DECOR_TYPES[PAINT[cat].key]) {
-  const P2 = PAINT[cat], cur = decor[room] || {};
+const PAINT = { murs: { key: "wall", color: "wallColor", price: 400, label: "Murs", colors: wallColors }, portes: { key: "door", color: "doorColor", price: 300, label: "Porte", colors: doorColors },
+  sols: { key: "floor", color: "floorColor", price: 600, label: "Sol", colors: floorColors } };
+// the walls, the door, the floor of a room (Murs, Portes, Sols, and a theme's shelves): a card per pattern; a click
+// selects it and tries it on in the room (decor.js tryDecor), its colours and the Apply button are in the detail card
+const PAINT_DESC = { wall: "Tout le tour de la pièce, sur les deux murs ; les cloisons et les objets muraux restent en place.",
+  door: "La porte de la pièce ; elle s'ouvre toujours quand quelqu'un passe.", floor: "Tout le sol de la pièce ; les meubles et les tapis restent dessus." };
+const THEME_PAINTS = { wall: THEME_WALLS, door: THEME_DOORS, floor: THEME_FLOORS };
+const paintLabel = (key, type) => (DECOR_TYPES[key].find(t => t[0] === type) || [, type])[1];
+const paintTheme = (key, type) => THEMES.find(t => t.id === THEME_PAINTS[key].find(f => f[0] === type)?.[2]);
+// the rooms a pattern can go in (no walls nor door on the terrace)
+const paintRooms = key => ["office", "lounge", ...hub.con.rooms].filter(r => decor[r] && (key === "floor" || r !== "terrace"));
+const PAINT_KIND = { wall: "🧱 Murs", door: "🚪 Porte", floor: "🟨 Sol" };
+function paintGrid(cat, room, types = DECOR_TYPES[PAINT[cat].key], showKind = false) {
+  const P2 = PAINT[cat], cur = decorSaved(room), poor = wallet.funds < P2.price;
   return types.map(([type, label]) => {
-    const colors = P2.key === "floor" ? floorColors(type) : DECOR_COLORS[P2.color].slice(0, 8);
-    return `<div class="bitem paint"><b>${esc(label)}</b><div class="pswatches">${colors.map(c => `<button class="psw${cur[P2.key] === type && cur[P2.color] === c ? " on" : ""}" data-paint="${cat}|${type}|${c}" title="${esc(label)} · ${c} · ${fmtSim(P2.price)}"><img alt="" src="${decorSwatch(P2.key === "wall" ? "wall" : "floor", type, c)}"></button>`).join("")}</div></div>`;
+    const colors = P2.colors(type), here = cur[P2.key] === type, on = buy.paint?.cat === cat && buy.paint.type === type;
+    return `<button class="bcard paint${on ? " on" : ""}${poor ? " poor" : ""}" data-psel="${cat}|${type}" title="${esc(label)} : l'essayer dans la pièce">
+      <span class="bpic ${P2.key}"><img alt="" loading="lazy" src="${decorSwatch(P2.key, type, here ? cur[P2.color] : colors[0])}"></span>${here ? `<span class="bbadge own">✓ ici</span>` : ""}
+      <span class="bname">${esc(label)}</span><span class="bprice">${fmtSim(P2.price)}<i class="bnsty" title="${colors.length} coloris">${colors.slice(0, 4).map(c => `<s style="--sw:${c}"></s>`).join("")}</i></span>${showKind ? `<span class="bcat">${PAINT_KIND[P2.key]}</span>` : ""}</button>`;
   }).join("");
 }
+// a theme's whole look: its first wall, door and floor at once, a quarter off
+const PACK_OFF = 0.25;
+const packPrice = () => Math.round((PAINT.murs.price + PAINT.portes.price + PAINT.sols.price) * (1 - PACK_OFF) / 10) * 10;
+function packKv(id) {
+  const [w, d, f] = [THEME_WALLS, THEME_DOORS, THEME_FLOORS].map(l => l.find(x => x[2] === id));
+  return w && d && f ? { wall: w[0], wallColor: w[3][0], door: d[0], doorColor: d[3][0], floor: f[0], floorColor: f[3][0] } : null;
+}
+const packPics = kv => `<span class="bpack"><img alt="" src="${decorSwatch("wall", kv.wall, kv.wallColor)}"><img alt="" class="door" src="${decorSwatch("door", kv.door, kv.doorColor)}"><img alt="" src="${decorSwatch("floor", kv.floor, kv.floorColor)}"></span>`;
+function packCard(id, room) {
+  const kv = packKv(id); if (!kv) return "";
+  const cur = decorSaved(room), done = Object.keys(kv).every(k => cur[k] === kv[k]);
+  return `<button class="bcard pack${buy.paint?.pack === id ? " on" : ""}${wallet.funds < packPrice() ? " poor" : ""}" data-ppack="${id}" title="Essayer l'ambiance complète dans la pièce">
+    ${packPics(kv)}${done ? `<span class="bbadge own">✓ ici</span>` : ""}<span class="bname">🎭 Ambiance complète : murs, porte et sol</span>
+    <span class="bprice">${fmtSim(packPrice())} <s class="was">${fmtSim(PAINT.murs.price + PAINT.portes.price + PAINT.sols.price)}</s></span></button>`;
+}
+// the selection's card on the right: the pattern big, its colours, what it replaces, Apply here or everywhere
+function paintDetailHtml(room) {
+  const p = buy.paint, cur = decorSaved(room), name = r => hub.Room.get(r).label;
+  const live = `<span class="blive" title="Rien n'est payé tant que tu n'appliques pas">👁 Essai</span>`;
+  if (p.pack) {
+    const t = THEMES.find(x => x.id === p.pack), kv = packKv(p.pack), done = Object.keys(kv).every(k => cur[k] === kv[k]), price = packPrice();
+    return `<aside class="bdetail paint"><div class="bpaintpic">${packPics(kv)}${live}</div><div class="bdhead"><b>Ambiance ${esc(t.name)}</b><span class="bprice">${fmtSim(price)}</span></div>
+      <div class="bmeta"><span class="btier">${t.icon} −${Math.round(PACK_OFF * 100)} % sur les trois</span><span class="bwas">coloris ensuite un par un</span></div>
+      <dl class="bspecs"><dt>Murs</dt><dd>${esc(paintLabel("wall", kv.wall))}</dd><dt>Porte</dt><dd>${esc(paintLabel("door", kv.door))}</dd><dt>Sol</dt><dd>${esc(paintLabel("floor", kv.floor))}</dd></dl>
+      <div class="bacts"><button class="primary" data-papply="room"${done || wallet.funds < price ? " disabled" : ""}>${done ? "✓ Déjà en place" : `✓ Appliquer · ${fmtSim(price)}`}</button><button class="bx" data-pcancel title="Ne pas l'acheter : la pièce redevient comme avant" aria-label="Annuler">✕</button></div></aside>`;
+  }
+  const P2 = PAINT[p.cat], label = paintLabel(P2.key, p.type), t = paintTheme(P2.key, p.type);
+  const same = r => decorSaved(r)[P2.key] === p.type && decorSaved(r)[P2.color] === p.color;
+  const all = paintRooms(P2.key).filter(r => !same(r)), allPrice = P2.price * all.length;
+  return `<aside class="bdetail paint"><div class="bpaintpic"><span class="bpic big ${P2.key}" title="${esc(PAINT_DESC[P2.key])}"><img alt="" src="${decorSwatch(P2.key, p.type, p.color)}"></span>${live}</div>
+    <div class="bdhead"><b>${esc(label)}</b><span class="bprice">${fmtSim(P2.price)}</span></div>
+    <div class="pswatches">${P2.colors(p.type).map(c => `<button class="psw ${P2.key}${c === p.color ? " on" : ""}" data-pcolor="${c}" title="Coloris ${c}"><img alt="" src="${decorSwatch(P2.key, p.type, c)}"></button>`).join("")}</div>
+    <div class="bmeta">${t ? `<span class="btier">${t.icon} ${esc(t.name)}</span>` : ""}<span class="bwas">avant : ${esc(paintLabel(P2.key, cur[P2.key]))}</span></div>
+    <div class="bacts"><button class="primary" data-papply="room"${same(room) || wallet.funds < P2.price ? " disabled" : ""}>${same(room) ? "✓ Déjà en place" : `✓ Appliquer · ${fmtSim(P2.price)}`}</button>
+      ${all.length > 1 || (all.length && !all.includes(room)) ? `<button data-papply="all"${wallet.funds < allPrice ? " disabled" : ""} title="Aussi dans : ${esc(all.filter(r => r !== room).map(name).join(", "))}">Partout · ${fmtSim(allPrice)}</button>` : ""}<button class="bx" data-pcancel title="Ne pas l'acheter : la pièce redevient comme avant" aria-label="Annuler">✕</button></div></aside>`;
+}
 // the categories in families (the rail on the left), each family's categories as tabs over the grid
-export const BUY_GROUPS = [["themes", "🎭", "Thèmes", THEMES.map(t => `theme:${t.id}`)], ["travail", "💼", "Travail", ["bureau", "chaises", "electronique", "rangement"]], ["salon", "🛋️", "Salon", ["fauteuils", "canapes", "poufs", "tables", "tapis"]],
+export const BUY_GROUPS = [["themes", "🎭", "Thèmes", ["theme:all", ...THEMES.map(t => `theme:${t.id}`)]], ["travail", "💼", "Travail", ["bureau", "chaises", "electronique", "rangement"]], ["salon", "🛋️", "Salon", ["fauteuils", "canapes", "poufs", "tables", "tapis"]],
   ["cuisine", "🍳", "Cuisine", ["cafe", "cuisine"]], ["bar", "🍸", "Bar", ["bar"]], ["loisirs", "🎮", "Loisirs", ["loisirs", "sport", "bibliotheque"]], ["deco", "🖼️", "Déco", ["plantes", "deco", "tableaux", "cadres", "neons", "horloges", "lumiere"]],
-  ["dehors", "🌿", "Dehors", ["exterieur"]], ["piece", "🏗️", "La pièce", ["murs", "sols", "cloisons", "fenetres", "construction"]], ["plus", "🐾", "Plus", ["animaux", "garde"]], ["envies", "♡", "Envies", ["envies"]]];
+  ["dehors", "🌿", "Dehors", ["exterieur"]], ["piece", "🏗️", "La pièce", ["murs", "portes", "sols", "cloisons", "fenetres", "construction"]], ["plus", "🐾", "Plus", ["animaux", "garde"]], ["envies", "♡", "Envies", ["envies"]]];
 const groupOf = cat => BUY_GROUPS.find(g => g[3].includes(cat)) || BUY_GROUPS[0];
 const catLabel = id => id === "envies" ? ["envies", "♡", "Mes envies"] : BUY_CATS.find(c => c[0] === id) || [id, "", id];
 const fold = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -272,6 +322,7 @@ function cardHtml(d, room, showCat) {
 }
 // the card on the right: the selected object, big, its colours, what it is, where it goes; or what this room holds
 function detailHtml(room) {
+  if (buy.paint) return paintDetailHtml(room);
   const d = buy.sel && defOf(buy.sel);
   if (!d) {
     const here = itemsIn(room), worth = here.reduce((v, it) => v + (defOf(it.type)?.price || 0), 0);
@@ -291,26 +342,45 @@ function detailHtml(room) {
     ${why ? `<span class="lockmsg">${esc(why)}</span>` : ""}
     <div class="bacts"><button class="primary" data-place="hand"${off ? " disabled" : ""} title="Le placer à la main (double clic sur une carte aussi)">🖐 Placer</button><button data-place="auto"${off || d.kind === "top" ? " disabled" : ""} title="Le poser à la première place libre">✨ Auto</button></div></aside>`;
 }
-// a theme: its banner, then its objects shelf by shelf, then the chief's clothes (bought and worn from here)
+// how far a theme is collected: its objects owned in any room, and how much of its look this room wears
+const ownedTypes = () => new Set((furni.items || []).map(it => it.type));
+function themeProgress(id, room) {
+  const objs = CATALOG.filter(d => d.theme === id), own = ownedTypes(), cur = decorSaved(room);
+  return { n: objs.filter(d => own.has(d.type)).length, of: objs.length,
+    look: ["wall", "door", "floor"].filter(k => THEME_PAINTS[k].some(f => f[2] === id && f[0] === cur[k])).length };
+}
+const progBar = (n, of) => `<span class="tprog" title="${n} / ${of}"><i style="width:${of ? Math.round(n / of * 100) : 0}%"></i></span>`;
+// ✨ Tous les thèmes: a card per theme, its look, what it holds, how far it is collected
+function themesGallery(room) {
+  return `<p class="bnote">Chaque thème : une ambiance (murs, porte, sol) à essayer dans la pièce, des cloisons à composer, des objets qui vivent avec tes agents et une tenue pour le chef.</p>`
+    + THEMES.map(t => {
+      const kv = packKv(t.id), { n, of, look } = themeProgress(t.id, room);
+      return `<button class="bthemecard" data-cat="theme:${t.id}" style="--th:${t.color}">${kv ? packPics(kv) : ""}${look === 3 ? `<span class="bbadge own">✓ ambiance ici</span>` : ""}
+        <span class="tname"><span class="ic">${t.icon}</span>${esc(t.name)}</span><span class="tdesc">${esc(t.desc)}</span>
+        ${progBar(n, of)}<span class="tstat">${n} / ${of} objets à toi${look && look < 3 ? ` · ${look}/3 de l'ambiance ici` : ""}</span></button>`;
+    }).join("");
+}
+// a theme: its banner (its progress, its shelves as chips), the room's look, then its objects shelf by shelf, the chief's clothes
 function themeGrid(id, room) {
   const t = THEMES.find(x => x.id === id), mine = CATALOG.filter(d => d.theme === id && (!buy.afford || (d.price <= wallet.funds && !hub.lockedFor?.(d))));
-  let out = `<div class="btheme"><span class="ic">${t.icon}</span><b>${esc(t.name)}</b><span class="muted">${esc(t.desc)}</span></div>`;
+  const looks = [["murs", THEME_WALLS], ["portes", THEME_DOORS], ["sols", THEME_FLOORS]].map(([cat, l]) => [cat, l.filter(f => f[2] === id)]);
+  const has = sid => sid === "garde" ? SHOP.some(i => i.theme === id) : sid === "ambiance" ? looks.some(([, l]) => l.length) : mine.some(d => shelfOf(d) === sid);
+  const name = (sid, label) => sid === "deco" && t.deco || label, { n, of } = themeProgress(id, room);
+  const chips = SHELVES.filter(([sid]) => has(sid)).map(([sid, ic, label]) => `<button class="bchip" data-jump="${sid}" title="${esc(name(sid, label))}">${ic}<span> ${esc(name(sid, label))}</span></button>`).join("");
+  let out = `<div class="btheme" style="--th:${t.color}"><span class="ic">${t.icon}</span><b>${esc(t.name)}</b><span class="muted" title="${esc(t.desc)}">${esc(t.desc)}</span>
+    <span class="tcount">${progBar(n, of)}${n} / ${of}</span><nav class="bchips">${chips}</nav></div>`;
   for (const [sid, ic, label] of SHELVES) {
+    if (!has(sid)) continue;
+    out += `<h5 class="bsec" data-shelf="${sid}">${ic} ${name(sid, label)}</h5>`;
     if (sid === "garde") {
-      const clothes = SHOP.filter(i => i.theme === id); if (!clothes.length) continue;
-      out += `<h5 class="bsec">${ic} ${label}</h5>` + clothes.map(it => { const own = shop.owned.includes(it.id), on = own && itemOn(it);
+      out += SHOP.filter(i => i.theme === id).map(it => { const own = shop.owned.includes(it.id), on = own && itemOn(it);
         const look = it.chief ? { ...CHIEF_LOOK, ...it.chief } : CHIEF_LOOK, hat = it.chief?.hat || (it.hat ? it.id.slice(4) : "");
         return `<div class="bitem${own ? " own" : ""}"><img class="bthumb big" alt="" src="${ART.person.url({ look, tux: true, smile: true, hat, frame: 0 })}"><b>${esc(it.name)}</b><span class="muted small">${esc(it.desc)}</span>
           <span class="price">${own ? (on ? "✓ porté" : "possédé") : fmtSim(it.price)}</span><button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (on ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
-      continue;
-    }
-    if (sid === "sols") {  // the theme's floors: painted on the whole room, like the floors of the Sols category
-      const floors = THEME_FLOORS.filter(f => f[2] === id); if (!floors.length) continue;
-      out += `<h5 class="bsec">${ic} ${label}</h5><p class="bnote">Sol ${deRoom(room)} : ${fmtSim(PAINT.sols.price)} le changement ; les meubles se posent dessus.</p>` + paintGrid("sols", room, floors);
-      continue;
-    }
-    const here = mine.filter(d => shelfOf(d) === sid); if (!here.length) continue;
-    out += `<h5 class="bsec">${ic} ${sid === "deco" && t.deco || label}</h5>` + here.map(d => cardHtml(d, room, false)).join("");
+    } else if (sid === "ambiance") {  // painted on the whole room: tried on with a click, paid with Apply
+      out += `<p class="bnote">Pour ${esc(ROOM_FR[room] || "la pièce")} entier${/^la /.test(ROOM_FR[room] || "") ? "e" : ""} : un clic l'essaie, rien n'est payé avant « Appliquer ».</p>` + packCard(id, room)
+        + looks.map(([cat, l]) => paintGrid(cat, room, l, true)).join("");
+    } else out += mine.filter(d => shelfOf(d) === sid).map(d => cardHtml(d, room, false)).join("");
   }
   return out;
 }
@@ -335,8 +405,8 @@ export function renderBuy() {
     + (buy.cat === "envies" ? `<span class="bresults">Les objets marqués ♡ dans leur fiche</span>` : "");
   const tools = `<span class="btools"><label class="bchk"><input type="checkbox" data-afford${buy.afford ? " checked" : ""}> à ma portée</label>
     <select data-sort aria-label="Trier">${SORTS.map(([id, label]) => `<option value="${id}"${buy.sort === id ? " selected" : ""}>${label}</option>`).join("")}</select></span>`;
-  let grid = "", special = !q && (PAINT[buy.cat] || ["garde", "animaux", "construction"].includes(buy.cat));
-  if (!q && PAINT[buy.cat]) grid = `<p class="bnote">${PAINT[buy.cat].label} ${deRoom(room)} : ${fmtSim(PAINT[buy.cat].price)} le changement.</p>` + paintGrid(buy.cat, room);
+  let grid = "", special = !q && ["garde", "animaux", "construction", "theme:all"].includes(buy.cat), paints = !q && PAINT[buy.cat];
+  if (paints) grid = `<p class="bnote">${PAINT[buy.cat].label} ${deRoom(room)} : choisis un motif, il s'essaie dans la pièce ; ses coloris et Appliquer sont dans la fiche.</p>` + paintGrid(buy.cat, room);
   else if (!q && buy.cat === "garde") {
     grid = SHOP.map(it => { const own = shop.owned.includes(it.id);
       return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
@@ -346,15 +416,26 @@ export function renderBuy() {
     if (buy.afford) defs = defs.filter(d => d.price <= wallet.funds && !hub.lockedFor?.(d));
     if (buy.sort) defs = [...defs].sort(buy.sort === "name" ? (a, b) => a.name.localeCompare(b.name, "fr") : buy.sort === "up" ? (a, b) => a.price - b.price : (a, b) => b.price - a.price);
     defs = [...defs].sort((a, b) => (b.okIn(room) ? 1 : 0) - (a.okIn(room) ? 1 : 0));  // what goes here first
-    if (!q && themeOf(buy.cat)) grid = themeGrid(themeOf(buy.cat), room);
+    if (!q && buy.cat === "theme:all") grid = themesGallery(room);
+    else if (!q && themeOf(buy.cat)) grid = themeGrid(themeOf(buy.cat), room);
     else grid = (!q && buy.cat === "animaux" ? hub.petsGridHtml() : "") + (!q && buy.cat === "construction" ? hub.constructGridHtml() : "") + defs.map(d => cardHtml(d, room, !!q || buy.cat === "envies")).join("")
       || `<p class="bnote">${q ? "Aucun objet ne correspond." : buy.cat === "envies" ? "Aucune envie pour l'instant : ouvre la fiche d'un objet et touche ♡ pour le garder ici." : buy.afford ? "Rien à ta portée ici pour l'instant." : "Rien ici."}</p>`;
   }
+  // the scroll of the grid, the tabs and the card stay put while the same shelf is redrawn (a click on a card, a colour)
+  const view = `${room}|${buy.cat}|${q}`, keep = view === renderBuy.view && ["bgrid", "bcats", "bdetail"].map(c => { const e = buyBox.querySelector(`.${c}`); return e && [e.scrollTop, e.scrollLeft]; });
+  renderBuy.view = view;
   buyBox.innerHTML = head + `<div class="bbody"><nav class="brail" aria-label="Familles">${rail}</nav>
-    <div class="bmain"><div class="bbar"><label class="bsearch">🔎<input id="bsearch" type="search" placeholder="Chercher un objet…" value="${esc(buy.q)}" autocomplete="off"></label><div class="bcats">${tabs}</div>${special ? "" : tools}</div>
-    <div class="bgrid${special ? " special" : ""}">${grid}</div></div>${special ? "" : detailHtml(room)}</div>`;
+    <div class="bmain"><div class="bbar"><label class="bsearch">🔎<input id="bsearch" type="search" placeholder="Chercher un objet…" value="${esc(buy.q)}" autocomplete="off"></label><div class="bcats">${tabs}</div>${special || paints ? "" : tools}</div>
+    <div class="bgrid${special ? " special" : ""}${!q && buy.cat === "theme:all" ? " themes" : ""}">${grid}</div></div>${special ? "" : detailHtml(room)}</div>`;
+  if (keep) ["bgrid", "bcats", "bdetail"].forEach((c, i) => { const e = buyBox.querySelector(`.${c}`); if (e && keep[i]) [e.scrollTop, e.scrollLeft] = keep[i]; });
+  else buyBox.querySelector(".bcats .on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   if (focused) { const i = document.getElementById("bsearch"); i.focus(); i.setSelectionRange(caret, caret); }
 }
+// the mouse wheel scrolls the tabs sideways
+buyBox.addEventListener("wheel", ev => {
+  const tabs = ev.target.closest(".bcats"); if (!tabs || tabs.scrollWidth <= tabs.clientWidth || Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return;
+  ev.preventDefault(); tabs.scrollLeft += ev.deltaY;
+}, { passive: false });
 buyBox.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b || b.disabled) return;
   if (b.dataset.buy === "close") return toggleBuy(false);
@@ -362,13 +443,19 @@ buyBox.addEventListener("click", ev => {
   if (b.dataset.buy === "undo") return undoLast();
   if (b.dataset.wish) return toggleWish(b.dataset.wish);
   if (b.dataset.rot !== undefined) { const d = defOf(buy.sel); buy.rot = (buy.rot + 1) % (d?.rots || 4); return renderBuy(); }
-  if (b.dataset.room) { setView(b.dataset.room); buy.placing = buy.moving = buy.pick = null; buyTool.hidden = true; return renderBuy(); }
-  if (b.dataset.group) { const g = BUY_GROUPS.find(x => x[0] === b.dataset.group); buy.q = ""; if (!g[3].includes(buy.cat)) { buy.cat = g[3][0]; buy.sel = null; } return renderBuy(); }  // ♡ Envies: one tab, the wish list
-  if (b.dataset.cat) { buy.cat = b.dataset.cat; buy.sel = null; return renderBuy(); }
-  if (b.dataset.sel) { if (buy.sel !== b.dataset.sel) buy.rot = 0; buy.sel = b.dataset.sel; buy.style = defOf(buy.sel).styles[0].id; return renderBuy(); }
+  if (b.dataset.room) { dropPaint(); setView(b.dataset.room); buy.placing = buy.moving = buy.pick = null; buyTool.hidden = true; return renderBuy(); }
+  if (b.dataset.group) { const g = BUY_GROUPS.find(x => x[0] === b.dataset.group); buy.q = ""; if (!g[3].includes(buy.cat)) { buy.cat = g[3][0]; buy.sel = null; dropPaint(); } return renderBuy(); }  // ♡ Envies: one tab, the wish list
+  if (b.dataset.cat) { buy.cat = b.dataset.cat; buy.sel = null; dropPaint(); return renderBuy(); }
+  if (b.dataset.psel) { const [cat, type] = b.dataset.psel.split("|"), P2 = PAINT[cat], cur = decorSaved(hub.curRoom());
+    buy.sel = null; return tryPaint({ cat, type, color: cur[P2.key] === type ? cur[P2.color] : P2.colors(type)[0] }); }
+  if (b.dataset.ppack) { buy.sel = null; return tryPaint({ pack: b.dataset.ppack }); }
+  if (b.dataset.jump) { buyBox.querySelector(`.bsec[data-shelf="${b.dataset.jump}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (b.dataset.pcolor) return tryPaint({ ...buy.paint, color: b.dataset.pcolor });
+  if (b.dataset.papply) return applyPaint(b.dataset.papply === "all");
+  if (b.dataset.pcancel !== undefined) { dropPaint(); return renderBuy(); }
+  if (b.dataset.sel) { dropPaint(); if (buy.sel !== b.dataset.sel) buy.rot = 0; buy.sel = b.dataset.sel; buy.style = defOf(buy.sel).styles[0].id; return renderBuy(); }
   if (b.dataset.style) { buy.style = b.dataset.style; return renderBuy(); }
   if (b.dataset.project) return hub.buyProject(b.dataset.project);
-  if (b.dataset.paint) return buyPaint(...b.dataset.paint.split("|"));
   if (b.dataset.wear) { const it = SHOP.find(i => i.id === b.dataset.wear); shopAction(shop.owned.includes(it.id) ? "toggle" : "buy", it.id); return renderBuy(); }
   if (b.dataset.place === "hand") { buy.placing = { type: buy.sel, style: buy.style }; buy.pick = null; buyTool.hidden = true; return renderBuy(); }
   if (b.dataset.place === "auto") return autoPlace(buy.sel, buy.style);
@@ -387,10 +474,13 @@ buyBox.addEventListener("change", ev => {
 buyBox.addEventListener("keydown", ev => { if (ev.target.id === "bsearch" && ev.key === "Escape") { ev.stopPropagation(); if (buy.q) { buy.q = ""; renderBuy(); document.getElementById("bsearch")?.focus(); } else ev.target.blur(); } });
 /* ---------- undo the last action (↶ in the header, Ctrl+Z) ---------- */
 let lastAct = null;
-const UNDO_FR = { buy: "l'achat", sell: "la vente", move: "le déplacement" };
+const UNDO_FR = { buy: "l'achat", sell: "la vente", move: "le déplacement", paint: "le décor" };
 function undoLast() {
   const a = lastAct; if (!a) return;
-  if (a.kind === "buy") {  // refunded in full: it was a mistake
+  if (a.kind === "paint") {  // the walls, door or floor put back, refunded
+    for (const { room, was } of a.items) applyDecor(room, was);
+    earn(a.price); wallet.log.unshift({ key: `undo:${Date.now()}`, t: Date.now(), who: CHIEF_NAME, spend: true, label: `Décor annulé : ${a.name}`, total: a.price }); saveWallet();
+  } else if (a.kind === "buy") {  // refunded in full: it was a mistake
     const it = itemByUid(a.uid); if (!it) { lastAct = null; return renderBuy(); }
     furni.items = furni.items.filter(o => o !== it && o.on_ !== it.uid);
     earn(a.price); wallet.log.unshift({ key: `undo:${Date.now()}`, t: Date.now(), who: CHIEF_NAME, spend: true, label: `Achat annulé : ${a.name}`, total: a.price }); saveWallet();
@@ -399,18 +489,43 @@ function undoLast() {
     furni.items.push(...a.items.map(o => ({ ...o })));
   } else for (const was of a.items) { const it = itemByUid(was.uid); if (it) { for (const k of ["side", "on_"]) delete it[k]; Object.assign(it, was); } }
   lastAct = null; saveBuild(); sfx("commit"); buy.pick = null; buyTool.hidden = true;
-  toast("MODE ACHAT", `${UNDO_FR[a.kind][0].toUpperCase()}${UNDO_FR[a.kind].slice(1)} est annulé`, `${a.name}${a.kind === "buy" ? ` · remboursé ${fmtSim(a.price)}` : a.kind === "sell" ? ` · racheté ${fmtSim(a.price)}` : " · remis à sa place"}`);
+  toast("MODE ACHAT", `${UNDO_FR[a.kind][0].toUpperCase()}${UNDO_FR[a.kind].slice(1)} est annulé`, `${a.name}${a.kind === "buy" || a.kind === "paint" ? ` · remboursé ${fmtSim(a.price)}` : a.kind === "sell" ? ` · racheté ${fmtSim(a.price)}` : " · remis à sa place"}`);
   renderBuy();
 }
 /* ---------- the wish list (♡): objects kept for later ---------- */
 const wishSlot = new SaveSlot("office-wishlist", { types: [] }), wishes = () => wishSlot.data.types;
 const wished = type => wishes().includes(type);
 function toggleWish(type) { const l = wishes(), i = l.indexOf(type); if (i >= 0) l.splice(i, 1); else l.push(type); wishSlot.save(); renderBuy(); }
-function buyPaint(cat, type, color) {
-  const P2 = PAINT[cat], room = hub.curRoom(), cur = decor[room] || {};
-  if (cur[P2.key] === type && cur[P2.color] === color) return;
-  if (!spend(P2.price, `${P2.label} : ${(DECOR_TYPES[P2.key].find(t => t[0] === type) || [, type])[1]}`)) return;
-  applyDecor(room, { [P2.key]: type, [P2.color]: color }); sfx("commit"); renderBuy();
+// try a pattern (or a theme's whole look) on in this room; dropPaint puts the room back as it is
+function tryPaint(p) {
+  const room = hub.curRoom(), was = buy.paint;
+  buy.paint = p;
+  if ((p.pack || p.cat === "portes") && !(was && (was.pack || was.cat === "portes"))) lookAtDoor(room);
+  tryDecor(room, p.pack ? packKv(p.pack) : { [PAINT[p.cat].key]: p.type, [PAINT[p.cat].color]: p.color });
+  renderBuy();
+}
+function dropPaint() { buy.paint = null; untryDecor(); }
+// the room's door brought into view, above the buy mode's panel (it is on the back wall, at x in the 2D strip)
+function lookAtDoor(room) {
+  if (!hub.Room?.current()?.iso?.()) return;
+  const x = room === "office" ? DOOR.x + 1 : 23, free = 1 - buyBox.offsetHeight / Math.max(1, cv.getBoundingClientRect().height);
+  hub.ISO.under = H * (1 - free);  // the camera may go down under the panel while the buy mode is open (toggleBuy)
+  hub.ISO.lookAt(P(x, 70, 18), 0.5, Math.max(0.2, free * 0.55));
+}
+// pay for the selection and keep it: in this room, or in every room that does not have it yet
+function applyPaint(everywhere) {
+  const p = buy.paint, room = hub.curRoom(); if (!p) return;
+  const kv = p.pack ? packKv(p.pack) : { [PAINT[p.cat].key]: p.type, [PAINT[p.cat].color]: p.color };
+  const name = p.pack ? `Ambiance ${THEMES.find(t => t.id === p.pack).name}` : `${PAINT[p.cat].label} : ${paintLabel(PAINT[p.cat].key, p.type)}`;
+  untryDecor();
+  const rooms = (everywhere ? paintRooms(PAINT[p.cat].key) : [room]).filter(r => Object.keys(kv).some(k => decorSaved(r)[k] !== kv[k]));
+  const price = p.pack ? packPrice() : PAINT[p.cat].price * rooms.length;
+  if (!rooms.length || !spend(price, rooms.length > 1 ? `${name} (${rooms.length} pièces)` : name)) return tryPaint(p);
+  lastAct = { kind: "paint", name, price, items: rooms.map(r => ({ room: r, was: Object.fromEntries(Object.keys(kv).map(k => [k, decorSaved(r)[k]])) })) };
+  for (const r of rooms) applyDecor(r, kv);
+  buy.paint = null; sfx("commit");
+  toast("MODE ACHAT", name, rooms.length > 1 ? `${rooms.length} pièces · ${fmtSim(price)}` : `${hub.Room.get(room).label} · ${fmtSim(price)}`);
+  renderBuy();
 }
 
 /* ---------- where an object can go ---------- */
