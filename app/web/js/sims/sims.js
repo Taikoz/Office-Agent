@@ -232,7 +232,7 @@ simsBox.addEventListener("click", ev => {
   else if (a === "pc") { const e = [...ents.values()].find(x => x.who === simSel && !x.leaving); if (e) openPc(e.agent.id); }
 });
 setInterval(renderSims, 1000);
-toggleSims(simsOpen);
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
 provide({ get ACT_SERVES() { return ACT_SERVES; }, get NEEDS() { return NEEDS; }, get chiefBusyNow() { return chiefBusyNow; }, get chiefOrder() { return chiefOrder; }, get drawEmotion() { return drawEmotion; }, get ensureNeeds() { return ensureNeeds; }, get lowestNeed() { return lowestNeed; }, get moodColor() { return moodColor; }, get needColor() { return needColor; }, get needMeters() { return needMeters; }, get renderSims() { return renderSims; }, get selectSim() { return selectSim; }, get simPortrait() { return simPortrait; }, get simPortraits() { return simPortraits; }, get simSel() { return simSel; }, get simsOpen() { return simsOpen; }, get stepNeeds() { return stepNeeds; }, get toggleEmotions() { return toggleEmotions; }, get toggleSims() { return toggleSims; }, get urgentNeed() { return urgentNeed; } });
+toggleSims(simsOpen);  // after provide: the panel draws portraits through hub.simPortrait (social/relations.js)

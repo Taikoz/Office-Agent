@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, net, pricing, questions, routes, savegame, schedules, slack, team, terminal, transcripts  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, launcher, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -756,6 +756,65 @@ class NetRejoinTests(unittest.TestCase):
         self.assertEqual(sorted(p["name"] for p in net.HUB.peers.values()), ["G", "H"])
         self.assertNotIn(g1["sid"], net.HUB.peers)
         self.assertNotIn(h1["sid"], net.HUB.peers)
+
+
+class QuipTests(unittest.TestCase):
+    """The devs' own words (quips.py): off by default, a daily cap, the comic's JSON, no real model call."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.patch = mock.patch.object(config, "STATE_DIR", Path(self.tmp.name))
+        self.patch.start()
+        quips._cache.clear()
+        self.detail = {"status": "working", "ticket": "DEMO-1", "description": "Ajouter le refresh token", "eventCount": 3,
+                       "events": [{"kind": "tool", "tool": "Bash", "label": "pytest"}, {"kind": "error", "label": "KeyError 'exp'"}],
+                       "edits": [{"file": "/repo/src/auth/login.py", "new": "def refresh(): ..."}],
+                       "terminal": [{"cmd": "pytest tests/", "failed": True, "out": "3 failed"}]}
+
+    def tearDown(self) -> None:
+        self.patch.stop()
+        self.tmp.cleanup()
+
+    def test_off_by_default_and_capped(self) -> None:
+        self.assertFalse(quips.status()["on"])
+        self.assertEqual(quips.ask("s", "p"), (None, "off"))
+        quips.set_on(True)
+        with mock.patch.object(quips, "engine", return_value="cli"), mock.patch.object(quips, "_cli", return_value=" Encore ce test ! "), mock.patch.object(quips, "GAP", 0):
+            self.assertEqual(quips.ask("s", "p"), ("Encore ce test !", ""))
+            s = quips.settings(); s["used"] = quips.DAILY_MAX; quips._save(s)
+            self.assertEqual(quips.ask("s", "p"), (None, "limit"))
+
+    def test_failed_call_gives_its_slot_back_and_off_wins(self) -> None:
+        quips.set_on(True)
+        with mock.patch.object(quips, "engine", return_value="cli"), mock.patch.object(quips, "_cli", return_value=None), mock.patch.object(quips, "GAP", 0):
+            self.assertEqual(quips.ask("s", "p"), (None, "failed"))
+            self.assertEqual(quips.settings()["used"], 0)
+        call = mock.Mock(return_value="trop tard")
+        with mock.patch.object(quips, "engine", return_value="cli"), mock.patch.object(quips, "_cli", call), \
+                mock.patch.object(quips.time, "sleep", side_effect=lambda _s: quips.set_on(False)), mock.patch.object(quips, "_last", quips.time.time() + 5):
+            self.assertEqual(quips.ask("s", "p"), (None, "off"))  # switched off during the wait: no call, the slot back
+        call.assert_not_called()
+        self.assertEqual(quips.settings(), {**quips.settings(), "on": False, "used": 0})
+
+    def test_context_and_cache(self) -> None:
+        ctx = quips.work_context(self.detail)
+        self.assertIn("DEMO-1", ctx)
+        self.assertIn("login.py", ctx)
+        self.assertNotIn("/repo/src", ctx)
+        self.assertIn("(échec)", ctx)
+        with mock.patch.object(quips, "agent_detail", return_value=self.detail), mock.patch.object(quips, "ask", return_value=("« Ce KeyError me nargue 😤 »\nautre", "")) as ask:
+            self.assertEqual(quips.quip("s1", "a1", "Léa"), {"line": "Ce KeyError me nargue 😤"})
+            self.assertEqual(quips.quip("s1", "a1", "Léa"), {"line": "Ce KeyError me nargue 😤", "same": True})
+            self.assertEqual(ask.call_count, 1)
+
+    def test_comic_json(self) -> None:
+        moments = [{"kind": "ticket", "hint": "DEMO-1"}, {"kind": "bug", "hint": "KeyError"}]
+        answer = 'Voici : [{"caption": "Lundi matin.", "say": "Allez !"}, {"caption": "Le drame.", "say": "Non 😱"}]'
+        with mock.patch.object(quips, "agent_detail", return_value=self.detail), mock.patch.object(quips, "ask", return_value=(answer, "")):
+            self.assertEqual(quips.comic("s1", "a1", "Léa", moments)["panels"][1], {"caption": "Le drame.", "say": "Non 😱"})
+        quips._cache.clear()
+        with mock.patch.object(quips, "agent_detail", return_value=self.detail), mock.patch.object(quips, "ask", return_value=("pas de JSON", "")):
+            self.assertEqual(quips.comic("s1", "a1", "Léa", moments), {"error": "failed"})
 
 
 class SlackTests(unittest.TestCase):

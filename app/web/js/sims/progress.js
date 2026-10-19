@@ -16,7 +16,7 @@ import { loadDetail, openPanel } from "../ui/panel.js";
 /* ---------- game: scene events, bosses, XP, achievements, quests, sounds ---------- */
 // the trophy shelf and the employee of the week's frame, where they hang (bought: build.js; offscreen: none)
 export const SHELF = { x: -999, y: -999, w: 50 }, FRAME = { x: -999, y: -999, w: 20, h: 26 };
-export const FX_BG = { talk: "#f4f2ea", pass: "#51cf66", fail: "#ff6b6b", mr: "#fbaa08", push: "#5aa9ff", commit: "#d5eeff", verify: "#5aa9ff", boss: "#fbaa08" };
+export const FX_BG = { talk: "#f4f2ea", pass: "#51cf66", fail: "#ff6b6b", mr: "#fbaa08", push: "#5aa9ff", commit: "#d5eeff", verify: "#5aa9ff", boss: "#fbaa08", quip: "#e3f1ff" };
 export let game = null, gameSeen = null, banner = null;
 export const evSeen = new Map(), particles = [], planes = [];
 let recentCups = new Map();
@@ -39,6 +39,7 @@ function react(a, ev) {
   const e = ents.get(a.id);
   const kind = { tests_pass: "pass", tests_fail: "fail", boss_defeated: "boss", to_verify: "verify" }[ev.kind] || ev.kind;
   sfx(kind);
+  if (["pass", "fail", "push", "mr", "boss"].includes(kind)) hub.quipNow?.(a.id);  // the dev says something about it (agents/quips.js)
   if (["mr", "verify", "boss"].includes(kind)) { catCheer(); hub.cheer?.(); }  // the chief raises his cup (world/upkeep.js)
   if (!e || e.queued) return;
   crewAdd(e.who, { pass: { moral: 5 }, fail: { moral: -6, fatigue: 2 }, push: { moral: 3 }, commit: { moral: 2 }, mr: { moral: 10 },

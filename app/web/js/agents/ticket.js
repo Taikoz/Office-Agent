@@ -28,6 +28,7 @@ function cardTools(a) {
   const b = [];
   if (a.ticket) b.push(`<button data-history="${esc(a.ticket)}" title="Tous les agents passés sur ce ticket">🕘 historique</button>`);
   const dbf = hub.debriefTool(a); if (dbf) b.push(dbf);  // debrief.js
+  if (a.status === "done" || (a.tools || 0) >= 20) b.push(`<button data-comic="${esc(a.id)}" title="La mission racontée en BD (à coller dans la MR ou sur Slack)">🎞️ BD</button>`);
   if (["blocked", "gone"].includes(a.status) || isStuck(a)) b.push(`<button data-relaunch="${esc(a.id)}" title="Relancer la même mission avec une consigne de reprise">🔁 relancer</button>`);
   return b.length ? `<div class="tools2">${b.join("")}</div>` : "";
 }

@@ -14,7 +14,7 @@ let loopErrors = 0;
 function loop(t) {
   requestAnimationFrame(loop);
   if (hub.frameSkip?.(t)) return;  // 30 frames a second when the office is not in use (ui/quality.js)
-  try { step(Math.min(64, t - last), t); last = t; render(t); }
+  try { step(Math.min(64, t - last), t); last = t; render(t); hub.afterFrame?.(t); }  // afterFrame: the timelapse's picture (ui/timelapse.js)
   catch (err) { last = t; if (loopErrors++ % 300 === 0) console.error("[office] frame", err); }
 }
 
