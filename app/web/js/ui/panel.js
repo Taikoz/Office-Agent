@@ -63,7 +63,7 @@ cv.addEventListener("click", ev => {
   if (id.startsWith("chiefact:")) return chiefLoungeAct(id.slice(9));
   if (id === "cat") return petCat();
   if (id === "lounge") return chiefToLounge();                                        // the office door: he goes on a break
-  if (id === "office") return view === "lounge" && chief.room === "lounge" ? chiefToOffice() : setView("office");
+  if (id === "office") return view !== "office" && chief.room === view ? chiefToOffice() : setView("office");  // his room's door: he goes; else the view
   if (id.startsWith("happen:")) return hub.Happening.clickId(id.slice(7));
   if (id === "meet-table") return hub.startMeeting();
   if (id === "dog") return hub.openPie("dog", null, canvasPoint(ev));  // the break-room door: back to work

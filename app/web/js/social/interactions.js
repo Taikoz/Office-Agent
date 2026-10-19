@@ -96,7 +96,7 @@ export function workerPieItems(id) {
 // the chief walks to the desk (from the break room through the door if need be), then `fn`
 function chiefToDev(e, fn) {
   const go = () => chiefGo({ x: e.desk.x + DESK_SP / 2 - 4, y: e.desk.y + 24 }, () => { if (ents.get(e.agent.id) === e) fn(); });
-  if (chief.room === "lounge") { chief.pendingOffice = go; chiefToOffice(); } else go();
+  if (chief.room !== "office") { chief.pendingOffice = go; chiefToOffice(); } else go();
 }
 export function workerAction(id, act) {
   const e = ents.get(id); if (!e) return;
@@ -106,7 +106,7 @@ export function workerAction(id, act) {
   if (act === "relaunch") return relaunch(id);
   if (act === "coffee") return hub.enqueue("☕", `Café pour ${who}`, () => {  // by the coffee machine first
     const brew = () => chiefGo("coffee", () => setTimeout(() => chiefToDev(e, served), 1500));
-    if (chief.room === "lounge") { chief.pendingOffice = brew; chiefToOffice(); } else brew();
+    if (chief.room !== "office") { chief.pendingOffice = brew; chiefToOffice(); } else brew();
   });
   function served() { crewAdd(who, { cafe: 45 }); hub.addMoodlet(who, "chiefcoffee", "☕", "Café du chef", 6, 60); relAdd(CHIEF_NAME, who, 4); fx("☕ merci chef !", "commit"); say(CHIEF_NAME, "Tiens, un café.", 2000); }
   if (act === "cheer") return hub.enqueue("🎉", `Encourager ${who}`, () => chiefToDev(e, () => {

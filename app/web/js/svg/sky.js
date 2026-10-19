@@ -2,7 +2,7 @@
 // moon, sun, clouds, lightning, the terrace sky; drawSky() puts them together with the weather.
 
 import { hub } from "../hub.js";
-import { S, W, ctx, px } from "../core/core.js";
+import { H, S, W, ctx, px } from "../core/core.js";
 import { ART, R, StaticArt, SvgArt, shade } from "./base.js";
 
 // style: velours (default), lin (straight linen panels), store (roller blind), aucun (bare window); color: the fabric (decor.js)
@@ -135,6 +135,34 @@ class TerraceMoonArt extends SvgArt {
   body({ bg }) { return `<circle cx="6" cy="6" r="5.4" fill="#f4efc9"/><circle cx="8.4" cy="4.6" r="4.6" fill="${bg}"/>`; }
 }
 ART.terracemoon = new TerraceMoonArt();
+
+// the terrace's sky (rooms/built.js), as wide as the scene: the hour, then the weather of today's tests like the windows
+// (drawSky): a grey sky, more and darker clouds, no sun nor stars under the rain, lightning in a storm, snowflakes
+export function drawTerraceSky(t) {
+  const { h, phase } = skyPhase(), w = typeof hub.weather === "function" ? hub.weather() : "clear", grey = SKY_GREY[w], still = hub.focusMode, tt = still ? 0 : t;
+  const stops = grey ? (phase === "night" ? ["#141a33", "#1d2545", "#2a3354"] : grey) : SKY[phase];
+  px(0, 0, W, 72, stops[2]);
+  ART.terracesky.draw(0, 0, { stops });
+  if (phase === "night") {
+    if (!grey) for (let i = 0; i < 40; i++) if ((Math.floor(tt / 600) + i) % 7) px((i * 53) % W, (i * 17) % 34, i % 5 ? 0.7 : 1, i % 5 ? 0.7 : 1, "#f4f2ff");
+    if (!grey || w === "cloud") ART.terracemoon.draw(318, 6, { bg: stops[0] });
+  } else if (!grey || w === "cloud") {
+    const k = Math.max(0, Math.min(1, (h - 6) / 15));
+    ART.sun.draw(20 + k * 350, 30 - Math.sin(k * Math.PI) * 26, { color: phase === "day" ? "#ffe066" : "#ff9f43" });
+  }
+  const tone = CLOUD_TONES[grey ? w : phase], n = { cloud: 8, rain: 10, storm: 12, snow: 8 }[w] || 5;
+  for (let i = 0; i < n; i++) { const kind = "abc"[i % 3], cw = ART.cloud.width(kind), x = (tt / (700 + (i % 5) * 160) + i * 97) % (W + cw + 20) - cw - 10; ART.cloud.draw(x, 4 + (i * 7) % 18 - (i >= 5 ? 3 : 0), { kind, tone }); }
+  if (phase === "day" && !grey && !still) for (let i = 0; i < 3; i++) { const bx = ((t / 60 + i * 40) % (W + 40)) - 20, by = 18 + i * 5 + Math.sin(t / 300 + i) * 2, up = Math.floor(t / 200 + i) % 2; px(bx, by, 1.2, 0.6, "#2a2a33"); px(bx + 1.2, by + (up ? -0.6 : 0.4), 1.2, 0.6, "#2a2a33"); px(bx - 1.2, by + (up ? -0.6 : 0.4), 1.2, 0.6, "#2a2a33"); }
+  if (w === "storm" && !still && Math.floor(t / 130) % 37 === 0) { px(0, 0, W, 72, "rgba(255,255,255,.4)"); ART.bolt.draw(120 + (Math.floor(t / 4810) * 97) % 200, 10); }
+  return { phase, w, grey: !!grey };
+}
+// over the whole terrace: a grey veil under a heavy sky, the snowflakes of a snowy day
+export function terraceWeatherVeil(t) {
+  const w = typeof hub.weather === "function" ? hub.weather() : "clear", still = hub.focusMode;
+  if (w === "rain" || w === "storm") fillVeil(w === "storm" ? "rgba(20, 26, 48, .22)" : "rgba(60, 72, 96, .14)");
+  if (w === "snow") for (let i = 0; i < 50; i++) px((i * 37.3 + (still ? 0 : t / (70 + i % 5 * 10))) % W, (i * 23.7 + (still ? 0 : t / 45)) % H, 1, 1, "#ffffff");
+}
+function fillVeil(c) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = c; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore(); }
 
 /* the sky behind a window: gradient by the real hour (night, dawn, day, dusk), the sun on its course, moon and
    twinkling stars at night, clouds drifting with parallax; the weather of today's tests (weather()) greys the sky,

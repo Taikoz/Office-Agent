@@ -204,7 +204,7 @@ function coffee(A, s, t) {
   const now2 = new Set();
   if (s.room === "office") {
     for (const e of ents.values()) if (e.pose === "coffee" && !e.path?.length) now2.add(e.who || e.agent?.id);
-    if (chief.room !== "lounge" && chief.at === "coffee") now2.add(CHIEF_NAME);
+    if (chief.room === "office" && chief.at === "coffee") now2.add(CHIEF_NAME);
   }
   for (const w of now2) if (!brewing.has(w)) {
     burst(A.amb, t, { kind: "pink", f: 900, q: 1.5, v: 0.05, a: 0.05, d: 1.1, pan: 0.5 });  // grinding
@@ -217,8 +217,9 @@ function coffee(A, s, t) {
 const lastAt = new WeakMap(), CHIEF_LOUNGE = {};  // the chief's steps in the break room have their own count
 function steps(A, s, t) {
   const soft = s.room === "lounge" || s.room === "library", walkers = [];
-  if (s.room === "office") { for (const e of ents.values()) walkers.push([e, e.x, e.y]); if (chief.room !== "lounge") walkers.push([chief, chief.x, chief.y]); }
+  if (s.room === "office") { for (const e of ents.values()) walkers.push([e, e.x, e.y]); if (chief.room === "office") walkers.push([chief, chief.x, chief.y]); }
   else if (s.room === "lounge") { for (const l of hub.loungers?.values() || []) walkers.push([l, l.x, l.y]); if (chief.room === "lounge") walkers.push([CHIEF_LOUNGE, chief.lx, chief.ly]); }
+  else if (chief.room === s.room) walkers.push([CHIEF_LOUNGE, chief.lx, chief.ly]);  // a built room (world/chief.js)
   let n = 0;
   for (const [o, x, y] of walkers) {
     if (x == null) continue;
