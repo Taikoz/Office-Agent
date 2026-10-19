@@ -14,7 +14,7 @@ import { crewAdd } from "../sims/crew.js";
 import { CHIEF_LOOK, chiefGo, chiefToOffice } from "./chief.js";
 import { setView, view } from "./lounge.js";
 import { SHOP, itemOn, jukebox, shop, shopAction, toggleJukebox } from "./shop.js";
-import { DECOR_COLORS, DECOR_TYPES, applyDecor, decor, decorSwatch, rugCanvas } from "./decor.js";
+import { DECOR_COLORS, DECOR_TYPES, THEME_FLOORS, applyDecor, decor, decorSwatch, drawTileAnim, floorColors, rugCanvas, tileCanvas } from "./decor.js";
 import { esc } from "../core/data.js";
 import { canvasPoint } from "../ui/panel.js";
 import { sfx, toast } from "../sims/progress.js";
@@ -40,13 +40,16 @@ export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "
 // theme, its objects by shelf (an object's shelf, else its category's), then the chief's clothes of the wardrobe
 export const THEMES = [{ id: "magie", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef.", deco: "Déco et objets magiques" },
   { id: "scifi", icon: "🚀", name: "Station spatiale", desc: "Cloisons de vaisseau, porte automatique, baie sur l'espace, ordinateurs du futur, téléporteurs, robot, poste de commandement (ChiefOS en HOLO)… et la combinaison du chef.", deco: "Gadgets et technologie" },
-  { id: "manoir", icon: "🦇", name: "Manoir hanté", desc: "Murs de manoir, porte qui grince, portrait dont les yeux te suivent, bocal à fantômes (les agents bloqués), horloge comtoise, cercueil, orgue du maître (ChiefOS en Crypte)… et la cape du chef.", deco: "Curiosités hantées" }];
+  { id: "manoir", icon: "🦇", name: "Manoir hanté", desc: "Murs de manoir, porte qui grince, portrait dont les yeux te suivent, bocal à fantômes (les agents bloqués), horloge comtoise, cercueil, orgue du maître (ChiefOS en Crypte)… et la cape du chef.", deco: "Curiosités hantées" },
+  { id: "pirate", icon: "🏴‍☠️", name: "Navire pirate", desc: "Coque à composer, sabord à canon, fenêtre de poupe (une voile par agent en mer), coffre au trésor (les missions livrées), perroquet, kraken (les CI rouges), barre du capitaine (ChiefOS en Galion)… et le tricorne du chef.", deco: "Trésors et curiosités du bord" },
+  { id: "japon", icon: "⛩️", name: "Maison japonaise", desc: "Shōji, fusuma à la grande vague, tokonoma dont le kanji dit l'humeur du bureau, daruma (un par agent), bassin aux carpes koï, jardin zen, torii (les CI vertes), estrade du sensei (ChiefOS en Zen)… et le kimono du chef.", deco: "Objets de la maison" },
+  { id: "plage", icon: "🏖️", name: "Plage & beach club", desc: "Cabines rayées, rideau de coquillages, baie sur l'océan (un surfeur par agent), piscine, château de sable (les tests verts), drapeau de baignade (les CI), crabes (les tests rouges), paillote bar, platines du DJ, poste du maître-nageur (ChiefOS en Tropical)… et la chemise hawaïenne du chef.", deco: "Beach club" }];
 for (const t of THEMES) BUY_CATS.push([`theme:${t.id}`, t.icon, t.name]);
-const SHELVES = [["murs", "🧱", "Murs à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
+const SHELVES = [["murs", "🧱", "Murs à composer"], ["sols", "🟨", "Sols"], ["dalles", "🏝️", "Dalles à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
   ["tables", "🍽️", "Tables"], ["bureaux", "🗄️", "Bureaux"], ["ordinateurs", "💻", "Ordinateurs"], ["deco", "✨", "Déco"], ["garde", "🎩", "Garde-robe du chef"]];
 const shelfOf = d => d.shelf || ({ fenetres: "fenetres", tapis: "tapis", lumiere: "lumiere", chaises: "chaises", fauteuils: "chaises", canapes: "chaises", tables: "tables", bureau: "bureaux", electronique: "ordinateurs" }[d.cat]) || "deco";
 const themeOf = c => c?.startsWith("theme:") ? c.slice(6) : null;
-const catCount = c => themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length : CATALOG.filter(d => d.cat === c).length;
+const catCount = c => themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length + THEME_FLOORS.filter(f => f[2] === themeOf(c)).length : CATALOG.filter(d => d.cat === c).length;
 export const defOf = type => CATALOG.find(d => d.type === type);
 const styleOf = it => { const d = defOf(it.type); return d.styles.find(s => s.id === it.style) || d.styles[0]; };
 export const itemsIn = room => (furni.items || []).filter(it => it.room === room && defOf(it.type));
@@ -60,18 +63,22 @@ const deskStyle = slot => { const it = (furni.items || []).find(o => defOf(o.typ
 
 /* ---------- drawing what is not a piece of furniture: rugs on the floor, objects on the walls ---------- */
 export const drawItem = (it, t, alpha = 1) => defOf(it.type).draw2d(it, t, alpha);
-export function drawRug(it, alpha = 1) {
-  const d = defOf(it.type), st = styleOf(it), [fw, fd] = footDims(d, it.rot), c = rugCanvas(d.shape || "uni", st.c || st.sw, fw, fd);
+// a tile (the beach's sand, shore, sea: d.tile) is painted turned, and its water moves (decor.js drawTileAnim)
+export function drawRug(it, alpha = 1, t = performance.now()) {
+  const d = defOf(it.type), st = styleOf(it), [fw, fd] = footDims(d, it.rot), color = st.c || st.sw;
+  const c = d.tile ? tileCanvas(d.shape, color, fw, fd, it.rot || 0) : rugCanvas(d.shape || "uni", color, fw, fd);
   if (alpha < 1) ctx.globalAlpha = alpha;
   ctx.drawImage(c, Math.round(it.x * S), Math.round(it.y * S));
+  if (d.tile) drawTileAnim(it, d.shape, fw, fd, t);
   ctx.globalAlpha = 1;
 }
 // layer "rug": the rugs (inside the floor's transform); "wall": the objects on the right wall; "leftwall": on the left one
 export function drawRoomItems(room, t, layer = "rug") {
+  if (layer === "rug") for (const it of itemsIn(room)) if (defOf(it.type).tile && !(buy.moving && buy.moving.uid === it.uid)) drawRug(it, 1, t);  // the tiles first, the rugs over them
   for (const it of itemsIn(room)) {
     if (buy.moving && buy.moving.uid === it.uid) continue;
     const d = defOf(it.type);
-    if (layer === "rug" && d.kind === "rug") drawRug(it);
+    if (layer === "rug" && d.kind === "rug" && !d.tile) drawRug(it, 1, t);
     else if (layer === "wall" && d.kind === "wall" && (it.side || "back") === "back") wallItem(it, t, "back");
     else if (layer === "leftwall" && d.kind === "wall" && it.side === "left") wallItem(it, t, "left");
   }
@@ -233,10 +240,11 @@ function rotUrl(def, st, rot) {
   return thumbs.get(key);
 }
 const PAINT = { murs: { key: "wall", color: "wallColor", price: 400, label: "Murs" }, sols: { key: "floor", color: "floorColor", price: 600, label: "Sol" } };
-function paintGrid(cat, room) {
+// types: [type, label] (the floors of a theme on its shelf); a theme's floor has its own colours (decor.js THEME_FLOORS)
+function paintGrid(cat, room, types = DECOR_TYPES[PAINT[cat].key]) {
   const P2 = PAINT[cat], cur = decor[room] || {};
-  return DECOR_TYPES[P2.key].map(([type, label]) => {
-    const colors = DECOR_COLORS[P2.color].slice(0, 8);
+  return types.map(([type, label]) => {
+    const colors = P2.key === "floor" ? floorColors(type) : DECOR_COLORS[P2.color].slice(0, 8);
     return `<div class="bitem paint"><b>${esc(label)}</b><div class="pswatches">${colors.map(c => `<button class="psw${cur[P2.key] === type && cur[P2.color] === c ? " on" : ""}" data-paint="${cat}|${type}|${c}" title="${esc(label)} · ${c} · ${fmtSim(P2.price)}"><img alt="" src="${decorSwatch(P2.key === "wall" ? "wall" : "floor", type, c)}"></button>`).join("")}</div></div>`;
   }).join("");
 }
@@ -251,6 +259,7 @@ const TIER = /^(\S+ [^·]+?) · /;  // "💸 Pauvre · …": the range, said in 
 const SORTS = [["", "Ordre du magasin"], ["up", "Prix croissant"], ["down", "Prix décroissant"], ["name", "Nom"]];
 Object.assign(buy, { q: "", sort: "", afford: false });
 const ROOM_FR = { office: "le bureau", lounge: "la salle de repos", meeting: "la réunion", terrace: "la terrasse", gym: "la salle de sport", library: "la bibliothèque" };
+const deRoom = r => (ROOM_FR[r] || "cette pièce").replace(/^le /, "du ").replace(/^la /, "de la ").replace(/^cette/, "de cette");  // « du bureau », « de la terrasse »
 const roomsOf = d => d.room === "any" ? "toutes les pièces" : [].concat(d.room).map(r => ROOM_FR[r] || r).join(", ");
 // a card of the grid: the object on its pedestal, its name, its price, how many are already in this room
 function cardHtml(d, room, showCat) {
@@ -272,7 +281,7 @@ function detailHtml(room) {
   const st = d.styles.find(s => s.id === buy.style) || d.styles[0], lock = hub.lockedFor?.(d), ok = d.okIn(room), off = !ok || wallet.funds < d.price || lock;
   const tier = TIER.exec(d.desc || ""), desc = tier ? d.desc.slice(tier[0].length) : d.desc || "", n = itemsIn(room).filter(it => it.type === d.type).length;
   const why = lock ? `🔒 Débloqué au niveau ${hub.unlockOf(d)} du bureau (tu es niveau ${hub.officeLevel()}) : réussis des défis de la semaine.` : !ok ? `Ne va pas dans ${ROOM_FR[room] || "cette pièce"} : ${roomsOf(d)}.` : wallet.funds < d.price ? `Il te manque ${fmtSim(d.price - wallet.funds)}.` : "";
-  const rots = d.kind === "floor" || d.kind === "top" ? d.rots || 4 : 1, rot = buy.rot % rots;
+  const rots = d.kind === "floor" || d.kind === "top" || (d.kind === "rug" && d.rots) ? d.rots || 4 : 1, rot = buy.rot % rots;
   return `<aside class="bdetail"><span class="bpic big"><img alt="" src="${rotUrl(d, st, rot)}"${rot % 2 ? ' class="flip"' : ""}>
       <span class="bpicacts">${rots > 1 ? `<button data-rot title="Le tourner avant de le placer (R)">↻</button>` : ""}<button data-wish="${d.type}" class="${wished(d.type) ? "on" : ""}" title="${wished(d.type) ? "Retirer de mes envies" : "Garder dans mes envies"}">${wished(d.type) ? "♥" : "♡"}</button></span></span>
     <div class="bdhead"><b>${esc(d.name)}</b><span class="bprice">${fmtSim(d.price)}</span></div>
@@ -293,6 +302,11 @@ function themeGrid(id, room) {
         const look = it.chief ? { ...CHIEF_LOOK, ...it.chief } : CHIEF_LOOK, hat = it.chief?.hat || (it.hat ? it.id.slice(4) : "");
         return `<div class="bitem${own ? " own" : ""}"><img class="bthumb big" alt="" src="${ART.person.url({ look, tux: true, smile: true, hat, frame: 0 })}"><b>${esc(it.name)}</b><span class="muted small">${esc(it.desc)}</span>
           <span class="price">${own ? (on ? "✓ porté" : "possédé") : fmtSim(it.price)}</span><button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (on ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
+      continue;
+    }
+    if (sid === "sols") {  // the theme's floors: painted on the whole room, like the floors of the Sols category
+      const floors = THEME_FLOORS.filter(f => f[2] === id); if (!floors.length) continue;
+      out += `<h5 class="bsec">${ic} ${label}</h5><p class="bnote">Sol ${deRoom(room)} : ${fmtSim(PAINT.sols.price)} le changement ; les meubles se posent dessus.</p>` + paintGrid("sols", room, floors);
       continue;
     }
     const here = mine.filter(d => shelfOf(d) === sid); if (!here.length) continue;
@@ -322,7 +336,7 @@ export function renderBuy() {
   const tools = `<span class="btools"><label class="bchk"><input type="checkbox" data-afford${buy.afford ? " checked" : ""}> à ma portée</label>
     <select data-sort aria-label="Trier">${SORTS.map(([id, label]) => `<option value="${id}"${buy.sort === id ? " selected" : ""}>${label}</option>`).join("")}</select></span>`;
   let grid = "", special = !q && (PAINT[buy.cat] || ["garde", "animaux", "construction"].includes(buy.cat));
-  if (!q && PAINT[buy.cat]) grid = `<p class="bnote">${PAINT[buy.cat].label} de ${ROOM_FR[room] || "cette pièce"} : ${fmtSim(PAINT[buy.cat].price)} le changement.</p>` + paintGrid(buy.cat, room);
+  if (!q && PAINT[buy.cat]) grid = `<p class="bnote">${PAINT[buy.cat].label} ${deRoom(room)} : ${fmtSim(PAINT[buy.cat].price)} le changement.</p>` + paintGrid(buy.cat, room);
   else if (!q && buy.cat === "garde") {
     grid = SHOP.map(it => { const own = shop.owned.includes(it.id);
       return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
@@ -395,7 +409,7 @@ function toggleWish(type) { const l = wishes(), i = l.indexOf(type); if (i >= 0)
 function buyPaint(cat, type, color) {
   const P2 = PAINT[cat], room = hub.curRoom(), cur = decor[room] || {};
   if (cur[P2.key] === type && cur[P2.color] === color) return;
-  if (!spend(P2.price, `${P2.label} : ${type}`)) return;
+  if (!spend(P2.price, `${P2.label} : ${(DECOR_TYPES[P2.key].find(t => t[0] === type) || [, type])[1]}`)) return;
   applyDecor(room, { [P2.key]: type, [P2.color]: color }); sfx("commit"); renderBuy();
 }
 
@@ -441,7 +455,10 @@ export function placement(type, p, room, rot = 0, ignore = null) {
   if (d.kind !== "rug") {
     if (FIXED_FLOOR[room]().some(([fx, fy, w, h]) => overlap(me, { x: fx, y: fy, w, h }))) return null;
     for (const o of itemsIn(room)) { const od = defOf(o.type); if (o.uid === ignore || od.kind !== "floor" || o.on_) continue; if (overlap(me, itemRect(o))) return null; }
-  } else for (const o of itemsIn(room)) if (o.uid !== ignore && defOf(o.type).kind === "rug" && overlap(me, itemRect(o))) return null;
+  } else for (const o of itemsIn(room)) {  // a rug may lie on the beach's tiles, not on another rug (nor a tile on a tile)
+    const od = defOf(o.type);
+    if (o.uid !== ignore && od.kind === "rug" && !!od.tile === !!d.tile && overlap(me, itemRect(o))) return null;
+  }
   return { x, y };
 }
 // a wall object goes on the wall nearest the pointer, Sims style, at its hanging height (eye level unless it says);

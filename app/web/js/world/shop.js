@@ -27,9 +27,22 @@ export const SHOP = [
   { id: "hat:tophat", name: "Hauts-de-forme pour l'équipe", price: 1300, desc: "Toute l'équipe en haut-de-forme noir à ruban rouge.", hat: true, theme: "manoir", icon: "🎩" },
   { id: "chief:vampire", name: "Cape de vampire", price: 1600, desc: `Pour ${CHIEF_NAME} : un habit noir, un jabot, une grande cape au col montant doublée de rouge (couleurs dans « Créer ton chef »).`, chief: { outfit: "vampire", shirt: "#1c1c24", tie: "#8f1f2a" }, theme: "manoir", icon: "🧛" },
   { id: "chief:tophat", name: "Haut-de-forme", price: 800, desc: `Pour ${CHIEF_NAME} : soie noire, ruban rouge sang.`, chief: { hat: "tophat" }, theme: "manoir", icon: "🎩" },
+  { id: "hat:tricorne", name: "Tricornes pour l'équipe", price: 1300, desc: "Tout l'équipage en tricorne noir galonné d'or.", hat: true, theme: "pirate", icon: "🏴‍☠️" },
+  { id: "chief:pirate", name: "Habit de capitaine", price: 1700, desc: `Pour ${CHIEF_NAME} : une longue redingote à boutons d'or, une chemise à jabot, une ceinture de flanelle (couleurs dans « Créer ton chef »).`, chief: { outfit: "pirate", shirt: "#1e2a4a", tie: "#8f1f2a" }, theme: "pirate", icon: "🧥" },
+  { id: "chief:tricorne", name: "Tricorne de capitaine", price: 900, desc: `Pour ${CHIEF_NAME} : feutre noir, galon d'or, une tête de mort sur le devant.`, chief: { hat: "tricorne" }, theme: "pirate", icon: "🏴‍☠️" },
+  { id: "chief:patch", name: "Bandeau sur l'œil", price: 300, desc: `Pour ${CHIEF_NAME} : un cache-œil de cuir noir (il voit très bien des deux yeux, c'est pour le style).`, chief: { glasses: "patch" }, theme: "pirate", icon: "🏴‍☠️" },
+  { id: "chief:parrot", name: "Perroquet d'épaule", price: 1200, desc: `Pour ${CHIEF_NAME} : un ara rouge perché sur son épaule, qui le suit partout.`, chief: { parrot: "1" }, theme: "pirate", icon: "🦜" },
+  { id: "hat:hachimaki", name: "Hachimaki pour l'équipe", price: 900, desc: "Toute l'équipe ceinte du bandeau blanc au soleil rouge : on ne lâche rien.", hat: true, theme: "japon", icon: "🎌" },
+  { id: "chief:kimono", name: "Kimono", price: 1600, desc: `Pour ${CHIEF_NAME} : un kimono long aux cols croisés et sa ceinture obi (couleurs dans « Créer ton chef »).`, chief: { outfit: "kimono", shirt: "#22336a", tie: "#c9a040" }, theme: "japon", icon: "👘" },
+  { id: "chief:kasa", name: "Chapeau kasa", price: 700, desc: `Pour ${CHIEF_NAME} : un chapeau conique de paille tressée, noué sous le menton.`, chief: { hat: "kasa" }, theme: "japon", icon: "👒" },
+  { id: "chief:katana", name: "Katana", price: 1400, desc: `Pour ${CHIEF_NAME} : un sabre au fourreau de laque noire, sa poignée tressée de rouge, à la hanche.`, chief: { katana: "1" }, theme: "japon", icon: "🗡️" },
+  { id: "hat:straw", name: "Chapeaux de paille pour l'équipe", price: 900, desc: "Toute l'équipe en chapeau de paille à ruban rouge : c'est l'été.", hat: true, theme: "plage", icon: "👒" },
+  { id: "chief:hawaii", name: "Chemise hawaïenne", price: 900, desc: `Pour ${CHIEF_NAME} : col ouvert, fleurs d'hibiscus (couleurs dans « Créer ton chef »).`, chief: { outfit: "hawaii", shirt: "#3ab8d8", tie: "#ff6a8a" }, theme: "plage", icon: "🌺" },
+  { id: "chief:straw", name: "Chapeau de paille", price: 500, desc: `Pour ${CHIEF_NAME} : un panama de paille, un ruban rouge.`, chief: { hat: "straw" }, theme: "plage", icon: "👒" },
+  { id: "chief:lei", name: "Collier de fleurs", price: 400, desc: `Pour ${CHIEF_NAME} : un lei hawaïen de fleurs roses, jaunes et blanches.`, chief: { lei: "1" }, theme: "plage", icon: "🌸" },
   { id: "chief:wand", name: "Baguette magique", price: 600, desc: `Pour ${CHIEF_NAME} : en bois de houx, une étincelle au bout. Il la lève en dirigeant l'équipe.`, chief: { wand: "1" }, theme: "magie", icon: "🪄" },
 ];
-const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "", jetpack: "" };  // taken off: back to the default
+const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "", jetpack: "", glasses: "", parrot: "", katana: "", lei: "" };  // taken off: back to the default
 const chiefWorn = it => { const [k, v] = Object.entries(it.chief)[0]; return hub.CHIEF_LOOK?.[k] === v || (k === "scarf" && !!hub.CHIEF_LOOK?.scarf); };
 const earnedXp = () => hub.game ? Object.values(hub.game.xp || {}).reduce((n, g) => n + (g.xp || 0), 0) : null;
 const has = id => shop.owned.includes(id) && !shop.off.includes(id);

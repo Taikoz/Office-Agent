@@ -33,7 +33,7 @@ function settingsAppHtml() {
     ${supportSettingsHtml()}
     ${perfHtml()}
     <h4>APPARENCE DE CHIEFOS</h4>
-    <div class="osrow"><b>Style</b><span class="qbtns">${[["auto", "Auto", "celui du bureau du chef : HOLO au poste de commandement holographique, Grimoire au bureau du directeur, Crypte à l'orgue du maître des lieux, Ubuntu sinon"], ...OS_SKINS]
+    <div class="osrow"><b>Style</b><span class="qbtns">${[["auto", "Auto", "celui du bureau du chef : HOLO au poste de commandement holographique, Grimoire au bureau du directeur, Crypte à l'orgue du maître des lieux, Galion à la barre du capitaine, Zen à l'estrade du sensei, Tropical au poste du maître-nageur, Ubuntu sinon"], ...OS_SKINS]
       .map(([id, label, hint]) => `<button data-skin="${id}" class="${skinNow() === id ? "on" : ""}" title="${hint}">${label}</button>`).join("")}</span><span class="muted">${OS_SKINS.find(s => s[0] === osSkin())[1]} actif</span></div>
     ${dockSettingsHtml()}
     <h4>AUTRES RÉGLAGES</h4>

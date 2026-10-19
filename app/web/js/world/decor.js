@@ -19,6 +19,28 @@ export const DECOR_TYPES = {
   curtain: [["velours", "Velours"], ["lin", "Lin"], ["store", "Store"], ["aucun", "Aucun"]],
   door: [["panneaux", "Panneaux"], ["vitrée", "Vitrée"], ["lisse", "Lisse"]],
 };
+// the themes' floors (build.js: in Sols, and on the theme's Sols shelf): [type, label, theme, its own colours]
+export const THEME_FLOORS = [
+  ["dalles", "Dalles de château", "magie", ["#8d8a80", "#a89c84", "#5a5866", "#7f8a74"]],
+  ["plancher", "Plancher de tour", "magie", ["#6b4a2e", "#4a2f1e", "#8a6a4a", "#3a2416"]],
+  ["etoile", "Mosaïque à l'étoile", "magie", ["#22336a", "#3a2350", "#5a1e2a", "#1f4a32"]],
+  ["tole", "Tôle de pont", "scifi", ["#9aa6b4", "#6a7684", "#4a5562", "#c9d2dc"]],
+  ["caillebotis", "Caillebotis lumineux", "scifi", ["#2a3340", "#1c222c", "#3a4450", "#1e1430"]],
+  ["hexalum", "Dalles hexagonales", "scifi", ["#dfe4ea", "#9aa6b4", "#2a3340", "#1a2a3a"]],
+  ["ciment", "Carreaux de ciment", "manoir", ["#4a1a2a", "#1e3a2a", "#24202a", "#3a1e4a"]],
+  ["vieuxparquet", "Parquet qui grince", "manoir", ["#3a2418", "#2a1c1a", "#4a2018", "#5a4a3a"]],
+  ["marbrenoir", "Marbre veiné", "manoir", ["#1c1820", "#e8e4dc", "#2a2a33", "#3a1a24"]],
+  ["pont", "Pont de navire", "pirate", ["#9a7a52", "#7a5232", "#b8946a", "#5a4030"]],
+  ["sable", "Sable de la crique", "pirate", ["#e8d4a0", "#d9c08a", "#f0e2c0", "#c9a46a"]],
+  ["tomettes", "Tomettes de la taverne", "pirate", ["#b8603a", "#a04a2e", "#c87a4a", "#8a3a24"]],
+  ["tatami", "Tatamis", "japon", ["#b8b46a", "#a8a45a", "#c9c08a", "#8a9a5a"]],
+  ["engawa", "Plancher d'engawa", "japon", ["#c9a46a", "#a07a4a", "#5a3a24", "#e0c89a"]],
+  ["gravier", "Gravier ratissé", "japon", ["#e8e4d8", "#c9c3b0", "#9a968a", "#d8d0c0"]],
+  ["teck", "Deck en teck", "plage", ["#a0703a", "#8a5a2a", "#c9905a", "#7a7468"]],
+  ["mosaique", "Mosaïque de piscine", "plage", ["#3ab8d8", "#2a8ab8", "#5ad0c8", "#f4f2ea"]],
+  ["jonc", "Natte de jonc", "plage", ["#d9c08a", "#c9a46a", "#b8a070", "#e8d8b0"]],
+];
+DECOR_TYPES.floor.push(...THEME_FLOORS.map(([id, label]) => [id, label]));
 const WOODS = [["Chêne", "#8a6a4a"], ["Noyer", "#5c3d27"], ["Érable", "#c9a06a"], ["Merisier", "#9a4f2e"], ["Wengé", "#3b2a20"],
   ["Bouleau", "#d8c3a0"], ["Laqué blanc", "#e6e2d8"], ["Laqué noir", "#2a2a33"]];
 export const DECOR_COLORS = {
@@ -28,6 +50,7 @@ export const DECOR_COLORS = {
   curtainColor: ["#8f2b46", "#22336a", "#2f6e3c", "#c9a24b", "#e8e2d0", "#4a2f6b", "#b8643c", "#3a3a48", "#d98fa0", "#5aa9ff"],
   doorColor: [...WOODS.map(w => w[1]), "#081746", "#2f6e3c", "#8f2b46", "#7a8094"],
 };
+export const floorColors = type => THEME_FLOORS.find(f => f[0] === type)?.[3] || DECOR_COLORS.floorColor.slice(0, 8);
 const DECOR_ROWS = [  // [type key, color key, label]; the wood has named presets instead of types
   ["wall", "wallColor", "Murs"], ["floor", "floorColor", "Sol"], [null, "wood", "Bois"],
   ["rug", "rugColor", "Tapis"], ["curtain", "curtainColor", "Rideaux"], ["door", "doorColor", "Porte"],
@@ -56,6 +79,7 @@ function decorPainter(w, h) {
 
 function paintFloor(p, w, h, type, base) {
   const { rect, poly } = p, rnd = decorRnd;
+  if (paintThemeFloor(p, w, h, type, base)) return;
   if (type === "parquet") {  // staggered planks, grain, a few knots
     const tones = [0.97, 1.04, 0.92, 1.11, 1, 0.89].map(k => shade(base, k)), PH = 6;
     for (let row = 0; row * PH < h; row++) {
@@ -116,6 +140,171 @@ function paintFloor(p, w, h, type, base) {
   }
 }
 
+// the themes' floors (THEME_FLOORS); false: not one of them
+function paintThemeFloor(p, w, h, type, base) {
+  const { rect, poly, ellipse } = p, rnd = decorRnd, dark = lum(base) < 0.4;
+  const crack = (x, y, n, s = 1) => { for (let k = 0; k < n; k++) rect(x + k * 0.8, y + (k % 2 ? 0.4 : -0.2) * s + k * 0.3 * s, 0.9, 0.3, "rgba(0, 0, 0, 0.3)"); };
+  const line = (ax, ay, bx, by, wd, col) => { const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L * wd / 2, ny = dx / L * wd / 2; poly([[ax + nx, ay + ny], [bx + nx, by + ny], [bx - nx, by - ny], [ax - nx, ay - ny]], col); };
+  if (type === "dalles") {  // castle flagstones: rows of uneven stones, mortar, a crack here and there, moss in the joints
+    rect(0, 0, w, h, shade(base, 0.55));
+    for (let row = 0, y = 0; y < h; row++) {
+      const rh = 7 + Math.floor(rnd(row * 7 + 1) * 4);
+      for (let x = -rnd(row + 3) * 10, i = 0; x < w; i++) {
+        const len = 8 + Math.floor(rnd(row * 53 + i) * 10), seed = row * 131 + i;
+        rect(x + 0.4, y + 0.4, len - 0.8, rh - 0.8, shade(base, 0.84 + rnd(seed) * 0.28));
+        rect(x + 0.4, y + 0.4, len - 0.8, 0.5, "rgba(255, 255, 255, 0.08)"); rect(x + 0.4, y + rh - 0.9, len - 0.8, 0.5, "rgba(0, 0, 0, 0.15)");
+        if (rnd(seed * 3) > 0.86) crack(x + 2 + rnd(seed) * (len - 6), y + 2 + rnd(seed * 7) * (rh - 4), 4, rnd(seed * 5) > 0.5 ? 1 : -1);
+        if (rnd(seed * 11) > 0.9) rect(x + len - 1, y + 1 + rnd(seed) * (rh - 3), 1.2, 1.6, "rgba(90, 122, 58, 0.55)");
+        x += len;
+      }
+      y += rh;
+    }
+  } else if (type === "plancher") {  // a tower's floor: wide old planks the whole length, iron nails, worn in the middle
+    const PH = 9;
+    for (let row = 0, y = 0; y < h; row++, y += PH) {
+      const c = shade(base, 0.9 + rnd(row * 17) * 0.2);
+      rect(0, y, w, PH, c); rect(0, y, w, 0.5, "rgba(255, 230, 190, 0.06)"); rect(0, y + PH - 0.6, w, 0.6, shade(base, 0.5));
+      for (let k = 0; k < w / 18; k++) rect(rnd(row * 41 + k) * w, y + 1.4 + rnd(row + k * 3) * (PH - 3), 10 + rnd(k * 7 + row) * 26, 0.35, "rgba(0, 0, 0, 0.14)");
+      for (let x = -rnd(row) * 60; x < w; x += 60) { rect(x, y, 0.6, PH, shade(base, 0.55)); for (const dx of [1.6, -2.2]) for (const dy of [2, PH - 3]) rect(x + dx, y + dy, 0.8, 0.8, "#2e2e36"); }
+    }
+    for (let i = 0; i < 6; i++) ellipse(rnd(i * 5) * w, rnd(i * 9 + 2) * h, 30, 12, "rgba(255, 230, 190, 0.035)");
+  } else if (type === "etoile") {  // a mosaic of small tesserae, a gold star every few steps, ringed
+    for (let y = 0; y < h; y += 3) for (let x = 0; x < w; x += 3) rect(x + 0.2, y + 0.2, 2.6, 2.6, shade(base, 0.82 + rnd(x * 7 + y * 13) * 0.32));
+    const gold = "#d9a441";
+    for (let cy = 16, r = 0; cy < h + 16; cy += 32, r++) for (let cx = (r % 2 ? 24 : 0); cx < w + 24; cx += 48) {
+      ellipse(cx, cy, 11, 11, gold, 0.6); ellipse(cx, cy, 9, 9, shade(base, 0.6));
+      poly(Array.from({ length: 16 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 8, rr = i % 2 ? 3.4 : 8.4; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }), gold);
+      poly(Array.from({ length: 16 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 8, rr = i % 2 ? 1.8 : 4.6; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }), "#f2d27a");
+    }
+  } else if (type === "tole") {  // deck plating: steel plates, seams, the raised diamond pattern, rivets at the corners
+    const T = 24;
+    for (let ty = 0; ty < h; ty += T) for (let tx = 0; tx < w; tx += T) {
+      rect(tx, ty, T, T, shade(base, 0.94 + rnd(tx + ty * 3) * 0.12));
+      for (let y = 1.5, r = 0; y < T - 1; y += 3, r++) for (let x = 1.5 + (r % 2) * 1.5; x < T - 1.5; x += 3) poly(r % 2 ? [[tx + x, ty + y], [tx + x + 1.6, ty + y - 0.6], [tx + x + 1.9, ty + y - 0.3], [tx + x + 0.3, ty + y + 0.3]] : [[tx + x, ty + y - 0.6], [tx + x + 1.6, ty + y], [tx + x + 1.3, ty + y + 0.3], [tx + x - 0.3, ty + y - 0.3]], shade(base, 1.22));
+      rect(tx, ty, T, 0.5, shade(base, 0.6)); rect(tx, ty, 0.5, T, shade(base, 0.6)); rect(tx + 0.5, ty + 0.5, T - 1, 0.4, "rgba(255, 255, 255, 0.12)");
+      for (const [dx, dy] of [[2, 2], [T - 3, 2], [2, T - 3], [T - 3, T - 3]]) { rect(tx + dx, ty + dy, 1, 1, shade(base, 0.7)); rect(tx + dx, ty + dy, 0.5, 0.5, "rgba(255, 255, 255, 0.35)"); }
+    }
+  } else if (type === "caillebotis") {  // a grating of slots in framed panels, a cyan light strip every few panels
+    const T = 16;
+    rect(0, 0, w, h, shade(base, 0.6));
+    for (let ty = 0; ty < h; ty += T) for (let tx = 0; tx < w; tx += T) {
+      rect(tx + 0.4, ty + 0.4, T - 0.8, T - 0.8, base);
+      for (let y = 2; y < T - 2; y += 2) rect(tx + 2, ty + y, T - 4, 0.9, "#0a0e14");
+      rect(tx + 0.4, ty + 0.4, T - 0.8, 0.4, "rgba(255, 255, 255, 0.12)");
+    }
+    for (let x = 32; x < w; x += 64) { rect(x - 1.2, 0, 2.4, h, "rgba(0, 229, 255, 0.18)"); rect(x - 0.4, 0, 0.8, h, "#00e5ff"); }
+  } else if (type === "hexalum") {  // hexagonal tiles, joints in light, a few tiles lit
+    const r = 5, dx = r * 1.732, dy = r * 1.5;
+    rect(0, 0, w, h, shade(base, 0.6));
+    for (let row = 0, y = 0; y < h + r; y += dy, row++) for (let i = 0, x = (row % 2) * dx / 2; x < w + r; x += dx, i++) {
+      const lit = (i * 7 + row * 3) % 13 === 0, pts = k => Array.from({ length: 6 }, (_, j) => [x + Math.cos(Math.PI / 6 + j * Math.PI / 3) * r * k, y + Math.sin(Math.PI / 6 + j * Math.PI / 3) * r * k]);
+      poly(pts(0.96), lit ? "#00e5ff" : shade(base, 1.1)); poly(pts(0.8), lit ? "rgba(160, 250, 255, 0.9)" : shade(base, 0.95 + rnd(i * 31 + row) * 0.08));
+    }
+  } else if (type === "pont") {  // a ship's deck: long narrow planks, black caulked seams, treenails at the butts, a hatch
+    const PH = 4;
+    for (let row = 0, y = 0; y < h; row++, y += PH) {
+      rect(0, y, w, PH, shade(base, 0.92 + rnd(row * 13) * 0.16)); rect(0, y + PH - 0.5, w, 0.5, "#1c1410");
+      for (let x = -rnd(row * 3) * 70; x < w; x += 70) { rect(x, y, 0.5, PH, "#1c1410"); rect(x + 1.2, y + 1.6, 0.7, 0.7, shade(base, 0.6)); rect(x - 1.8, y + 1.6, 0.7, 0.7, shade(base, 0.6)); }
+      for (let k = 0; k < w / 30; k++) rect(rnd(row * 41 + k) * w, y + 1 + rnd(row + k * 5) * 2, 8 + rnd(k + row) * 18, 0.25, "rgba(0, 0, 0, 0.12)");
+    }
+    for (let i = 0; i < 8; i++) ellipse(rnd(i * 7 + 3) * w, rnd(i * 11 + 1) * h, 26, 8, "rgba(255, 255, 255, 0.04)");  // salt-bleached
+    const hx = Math.floor(w * 0.62), hy = Math.floor(h * 0.3);  // a grated hatch
+    rect(hx, hy, 24, 16, shade(base, 0.6)); rect(hx + 1.5, hy + 1.5, 21, 13, "#1c1410");
+    for (let x = hx + 2; x < hx + 22; x += 3) rect(x, hy + 1.5, 1.2, 13, shade(base, 0.85));
+    for (let y = hy + 2; y < hy + 14; y += 3) rect(hx + 1.5, y, 21, 1.2, shade(base, 0.8));
+  } else if (type === "sable") {  // the sand of a cove: ripples, grains, shells, a starfish, a footprint or two
+    rect(0, 0, w, h, base);
+    for (let y = 2; y < h; y += 5) for (let x = -rnd(y) * 20; x < w; x += 24) rect(x, y + Math.sin(x / 12) * 1.2, 14 + rnd(x + y) * 8, 0.6, "rgba(120, 90, 40, 0.14)");
+    for (let i = 0; i < w * h / 40; i++) rect(rnd(i * 3) * w, rnd(i * 7 + 1) * h, 0.5, 0.5, rnd(i) > 0.5 ? "rgba(255, 255, 255, 0.35)" : "rgba(120, 90, 40, 0.25)");
+    for (let i = 0; i < 6; i++) { const x = rnd(i * 17 + 2) * w, y = rnd(i * 23 + 9) * h; ellipse(x, y, 1.6, 1.2, "#f4e2d8"); rect(x - 0.2, y - 1, 0.4, 2, "rgba(200, 140, 120, 0.5)"); }
+    for (let i = 0; i < 2; i++) { const cx = rnd(i * 31 + 5) * w, cy = rnd(i * 37 + 4) * h; poly(Array.from({ length: 10 }, (_, j) => { const a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? 1.2 : 3; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }), "#e8763a"); }
+    for (let k = 0; k < 6; k++) ellipse(w * 0.3 + k * 7, h * 0.7 + (k % 2) * 3, 1.2, 1.8, "rgba(120, 90, 40, 0.2)");
+  } else if (type === "tomettes") {  // a tavern's hexagonal terracotta tiles, each its own tone, worn, lime joints
+    const r = 5, dx = r * 1.732, dy = r * 1.5;
+    rect(0, 0, w, h, "#d8ccb4");
+    for (let row = 0, y = 0; y < h + r; y += dy, row++) for (let i = 0, x = (row % 2) * dx / 2; x < w + r; x += dx, i++) {
+      const pts = k => Array.from({ length: 6 }, (_, j) => [x + Math.cos(Math.PI / 6 + j * Math.PI / 3) * r * k, y + Math.sin(Math.PI / 6 + j * Math.PI / 3) * r * k]);
+      poly(pts(0.9), shade(base, 0.86 + rnd(i * 13 + row * 7) * 0.26));
+      if (rnd(i * 5 + row) > 0.8) poly(pts(0.5), "rgba(255, 255, 255, 0.07)");
+    }
+  } else if (type === "teck") {  // a pool deck: teak boards with gaps, stainless screws, sun-bleached streaks
+    const PH = 5;
+    rect(0, 0, w, h, "#2a2018");
+    for (let row = 0, y = 0; y < h; row++, y += PH) {
+      rect(0, y, w, PH - 0.8, shade(base, 0.9 + rnd(row * 11) * 0.2)); rect(0, y, w, 0.4, "rgba(255, 255, 255, 0.12)");
+      for (let k = 0; k < w / 24; k++) rect(rnd(row * 37 + k) * w, y + 1 + rnd(row + k * 5) * 2.4, 12 + rnd(k + row) * 22, 0.3, "rgba(255, 240, 210, 0.12)");
+      for (let x = 20 - (row % 2) * 10; x < w; x += 40) { rect(x, y + 1, 0.6, 0.6, "#c9ccd6"); rect(x, y + PH - 2.2, 0.6, 0.6, "#c9ccd6"); }
+    }
+  } else if (type === "mosaique") {  // a pool's mosaic: little glass tiles in shades of blue, a band of darker ones, ripples of light
+    for (let y = 0; y < h; y += 2.5) for (let x = 0; x < w; x += 2.5) rect(x + 0.2, y + 0.2, 2.1, 2.1, shade(base, 0.85 + rnd(x * 3 + y * 7) * 0.3));
+    for (let y = 30; y < h; y += 60) for (let x = 0; x < w; x += 2.5) rect(x + 0.2, y + 0.2, 2.1, 2.1, shade(base, 0.55));
+    for (let i = 0; i < w * h / 600; i++) { const x = rnd(i * 13) * w, y = rnd(i * 17 + 3) * h; ellipse(x, y, 6 + rnd(i) * 6, 1.2, "rgba(255, 255, 255, 0.18)"); }
+  } else if (type === "jonc") {  // a seagrass mat: woven squares that alternate their direction, a braided border every few
+    const T = 8;
+    for (let ty = 0, r = 0; ty < h; ty += T, r++) for (let tx = 0, i = 0; tx < w; tx += T, i++) {
+      rect(tx, ty, T, T, shade(base, 0.94 + rnd(tx + ty * 5) * 0.12));
+      if ((r + i) % 2) for (let k = 0.8; k < T; k += 1.6) rect(tx, ty + k, T, 0.5, "rgba(90, 70, 30, 0.22)");
+      else for (let k = 0.8; k < T; k += 1.6) rect(tx + k, ty, 0.5, T, "rgba(90, 70, 30, 0.22)");
+    }
+  } else if (type === "tatami") {  // tatami mats in the classic pattern (pairs turned), their black cloth borders, the weave
+    const L = 36, Wd = 18, edge = "#1c1c22";
+    for (let ty = 0, r = 0; ty < h; ty += L, r++) for (let tx = 0, i = 0; tx < w; tx += L, i++) {
+      const mats = (r + i) % 2 ? [[tx, ty, Wd, L], [tx + Wd, ty, Wd, L]] : [[tx, ty, L, Wd], [tx, ty + Wd, L, Wd]];
+      for (const [x, y, mw, mh] of mats) {
+        rect(x, y, mw, mh, shade(base, 0.96 + rnd(x * 3 + y) * 0.08));
+        if (mw > mh) for (let k = 1; k < mh; k += 1.2) rect(x, y + k, mw, 0.3, "rgba(0, 0, 0, 0.07)"); else for (let k = 1; k < mw; k += 1.2) rect(x + k, y, 0.3, mh, "rgba(0, 0, 0, 0.07)");
+        if (mw > mh) { rect(x, y, mw, 1.2, edge); rect(x, y + mh - 1.2, mw, 1.2, edge); } else { rect(x, y, 1.2, mh, edge); rect(x + mw - 1.2, y, 1.2, mh, edge); }
+        rect(x, y, mw, 0.3, "rgba(0, 0, 0, 0.35)"); rect(x, y, 0.3, mh, "rgba(0, 0, 0, 0.35)");
+      }
+    }
+  } else if (type === "engawa") {  // a veranda's floor: long narrow polished boards, a soft sheen, no knots
+    const PH = 3.2;
+    for (let row = 0, y = 0; y < h; row++, y += PH) {
+      rect(0, y, w, PH, shade(base, 0.94 + rnd(row * 7) * 0.12)); rect(0, y + PH - 0.3, w, 0.3, shade(base, 0.62)); rect(0, y, w, 0.4, "rgba(255, 255, 255, 0.1)");
+      for (let x = -rnd(row * 5) * 120; x < w; x += 120) rect(x, y, 0.3, PH, shade(base, 0.6));
+    }
+    for (let i = 0; i < 6; i++) ellipse(rnd(i * 11) * w, rnd(i * 13 + 4) * h, 40, 6, "rgba(255, 255, 255, 0.05)");
+  } else if (type === "gravier") {  // raked gravel: parallel lines, rings around a few stones
+    rect(0, 0, w, h, base);
+    for (let i = 0; i < w * h / 12; i++) rect(rnd(i * 5) * w, rnd(i * 9 + 2) * h, 0.6, 0.6, rnd(i) > 0.5 ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.1)");
+    const stones = Array.from({ length: Math.max(2, Math.round(w * h / 30000)) }, (_, k) => [rnd(k * 17 + 3) * w, rnd(k * 29 + 7) * h, 4 + rnd(k) * 4]);
+    for (let y = 2; y < h; y += 2.6) rect(0, y, w, 0.5, "rgba(0, 0, 0, 0.12)");
+    for (const [x, y, r] of stones) {
+      ellipse(x, y, r + 9, (r + 9) * 0.8, base);
+      for (const k of [3, 5.6, 8.2]) { ellipse(x, y, r + k, (r + k) * 0.8, "rgba(0, 0, 0, 0.12)"); ellipse(x, y, r + k - 0.5, (r + k - 0.5) * 0.8, base); }
+      ellipse(x, y, r, r * 0.8, "#76726a"); ellipse(x - 1, y - 1, r * 0.7, r * 0.5, "#9a968a"); ellipse(x + 1, y - r * 0.4, 1.6, 1, "#5a8a3a");
+    }
+  } else if (type === "ciment") {  // encaustic tiles: a cream quatrefoil and a diamond on each, a border, a little worn
+    const T = 12, cream = "#e8dcc4";
+    for (let ty = 0; ty < h; ty += T) for (let tx = 0; tx < w; tx += T) {
+      const cx = tx + T / 2, cy = ty + T / 2;
+      rect(tx, ty, T, T, shade(base, 0.95 + rnd(tx * 3 + ty) * 0.1));
+      for (const [ox, oy] of [[0, -3], [3, 0], [0, 3], [-3, 0]]) ellipse(cx + ox, cy + oy, 2.2, 2.2, cream);
+      ellipse(cx, cy, 2.6, 2.6, base); poly([[cx, cy - 1.8], [cx + 1.8, cy], [cx, cy + 1.8], [cx - 1.8, cy]], "#c9a24b");
+      for (const [qx, qy] of [[tx, ty], [tx + T, ty], [tx, ty + T], [tx + T, ty + T]]) poly([[qx, qy - 2], [qx + 2, qy], [qx, qy + 2], [qx - 2, qy]], cream);
+      rect(tx, ty, T, 0.35, "rgba(0, 0, 0, 0.3)"); rect(tx, ty, 0.35, T, "rgba(0, 0, 0, 0.3)");
+      if (rnd(tx * 7 + ty * 3) > 0.9) ellipse(cx + 2, cy + 1, 3, 2, "rgba(255, 255, 255, 0.08)");
+    }
+  } else if (type === "vieuxparquet") {  // a dark old parquet: the planks, then dust, cracks, a board gone
+    paintFloor(p, w, h, "parquet", base);
+    for (let i = 0; i < 10; i++) ellipse(rnd(i * 3 + 1) * w, rnd(i * 7 + 2) * h, 14 + rnd(i) * 22, 5 + rnd(i * 5) * 6, "rgba(200, 190, 170, 0.05)");
+    for (let i = 0; i < 18; i++) crack(rnd(i * 13) * w, Math.floor(rnd(i * 17 + 4) * h / 6) * 6 + 2 + rnd(i) * 2, 5 + Math.floor(rnd(i * 3) * 5), rnd(i * 19) > 0.5 ? 1 : -1);
+    for (let i = 0; i < 2; i++) { const x = rnd(i * 23 + 7) * (w - 30), y = Math.floor(rnd(i * 29 + 5) * h / 6) * 6; rect(x, y, 18, 6, "#120c0a"); rect(x, y, 18, 0.8, "rgba(0, 0, 0, 0.6)"); }
+  } else if (type === "marbrenoir") {  // veined marble slabs, a checker of two tones, thin joints
+    const T = 20, vein = dark ? "rgba(232, 228, 240, 0.22)" : "rgba(40, 30, 40, 0.18)";
+    for (let ty = 0; ty < h; ty += T) for (let tx = 0; tx < w; tx += T) {
+      rect(tx, ty, T, T, ((tx + ty) / T) % 2 ? shade(base, dark ? 1.3 : 0.88) : base);
+      for (let v = 0; v < 2; v++) {
+        let x = tx + rnd(tx * 3 + ty + v) * T, y = ty;
+        for (let k = 0; k < 5; k++) { const nx = x + (rnd(tx + ty * 7 + k + v * 9) - 0.5) * 9, ny = y + T / 5; line(x, y, nx, ny, 0.35, vein); x = nx; y = ny; }
+      }
+      rect(tx, ty, T, 0.3, dark ? "rgba(217, 164, 65, 0.4)" : "rgba(0, 0, 0, 0.25)"); rect(tx, ty, 0.3, T, dark ? "rgba(217, 164, 65, 0.4)" : "rgba(0, 0, 0, 0.25)");
+      rect(tx + 1, ty + 1, T * 0.5, 0.4, "rgba(255, 255, 255, 0.07)");
+    }
+  } else return false;
+  return true;
+}
+
 // a rug in the box (x0, y0, w, h): fringes on the short sides, as on the office rugs
 function paintRug(p, x0, y0, w, h, type, base) {
   const { rect, ellipse } = p, dark = shade(base, 0.7), light = shade(base, 1.3);
@@ -166,6 +355,55 @@ function paintRug(p, x0, y0, w, h, type, base) {
     const mx = x0 + w * 0.72, my = y0 + h * 0.34, mr = Math.min(w, h) * 0.13;
     ellipse(mx, my, mr, mr, "#f4e7b0"); ellipse(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, mr * 0.85, base);
     for (let k = 0; k < 6; k++) rect(x0 + w * 0.2 + k * 2, y0 + h * 0.66 - k * 1.1, 1.6 - k * 0.2, 0.6, k ? light : "#f4efe2");
+  } else if (type === "carte") {  // a treasure map: parchment, the sea's edge, islands, a dotted path to the red X, a compass rose
+    const ink = "#5a3a24", sea = "rgba(60, 120, 150, 0.35)";
+    rect(x0 + 2, y0 + 2, w - 4, h - 4, sea); rect(x0 + 2, y0 + 2, w - 4, 2, dark); rect(x0 + 2, y0 + h - 4, w - 4, 2, dark);
+    for (const [fx, fy, rx, ry] of [[0.3, 0.45, 0.2, 0.26], [0.7, 0.6, 0.16, 0.2], [0.78, 0.22, 0.08, 0.1]]) {
+      ellipse(x0 + w * fx, y0 + h * fy, w * rx + 1.2, h * ry + 1.2, ink, 0.6); ellipse(x0 + w * fx, y0 + h * fy, w * rx, h * ry, base);
+      for (let k = 0; k < 3; k++) ellipse(x0 + w * fx + (k - 1) * 3, y0 + h * fy - 1, 1.6, 0.8, "#4a7a3a");
+    }
+    for (let k = 0; k < 9; k++) { const t = k / 8; rect(x0 + w * (0.2 + t * 0.52) - 0.6, y0 + h * (0.5 + Math.sin(t * 5) * 0.1), 1.2, 1.2, "#8f1f2a"); }
+    const xx = x0 + w * 0.72, xy = y0 + h * 0.62;
+    p.poly([[xx - 3, xy - 3], [xx - 2, xy - 3], [xx + 3, xy + 2], [xx + 2, xy + 2.6]], "#c0303a"); p.poly([[xx + 3, xy - 3], [xx + 2, xy - 3], [xx - 3, xy + 2], [xx - 2, xy + 2.6]], "#c0303a");
+    const cx = x0 + w * 0.12, cy = y0 + h * 0.2;
+    p.poly([[cx, cy - 5], [cx + 1, cy], [cx, cy + 5], [cx - 1, cy]], ink); p.poly([[cx - 5, cy], [cx, cy - 1], [cx + 5, cy], [cx, cy + 1]], ink);
+    for (let k = 0; k < 6; k++) ellipse(x0 + w * (0.55 + k * 0.04), y0 + h * (0.86 + Math.sin(k) * 0.03), 1.6, 1.2, k ? "#3a7a6a" : "#2a5a4a");  // a sea serpent
+  } else if (type === "rosevents") {  // a compass rose of sixteen points, ringed with rope
+    const cx = x0 + w / 2, cy = y0 + h / 2, R = Math.min(w, h) / 2 - 3, gold = "#d9a441", cream = "#efe2c0";
+    ellipse(cx, cy, R, R * (h / w), "#c9a46a"); ellipse(cx, cy, R - 1.4, (R - 1.4) * (h / w), base);
+    for (let k = 0; k < 16; k++) {
+      const a = k * Math.PI / 8 - Math.PI / 2, l = (k % 4 === 0 ? 1 : k % 2 ? 0.5 : 0.72) * (R - 3), wd = k % 4 === 0 ? 2.6 : 1.6;
+      const tx = cx + Math.cos(a) * l, ty = cy + Math.sin(a) * l * (h / w), nx = Math.cos(a + Math.PI / 2) * wd, ny = Math.sin(a + Math.PI / 2) * wd * (h / w);
+      p.poly([[cx, cy], [cx + nx, cy + ny], [tx, ty]], k % 2 ? cream : gold); p.poly([[cx, cy], [cx - nx, cy - ny], [tx, ty]], k % 2 ? shade(cream, 0.8) : shade(gold, 0.7));
+    }
+    ellipse(cx, cy, 2.2, 2.2, "#8f1f2a"); ellipse(cx, cy, 1, 1, gold);
+    p.poly([[cx, y0 + 2.5], [cx + 1.6, y0 + 5], [cx, y0 + 4.2], [cx - 1.6, y0 + 5]], cream);
+  } else if (type === "serviette") {  // a big beach towel: wide stripes, white bands, fringes, an embroidered sun
+    for (let x = x0 + 2, k = 0; x < x0 + w - 2; x += (w - 4) / 7, k++) rect(x, y0 + 2, (w - 4) / 7, h - 4, k % 2 ? "#f4f2ea" : base);
+    rect(x0 + 2, y0 + 2, w - 4, 1, "rgba(0, 0, 0, 0.1)");
+    const cx = x0 + w / 2, cy = y0 + h * 0.3;
+    ellipse(cx, cy, 4, 4, "#f0c040"); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; rect(cx + Math.cos(a) * 6 - 0.6, cy + Math.sin(a) * 6 - 0.6, 1.2, 1.2, "#f0c040"); }
+  } else if (type === "monstera") {  // tropical leaves on a plain ground: split monstera leaves and palm fronds
+    const leaf = lum(base) > 0.5 ? "#2f8a3a" : "#3fae5a", dleaf = shade(leaf, 0.7);
+    for (let i = 0; i < 7; i++) {
+      const cx = x0 + 6 + decorRnd(i * 7 + 1) * (w - 12), cy = y0 + 6 + decorRnd(i * 11 + 3) * (h - 12), r = 5 + decorRnd(i) * 3;
+      if (i % 2) { ellipse(cx, cy, r, r * 0.8, leaf); for (let k = 0; k < 4; k++) rect(cx - r + k * r * 0.5 + 1, cy - 0.3, r * 0.3, 0.6, base); rect(cx - 0.3, cy - r * 0.8, 0.6, r * 1.6, dleaf); }
+      else for (let k = -3; k <= 3; k++) p.poly([[cx, cy], [cx + k * 2.2, cy - r], [cx + k * 2.2 + 0.8, cy - r + 0.4]], leaf);
+    }
+  } else if (type === "vague") {  // the great wave: a deep curl, foam claws, a tiny Fuji under it
+    const ink = lum(base) > 0.5 ? "#22336a" : "#e8e0c8", deep = lum(base) > 0.5 ? "#3a5a9a" : "#3a5a8a";
+    for (let k = 0; k < 40; k++) { const t = k / 39, x = x0 + 3 + t * (w - 6), y = y0 + h * 0.7 - Math.sin(t * Math.PI) * h * 0.45 * (t < 0.7 ? 1 : 0.6); rect(x, y, (w - 6) / 39 + 0.5, y0 + h - 3 - y, deep); }
+    for (let k = 0; k < 14; k++) { const a = Math.PI * 1.1 + k * 0.12, cx = x0 + w * 0.5, cy = y0 + h * 0.42; ellipse(cx + Math.cos(a) * h * 0.22, cy + Math.sin(a) * h * 0.2, 1.3, 1.1, ink); }
+    for (let k = 0; k < 12; k++) ellipse(x0 + w * (0.12 + k * 0.03), y0 + h * (0.42 - Math.sin(k / 11 * Math.PI) * 0.25), 1.2, 1.2, "#f4efe0");
+    p.poly([[x0 + w * 0.72, y0 + h * 0.66], [x0 + w * 0.78, y0 + h * 0.5], [x0 + w * 0.84, y0 + h * 0.66]], ink); p.poly([[x0 + w * 0.765, y0 + h * 0.54], [x0 + w * 0.78, y0 + h * 0.5], [x0 + w * 0.795, y0 + h * 0.54]], "#f4efe0");
+    for (let y = y0 + h * 0.74; y < y0 + h - 3; y += 3) for (let x = x0 + 4; x < x0 + w - 4; x += 6) rect(x, y, 3, 0.5, "rgba(255, 255, 255, 0.4)");
+  } else if (type === "sakura") {  // cherry blossoms and petals scattered on a plain ground
+    for (let i = 0; i < 18; i++) {
+      const cx = x0 + 5 + decorRnd(i * 7) * (w - 10), cy = y0 + 5 + decorRnd(i * 13 + 2) * (h - 10);
+      if (i % 3) { rect(cx, cy, 1.4, 0.8, "#f8c8d8"); continue; }
+      for (let k = 0; k < 5; k++) { const a = k * Math.PI * 2 / 5; ellipse(cx + Math.cos(a) * 1.6, cy + Math.sin(a) * 1.6, 1.3, 1.3, "#f8c8d8"); }
+      ellipse(cx, cy, 0.8, 0.8, "#e8708a");
+    }
   } else if (type === "toile") {  // a cobweb of silver: spokes from the heart, rings of thread, the spider in the middle
     const cx = x0 + w / 2, cy = y0 + h / 2, rx = w / 2 - 3, ry = h / 2 - 3, silver = "rgba(232, 228, 240, 0.75)";
     const ln = (ax, ay, bx, by, wd) => { const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L * wd / 2, ny = dx / L * wd / 2; p.poly([[ax + nx, ay + ny], [bx + nx, by + ny], [bx - nx, by - ny], [ax - nx, ay - ny]], silver); };
@@ -282,6 +520,62 @@ export function rugCanvas(shape, color, w, d) {
   const p = decorPainter(w, d); paintRug(p, 1, 1, w - 2, d - 2, shape, color);
   if (rugs.size > 60) rugs.clear();
   rugs.set(key, p.c); return p.c;
+}
+// the beach tiles (items/beach.js: rugs laid side by side, walked on, furniture on top): sand, shore, sea. The shape
+// f(u, v) of a tile, turned by rot: > 0 sand, < 0 water; the shores meet the tile's edges at their middle, so that a
+// straight shore, a point and a cove fit together whichever way they are turned
+const TILE_F = { sable: () => 1, mer: () => -1, rivage: (u, v) => v - 0.5 + Math.sin(u * Math.PI) * 0.05,
+  pointe: (u, v) => 0.5 - Math.hypot(u - 1, v - 1), crique: (u, v) => Math.hypot(u, v) - 0.5 };
+const turnUV = (a, b, r) => r === 1 ? [b, 1 - a] : r === 2 ? [1 - a, 1 - b] : r === 3 ? [1 - b, a] : [a, b];
+export const tileF = (shape, a, b, rot = 0) => (TILE_F[shape] || TILE_F.sable)(...turnUV(a, b, ((rot % 4) + 4) % 4));
+export const TILE_SAND = "#e8d4a0";
+const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const mixHex = (a, b, k) => { const A = hexRgb(a), B = hexRgb(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, "0")).join(""); };
+// a tile painted once per scale, shape, colour and turn: the sand (wet near the water), the water from the shallows to
+// the deep; color: the sand's for a sand tile, the water's otherwise
+export function tileCanvas(shape, color, w, d, rot = 0) {
+  const key = `tile|${S}|${shape}|${color}|${w}|${d}|${rot % 4}`;
+  if (rugs.has(key)) return rugs.get(key);
+  const p = decorPainter(w, d), { rect, ellipse } = p, sand = shape === "sable" ? color : TILE_SAND, water = shape === "sable" ? "#1a8ab8" : color;
+  const st = 0.5;
+  for (let y = 0; y < d; y += st) for (let x = 0; x < w; x += st) {
+    const fu = tileF(shape, (x + st / 2) / w, (y + st / 2) / d, rot) * w, n = decorRnd(x * 13.1 + y * 7.7);
+    let col;
+    if (fu > 2.2) col = shade(sand, 0.95 + n * 0.1);
+    else if (fu > 0) col = shade(sand, 0.8 + n * 0.05);  // the wet sand
+    else col = mixHex(mixHex(water, "#c8f8f0", 0.5), water, Math.max(0, Math.min(1, -fu / 12 + (n - 0.5) * 0.08)));  // the shallows to the deep
+    rect(x, y, st, st, col);
+  }
+  if (shape !== "mer") for (let i = 0; i < 6; i++) {  // the sand's ripples, a shell
+    const x = decorRnd(i * 17 + 2) * (w - 6) + 3, y = decorRnd(i * 23 + 5) * (d - 4) + 2;
+    if (tileF(shape, x / w, y / d, rot) * w < 4) continue;
+    if (i === 0) { ellipse(x, y, 1.2, 0.9, "#f4e2d8"); rect(x - 0.15, y - 0.8, 0.3, 1.4, "rgba(200, 140, 120, 0.5)"); }
+    else rect(x, y, 4 + decorRnd(i) * 4, 0.4, "rgba(150, 110, 50, 0.16)");
+  }
+  if (rugs.size > 80) rugs.clear();
+  rugs.set(key, p.c); return p.c;
+}
+// the water of a tile, live (build.js drawRug): crests of waves that roll across the tiles (in room coordinates, so that
+// neighbouring tiles match), glints of sun, and on a shore the foam that comes and goes on the sand
+export function drawTileAnim(it, shape, w, d, t) {
+  if (shape === "sable" || hub.focusMode) return;
+  const X0 = it.x, Y0 = it.y, rot = it.rot || 0, step = 1.6;
+  for (let y = 0; y < d; y += step) for (let x = 0; x < w; x += step) {
+    const fu = tileF(shape, (x + step / 2) / w, (y + step / 2) / d, rot) * w;
+    if (fu >= -0.4) continue;
+    const X = X0 + x, Y = Y0 + y, ph = ((Y * 0.7 + Math.sin(X * 0.21) * 2.4 - t / 260) % 9 + 9) % 9;
+    if (ph < 1.2) { ctx.fillStyle = `rgba(255, 255, 255, ${(0.5 * (1 - ph / 1.2)).toFixed(2)})`; ctx.fillRect(X * S, Y * S, step * S, 0.6 * S); }
+    const h = decorRnd(Math.floor(X * 3.1) + Math.floor(Y * 7.7) * 131);
+    if (h > 0.965 && Math.sin(t / 170 + h * 60) > 0.75) { ctx.fillStyle = "#ffffff"; ctx.fillRect((X + 0.5) * S, (Y + 0.5) * S, 0.5 * S, 0.5 * S); }
+  }
+  if (shape === "mer") return;
+  const band = 1.4 + Math.sin(t / 700) * 1.1;  // the swash: the foam climbs the sand and draws back
+  for (let y = 0; y < d; y += 1) for (let x = 0; x < w; x += 1) {
+    const fu = tileF(shape, (x + 0.5) / w, (y + 0.5) / d, rot) * w - band + 1.4;
+    if (fu >= 0 || fu < -2.6) continue;
+    ctx.fillStyle = fu > -1 ? "rgba(255, 255, 255, 0.62)" : "rgba(255, 255, 255, 0.24)";
+    ctx.fillRect((X0 + x) * S, (Y0 + y) * S, S, S);
+  }
 }
 // a sample of a wall or floor for the buy mode's cards
 const swatches = new Map();

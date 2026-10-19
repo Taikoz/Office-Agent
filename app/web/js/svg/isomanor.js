@@ -33,7 +33,7 @@ const ghost = (x, y, s = 1, a = 0.85) => `<path fill="#f4f8ff" fill-opacity="${a
   + `l-${n2(0.43 * s)} -${n2(0.5 * s)}-${n2(0.43 * s)} ${n2(0.5 * s)}-${n2(0.43 * s)} -${n2(0.5 * s)}-${n2(0.44 * s)} ${n2(0.5 * s)}Z"/>`
   + `<circle cx="${n2(x - 0.45 * s)}" cy="${n2(y - 0.3 * s)}" r="${n2(0.25 * s)}" fill="#1c1c22"/><circle cx="${n2(x + 0.45 * s)}" cy="${n2(y - 0.3 * s)}" r="${n2(0.25 * s)}" fill="#1c1c22"/>`;
 // a bat, wings spread (screen units); up: the wings' beat
-const bat = (x, y, s = 1, up = false) => `<path fill="#1c1420" d="M${n2(x)} ${n2(y)}Q${n2(x - 1.6 * s)} ${n2(y + (up ? -2 : 0.4) * s)} ${n2(x - 3.4 * s)} ${n2(y + (up ? -1.6 : -0.6) * s)}`
+const bat = (x, y, s = 1, up = false) => `<path fill="#2e2236" stroke="#8a7a9a" stroke-width=".22" d="M${n2(x)} ${n2(y)}Q${n2(x - 1.6 * s)} ${n2(y + (up ? -2 : 0.4) * s)} ${n2(x - 3.4 * s)} ${n2(y + (up ? -1.6 : -0.6) * s)}`
   + `Q${n2(x - 2.4 * s)} ${n2(y + 0.4 * s)} ${n2(x - 2.6 * s)} ${n2(y + 1 * s)}Q${n2(x - 1.4 * s)} ${n2(y + 0.4 * s)} ${n2(x)} ${n2(y + 1.2 * s)}Q${n2(x + 1.4 * s)} ${n2(y + 0.4 * s)} ${n2(x + 2.6 * s)} ${n2(y + 1 * s)}`
   + `Q${n2(x + 2.4 * s)} ${n2(y + 0.4 * s)} ${n2(x + 3.4 * s)} ${n2(y + (up ? -1.6 : -0.6) * s)}Q${n2(x + 1.6 * s)} ${n2(y + (up ? -2 : 0.4) * s)} ${n2(x)} ${n2(y)}Z"/>`
   + `<path fill="#1c1420" d="M${n2(x - 0.6 * s)} ${n2(y + 0.2 * s)}l.2 -.8.4 .5.4 -.5.2 .8z"/><rect x="${n2(x - 0.4 * s)}" y="${n2(y + 0.3 * s)}" width=".25" height=".25" fill="#ff4d5e"/><rect x="${n2(x + 0.15 * s)}" y="${n2(y + 0.3 * s)}" width=".25" height=".25" fill="#ff4d5e"/>`;
@@ -79,7 +79,7 @@ art("isomanordoor", 24, 4, 60, ({ c = "#4a1a2a", open = 0 }) => {
   for (const z of [6, 33]) g += path([P(0, z), P(5, z), P(5, z + 1.2), P(0, z + 1.2)], IRON[1]);
   const [kx, ky] = ipt(...P(11.6, 21));
   return g + `<circle cx="${n2(kx)}" cy="${n2(ky)}" r="1.4" fill="none" stroke="${GOLD[1]}" stroke-width=".45"/><circle cx="${n2(kx)}" cy="${n2(ky - 1.3)}" r=".5" fill="${GOLD[2]}"/>`;
-});
+}, { mx: 5 });  // mx: room on both sides for the leaf swung open (symmetric: a turned door stays in place)
 // a wall with the ancestor's portrait: a gilt frame, a stern old man; his eyes follow the chief (look -1..1) and glow red
 // at night (lit)
 art("isomanorportrait", 24, 4, 60, ({ c = "#4a1a2a", look = 0, lit = false }) => {
@@ -256,11 +256,14 @@ art("isocoffin", 24, 10, 16, ({ w = EBONY, open = 0 }) => {
 art("isobatroost", 16, 6, 54, ({ w = "#3a2418", fly = false, frame = 0 }) => {
   let g = ishadow(16, 6) + ibox(0, 2, 2, 2, 0, 36, T3(w)) + ibox(14, 2, 2, 2, 0, 36, T3(w)) + ibox(-1, 1.8, 18, 2.4, 36, 2.4, T3(shade(w, 1.1)));
   g += path([[0, 4, 30], [0, 4, 36], [4, 4, 36]], shade(w, 0.85)) + path([[16, 4, 30], [16, 4, 36], [12, 4, 36]], shade(w, 0.85));
-  const xs = [3.2, 5.6, 8, 10.4, 12.8];
-  if (!fly) return g + xs.map((x, k) => { const [px, py] = ipt(x, 3, 35.8), s = k % 2 ? 0.9 : 1.05;
-    return `<path fill="#1c1420" d="M${n2(px - 0.9 * s)} ${n2(py)}h${n2(1.8 * s)}q.2 2.6 -.9 ${n2(4 * s)}q-1.1 -1.4 -.9 -${n2(4 * s)}z"/><path fill="#1c1420" d="M${n2(px - 0.5)} ${n2(py + 4 * s)}l.2 .7.3 -.4.3 .4.2 -.7z"/>`; }).join("");
-  return g + xs.map((x, k) => { const a = (frame + k * 2.3) * 0.7, [px, py] = ipt(8 + Math.cos(a) * 9, 3 + Math.sin(a) * 6, 42 + Math.sin(a * 1.7 + k) * 6); return bat(px, py, 1.1, (frame + k) % 2 === 0); }).join("");
-});
+  const xs = fly ? [3.2, 5.6, 8, 10.4, 12.8] : [3.6, 6.4, 9.6, 12.4];
+  // asleep: wrapped in their wings, upside down, the ears below, the feet clutching the beam
+  if (!fly) return g + xs.map((x, k) => { const [px, py] = ipt(x, 3, 35.8), s = (k % 2 ? 1.15 : 1.35), sway = [0, 0.3, 0, -0.3][(frame + k) % 4];
+    return `<path fill="#3a2a3a" d="M${n2(px - 0.3)} ${n2(py - 0.4)}h.6v.8h-.6z"/><path fill="#2e2236" stroke="#8a7a9a" stroke-width=".2" d="M${n2(px - 1.1 * s)} ${n2(py + 0.4)}Q${n2(px)} ${n2(py - 0.2)} ${n2(px + 1.1 * s)} ${n2(py + 0.4)}Q${n2(px + 1.5 * s + sway)} ${n2(py + 2.6 * s)} ${n2(px + sway)} ${n2(py + 4.2 * s)}Q${n2(px - 1.5 * s + sway)} ${n2(py + 2.6 * s)} ${n2(px - 1.1 * s)} ${n2(py + 0.4)}Z"/>`
+      + `<path fill="none" stroke="#3a2a3a" stroke-width=".25" d="M${n2(px + sway * 0.5)} ${n2(py + 0.6)}V${n2(py + 3.4 * s)}"/>`
+      + `<path fill="#1c1420" d="M${n2(px - 0.9 + sway)} ${n2(py + 4 * s)}l.2 1 .5 -.5.4 .5.2 -1z"/>`; }).join("");
+  return g + xs.map((x, k) => { const a = (frame + k * 2.3) * 0.7, [px, py] = ipt(8 + Math.cos(a) * 9, 3 + Math.sin(a) * 6, 46 + Math.sin(a * 1.7 + k) * 7); return bat(px, py, 1.5, (frame + k) % 2 === 0); }).join("");
+}, { mx: 7 });  // mx: room for the bats circling around the beam
 // the raven on its bust: a marble column, a pale bust, a black raven perched on its head who tilts his head and opens
 // his beak when he speaks (talk)
 art("isoraven", 8, 8, 40, ({ frame = 0, talk = false }) => {
