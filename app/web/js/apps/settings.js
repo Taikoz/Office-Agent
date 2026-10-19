@@ -2,7 +2,8 @@
 
 import { esc } from "../core/data.js";
 import { OsApp } from "./base.js";
-import { dockSettingsHtml } from "../ui/chiefos.js";
+import { dockSettingsHtml, osSkin, setOsSkin } from "../ui/chiefos.js";
+import { SaveSlot } from "../save/slot.js";
 import { meteo } from "../world/seasons.js";
 import { plan } from "./planning.js";
 import { glBusy, glDraftUrl, glMsg, glStatus } from "../ui/gitlab.js";
@@ -10,6 +11,7 @@ import { quality, setQuality } from "../ui/quality.js";
 import { slackClick, supportSettingsHtml } from "./support.js";
 import { renderChiefOs } from "../ui/chiefos.js";
 
+const skinNow = () => SaveSlot.get("office-osskin")?.data.skin || "auto";
 const Q = [["auto", "Auto", "s'adapte à ta machine"], ["high", "Haute", "tous les pixels de l'écran"], ["eco", "Économie", "30 images/s, moins de pixels, sans flou"]];
 function perfHtml() {
   const res = Math.round((document.getElementById("c").width / document.getElementById("c").getBoundingClientRect().width) * 100);
@@ -30,6 +32,9 @@ function settingsAppHtml() {
     <p class="muted">Droit <b>read_api</b> suffisant (lecture seule). Le jeton reste sur cette machine (<code>~/.claude/agent-office/gitlab.json</code>, lisible par toi seul) : la page ne le revoit jamais et il n'est pas dans la sauvegarde. Le serveur interroge GitLab lui-même.</p>
     ${supportSettingsHtml()}
     ${perfHtml()}
+    <h4>APPARENCE DE CHIEFOS</h4>
+    <div class="osrow"><b>Style</b><span class="qbtns">${[["auto", "Auto", "HOLO au poste de commandement holographique, Ubuntu sinon"], ["ubuntu", "Ubuntu", "le bureau classique"], ["holo", "HOLO", "futuriste : verre, néon, hexagones"]]
+      .map(([id, label, hint]) => `<button data-skin="${id}" class="${skinNow() === id ? "on" : ""}" title="${hint}">${label}</button>`).join("")}</span><span class="muted">${osSkin() === "holo" ? "◈ HOLO actif" : "Ubuntu actif"}</span></div>
     ${dockSettingsHtml()}
     <h4>AUTRES RÉGLAGES</h4>
     <div class="osrow"><b>🌦️ Météo réelle</b><span class="muted">${meteo.on ? `activée · ${esc(meteo.city)}` : "désactivée"}</span><button data-os-app="meteo">Ouvrir</button></div>
@@ -42,6 +47,7 @@ class SettingsApp extends OsApp {
   render() { return settingsAppHtml(); }
   click(b) {
     if (b.dataset.sl) { slackClick(b); return true; }  // Slack · Support (apps/support.js)
+    if (b.dataset.skin) { setOsSkin(b.dataset.skin); return true; }
     if (!b.dataset.q) return false; setQuality(b.dataset.q); renderChiefOs(); return true;
   }
 }

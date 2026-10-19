@@ -38,11 +38,12 @@ export const BUY_CATS = [["bureau", "🗄️", "Bureaux"], ["chaises", "🪑", "
   ["murs", "🧱", "Murs"], ["sols", "🟨", "Sols"], ["exterieur", "🌿", "Extérieur"], ["animaux", "🐾", "Animaux"], ["construction", "🏗️", "Construction"], ["cloisons", "🧱", "Cloisons"], ["garde", "🎩", "Garde-robe"]];
 // themed collections (the rail's 🎭 Thèmes): an object of a theme has theme: <id> and keeps its own category; inside a
 // theme, its objects by shelf (an object's shelf, else its category's), then the chief's clothes of the wardrobe
-export const THEMES = [{ id: "magie", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef." }];
+export const THEMES = [{ id: "magie", icon: "🪄", name: "École de sorcellerie", desc: "Murs de château à composer, vitraux, chandelles flottantes, chaudrons, grimoires, hibou… et la tenue du chef.", deco: "Déco et objets magiques" },
+  { id: "scifi", icon: "🚀", name: "Station spatiale", desc: "Cloisons de vaisseau, porte automatique, baie sur l'espace, ordinateurs du futur, téléporteurs, robot, poste de commandement (ChiefOS en HOLO)… et la combinaison du chef.", deco: "Gadgets et technologie" }];
 for (const t of THEMES) BUY_CATS.push([`theme:${t.id}`, t.icon, t.name]);
 const SHELVES = [["murs", "🧱", "Murs à composer"], ["fenetres", "🪟", "Fenêtres"], ["tapis", "🟫", "Tapis"], ["lumiere", "🕯️", "Éclairage"], ["chaises", "🪑", "Chaises et fauteuils"],
-  ["tables", "🍽️", "Tables"], ["bureaux", "🗄️", "Bureaux"], ["deco", "✨", "Déco et objets magiques"], ["garde", "🎩", "Garde-robe du chef"]];
-const shelfOf = d => d.shelf || ({ fenetres: "fenetres", tapis: "tapis", lumiere: "lumiere", chaises: "chaises", fauteuils: "chaises", canapes: "chaises", tables: "tables", bureau: "bureaux" }[d.cat]) || "deco";
+  ["tables", "🍽️", "Tables"], ["bureaux", "🗄️", "Bureaux"], ["ordinateurs", "💻", "Ordinateurs"], ["deco", "✨", "Déco"], ["garde", "🎩", "Garde-robe du chef"]];
+const shelfOf = d => d.shelf || ({ fenetres: "fenetres", tapis: "tapis", lumiere: "lumiere", chaises: "chaises", fauteuils: "chaises", canapes: "chaises", tables: "tables", bureau: "bureaux", electronique: "ordinateurs" }[d.cat]) || "deco";
 const themeOf = c => c?.startsWith("theme:") ? c.slice(6) : null;
 const catCount = c => themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length : CATALOG.filter(d => d.cat === c).length;
 export const defOf = type => CATALOG.find(d => d.type === type);
@@ -294,7 +295,7 @@ function themeGrid(id, room) {
       continue;
     }
     const here = mine.filter(d => shelfOf(d) === sid); if (!here.length) continue;
-    out += `<h5 class="bsec">${ic} ${label}</h5>` + here.map(d => cardHtml(d, room, false)).join("");
+    out += `<h5 class="bsec">${ic} ${sid === "deco" && t.deco || label}</h5>` + here.map(d => cardHtml(d, room, false)).join("");
   }
   return out;
 }
@@ -491,7 +492,7 @@ function autoPlace(type, style) {
 // each one once, when the office has none (furni.kitDev, furni.kitChief: done, kept in the save; sold later: not back)
 function starterKit() {
   if (typeof DEMO !== "undefined" && DEMO) return;
-  const office = itemsIn("office"), hasDev = office.some(o => defOf(o.type)?.workstation), hasChief = office.some(o => o.type === "chiefdesk");
+  const office = itemsIn("office"), hasDev = office.some(o => defOf(o.type)?.workstation), hasChief = office.some(o => defOf(o.type)?.chiefDesk);
   const wantDev = !furni.kitDev && !hasDev, wantChief = !furni.kitChief && !hasChief;
   if (furni.kitDev && furni.kitChief) return;
   furni.kitDev = true; furni.kitChief = true;

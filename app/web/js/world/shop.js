@@ -19,9 +19,14 @@ export const SHOP = [
   { id: "chief:robe", name: "Robe de sorcier", price: 1500, desc: `Pour ${CHIEF_NAME} : une longue robe nuit, liseré et fermoir dorés (couleurs dans « Créer ton chef »).`, chief: { outfit: "robe", shirt: "#2a2350", tie: "#d4a640" }, theme: "magie", icon: "🧙" },
   { id: "chief:wizard", name: "Chapeau pointu", price: 900, desc: `Pour ${CHIEF_NAME} : large bord, ruban doré, pointe pliée, une étoile.`, chief: { hat: "wizard" }, theme: "magie", icon: "🎩" },
   { id: "chief:scarf", name: "Écharpe rayée", price: 400, desc: `Pour ${CHIEF_NAME} : quatre coloris de maison au choix dans « Créer ton chef ».`, chief: { scarf: "#8f2b2b,#d4a640" }, theme: "magie", icon: "🧣" },
+  { id: "hat:visor", name: "Visières holo pour l'équipe", price: 1500, desc: "Toute l'équipe en visière holographique cyan.", hat: true, theme: "scifi", icon: "🥽" },
+  { id: "chief:flight", name: "Combinaison spatiale", price: 1800, desc: `Pour ${CHIEF_NAME} : d'une pièce, panneau de poitrine lumineux, bandes de couleur (réglables dans « Créer ton chef »).`, chief: { outfit: "flight", shirt: "#e6e8ee", tie: "#00e5ff" }, theme: "scifi", icon: "👨‍🚀" },
+  { id: "chief:helmet", name: "Casque d'astronaute", price: 1200, desc: `Pour ${CHIEF_NAME} : une bulle de verre sur un col d'acier.`, chief: { hat: "helmet" }, theme: "scifi", icon: "🪖" },
+  { id: "chief:visor", name: "Visière holo", price: 700, desc: `Pour ${CHIEF_NAME} : un bandeau de lumière cyan devant les yeux.`, chief: { hat: "visor" }, theme: "scifi", icon: "🥽" },
+  { id: "chief:jetpack", name: "Jetpack", price: 1600, desc: `Pour ${CHIEF_NAME} : deux réservoirs sur le dos ; des flammes sous lui quand il marche.`, chief: { jetpack: "1" }, theme: "scifi", icon: "🚀" },
   { id: "chief:wand", name: "Baguette magique", price: 600, desc: `Pour ${CHIEF_NAME} : en bois de houx, une étincelle au bout. Il la lève en dirigeant l'équipe.`, chief: { wand: "1" }, theme: "magie", icon: "🪄" },
 ];
-const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "" };  // taken off: back to the default
+const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "", jetpack: "" };  // taken off: back to the default
 const chiefWorn = it => { const [k, v] = Object.entries(it.chief)[0]; return hub.CHIEF_LOOK?.[k] === v || (k === "scarf" && !!hub.CHIEF_LOOK?.scarf); };
 const earnedXp = () => hub.game ? Object.values(hub.game.xp || {}).reduce((n, g) => n + (g.xp || 0), 0) : null;
 const has = id => shop.owned.includes(id) && !shop.off.includes(id);
