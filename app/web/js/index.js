@@ -116,6 +116,8 @@ import "./items/jukebox.js";
 import "./items/chiefdesk.js";
 import "./items/bowl.js";
 import "./items/window.js";
+import "./items/bar.js";
+import "./world/interact.js";
 import "./world/build.js";
 import "./world/place.js";
 import "./world/route.js";

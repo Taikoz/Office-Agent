@@ -42,12 +42,13 @@ class OfficeRoom extends Room {
     const onPodium = chief.at === "podium" && !chief.path.length, walking = chief.path.length > 0;
     const gaming = chief.at === "console" && !chief.path.length, asleep = gaming && ch?.idle > 900;
     const svc = chief.at === "service" && !walking ? chief.svc : null;  // looking after an object (world/upkeep.js)
+    const use = chief.at === "use" && !walking ? chief.opose : null;  // on a seat, at a counter… (world/interact.js)
     if (layer !== "over") {
       const waving = onPodium && !ch?.question && (t < chief.wave || (ch && !ch.finished && ch.idle < 20));
       if (!(["pc", "chiefos"].includes(chief.at) && !walking)) drawPerson(chief.x, chief.y, CHIEF_LOOK, { tux: true, frame: Math.floor(t / (walking ? 180 : gaming ? 140 : 250)), step: walking ? stepOf(chief, chief.x, chief.y) : null, talk: t < (chief.until || 0), smile: !asleep,
-        arms: svc ? (svc.kind === "thirst" ? "down" : "reach") : t < (chief.cheerUntil || 0) && !walking ? "up" : waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length && !chief.cup ? "reach" : "down", back: gaming || (walking && chief.path[0].y < chief.y) || (chief.at === "coffee" && !walking && !chief.cup), seated: gaming,
-        hold: svc?.kind === "thirst" ? "pour" : chief.carry ? chief.carry : chief.cup && !waving && !gaming ? (t < (chief.cheerUntil || 0) ? "cup" : cupHold(!walking, 7, t)) : "",  // his coffee: made at the machine (hands on it), then in hand, a sip now and then
-        dir: walking ? [chief.path[0].x - chief.x, chief.path[0].y - chief.y] : svc ? svc.dir : null });
+        arms: use?.arms ? use.arms : svc ? (svc.kind === "thirst" ? "down" : "reach") : t < (chief.cheerUntil || 0) && !walking ? "up" : waving ? "baton" : gaming && !asleep ? "type" : chief.at === "coffee" && !chief.path.length && !chief.cup ? "reach" : "down", back: use ? (use.dir?.[1] ?? 0) < 0 : gaming || (walking && chief.path[0].y < chief.y) || (chief.at === "coffee" && !walking && !chief.cup), seated: gaming || !!use?.seated,
+        hold: use?.hold ? use.hold : svc?.kind === "thirst" ? "pour" : chief.carry ? chief.carry : chief.cup && !waving && !gaming ? (t < (chief.cheerUntil || 0) ? "cup" : cupHold(!walking, 7, t)) : "",  // his coffee: made at the machine (hands on it), then in hand, a sip now and then
+        dir: walking ? [chief.path[0].x - chief.x, chief.path[0].y - chief.y] : svc ? svc.dir : use?.dir || null });
     }
     if (layer === "body") return;
     text(CHIEF_NAME.toUpperCase(), chief.x, chief.y + (onPodium ? 7 : 2), "#fbaa08", 4.6, "center");
@@ -196,7 +197,7 @@ class OfficeRoom extends Room {
     }
     if (hub.petBook.dog) { const dg = hub.dog; items.push({ pt: [dg.x, dg.y], draw: () => anchored(dg.x, dg.y, () => hub.drawDog(t), { x: dg.x - 11, y: dg.y - 20, w: 22, h: 23, to: { x: dg.x, y: dg.y - 4 } }) }); }
     // the chief and the team (on their chair when there is one)
-    const lift = () => chief.at === "podium" && !chief.path.length && OFFICE_SPOTS.podium ? 5 : 0;
+    const lift = () => chief.at === "podium" && !chief.path.length && OFFICE_SPOTS.podium ? 5 : chief.at === "use" && !chief.path.length ? chief.opose?.lift || 0 : 0;
     const seatLift = (x, y) => chairNear("office", x, y) ? 3 : 0;
     if (chief.room === "office") {
       const seatedPc = ["pc", "chiefos"].includes(chief.at) && !chief.path.length;

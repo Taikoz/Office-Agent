@@ -4,8 +4,7 @@
 
 import "../svg/isogadgets.js";
 import { hub } from "../hub.js";
-import { CHIEF_NAME, chief } from "../core/core.js";
-import { chiefGo, chiefToLounge, chiefToOffice } from "../world/chief.js";
+import { CHIEF_NAME } from "../core/core.js";
 import { saveBuild } from "../world/build.js";
 import { usersOf } from "../world/place.js";
 import { jukebox, pressJukebox } from "../world/shop.js";
@@ -34,17 +33,9 @@ pc("pcdual", "Double écran", 1600, 30, 9, "isopcdual", [{ x: 1.6, y: 1.95, z: 4
 pc("pcultra", "Écran incurvé ultra-large", 1800, 30, 9, "isopcultra", [{ x: 7.4, y: 2.45, z: 4.6, w: 15.2, h: 7.8 }], "Un écran courbe qui enveloppe le regard, un mini-PC à côté.",
   sty([["noir", "Noir", "#1c1c22"], ["blanc", "Blanc", "#e6e6ea"], ["gris", "Gris sidéral", "#5a5e68"]]));
 
-/* ---------- the chief goes to an object, then does something there ---------- */
+/* ---------- the chief goes to an object (in any room: world/interact.js), then does something there ---------- */
 export function chiefVisit(it, fn) {
-  if (hub.chiefBusyNow()) return say(CHIEF_NAME, "Pas maintenant, l'équipe a besoin de moi !");
-  const sp = hub.frontOf(it), done = () => { fn(); hub.saveBuild?.(); };
-  if (it.room === "office") {
-    const go = () => chiefGo(sp, done);
-    if (chief.room !== "office") { chief.pendingOffice = go; chiefToOffice(); } else go();
-  } else if (it.room === "lounge") {
-    const go = () => { chief.lpath = [{ x: sp.x, y: sp.y, on: done }]; };
-    if (chief.room === "lounge") go(); else { chief.loungeNext = go; chiefToLounge(); }
-  } else done();
+  hub.chiefUse(it, { then: () => { fn(); hub.saveBuild?.(); } });
 }
 // an object with its own actions: [id, icon, label, run(it), when(it)?, lock(it)?]; walk: the chief goes there first
 export class Gadget extends Colored {

@@ -142,7 +142,8 @@ pf("poufcuir", "Pouf capitonné", 450, "💼 Riche", "Cuir capitonné, cerclé e
 pf("poufgalets", "Poufs galets", 600, "🎨 Créateur", "Trois galets de mousse de tailles différentes.", sty("c", [["sauge", "Sauge", "#9caf88"], ["sable", "Sable", "#d9c7a5"], ["ardoise", "Ardoise", "#5a6070"], ["corail", "Corail", "#e88a6a"]]), 22, 16, 1);
 pf("poufmaroc", "Pouf marocain brodé", 900, "👑 Luxe", "Cuir tanné à la main, broderies au fil d'or.", sty("c", [["cognac", "Cognac", "#9a5a2a"], ["rouge", "Rouge", "#8f1f2a"], ["bleu", "Bleu Majorelle", "#2a3ab0"], ["vert", "Vert", "#1f6e4a"]]), 16, 16, 1);
 addC({ type: "stool", cat: "chaises", name: "Tabouret", price: 60, room: "any", w: 10, d: 10, art: "isostool", chair: true, walkable: true, desc: "Autour d'une table.", styles: [{ id: "bois", name: "Bois", sw: "#8a6a4a" }] });
-addC({ type: "barstool", cat: "chaises", name: "Tabouret de bar", price: 90, room: "any", w: 8, d: 8, art: "isobarstool", chair: true, walkable: true, desc: "Haut, devant un bar.", styles: [{ id: "orange", name: "Orange", sw: "#de8001" }] });
+addC({ type: "barstool", cat: "bar", name: "Tabouret de bar", price: 90, room: "any", w: 8, d: 8, art: "isobarstool", chair: true, walkable: true, visit: "terrace", pose: { seated: true, hold: "pint" },
+  spots: [{ x: 4, y: 4, face: [0, -1], lift: 10 }], desc: "Haut, devant un bar. Pendant l'afterwork, les devs s'y installent.", styles: [{ id: "orange", name: "Orange", sw: "#de8001" }] });
 addC({ type: "cushion", cat: "poufs", name: "Coussin de sol", price: 40, room: "any", w: 14, d: 10, art: "isocushion", chair: true, walkable: true, desc: "Pour s'asseoir par terre.", styles: BAG_C });
 addC({ type: "beanbag", cat: "poufs", name: "Pouf", price: 150, room: "any", w: 18, d: 14, art: "isobeanbag", act: "chat", walkable: true, spots: [{ x: 9, y: 7, face: [0, 1] }],
   desc: "Pour papoter (il en faut deux).", styles: BAG_C });
@@ -194,7 +195,8 @@ new TeamPlant({ type: "teamplant", cat: "plantes", name: "Plante de l'équipe", 
   desc: "Elle pousse avec les MR de la semaine et fane sans MR pendant deux jours.", styles: [{ id: "verte", name: "Verte", sw: "#3f9e4f" }] });
 
 /* ---------- outdoors ---------- */
-addC({ type: "bar", cat: "exterieur", name: "Bar", price: 2200, room: "any", w: 88, d: 26, rots: 2, art: "isobar", env: e => ({ neon: e.lit }), surface: { z: 22, rect: [0, 12, 88, 14] }, desc: "Comptoir, bouteilles, néon.", styles: [{ id: "bois", name: "Bois", sw: "#8a5d3a" }] });
+addC({ type: "bar", cat: "bar", act: "bar", bar: true, name: "Bar tout-en-un", price: 2200, room: "any", w: 88, d: 26, rots: 2, art: "isobar", env: e => ({ neon: e.lit }), surface: { z: 22, rect: [0, 12, 88, 14] },
+  spots: [22, 44, 66].map(x => ({ x, y: 31, face: [0, -1] })), desc: "Comptoir, bouteilles, néon, d'un seul bloc. Les devs viennent y boire un verre. Pour un bar sur mesure : les modules de comptoir.", styles: [{ id: "bois", name: "Bois", sw: "#8a5d3a" }] });
 addC({ type: "grill", cat: "exterieur", name: "Barbecue", price: 600, room: "any", w: 20, d: 14, art: "isogrill", env: e => ({ on: e.party || e.season === "été" }), desc: "S'allume pour l'afterwork.", styles: [{ id: "noir", name: "Noir", sw: "#1c1c24" }] });
 addC({ type: "firepit", cat: "exterieur", name: "Brasero", price: 700, room: "any", w: 28, d: 24, art: "isofirepit", env: e => ({ lit: e.lit || e.season === "hiver", frame: e.still ? 0 : Math.floor(e.t / 160) % 3 }), desc: "Allumé le soir.", styles: [{ id: "pierre", name: "Pierre", sw: "#8d929c" }] });
 addC({ type: "parasol", cat: "exterieur", name: "Parasol", price: 250, room: "any", w: 16, d: 16, art: "isoparasol", walkable: false, env: e => ({ closed: e.wet || e.dark }), desc: "À rayures. Replié sous la pluie et la nuit, ouvert au soleil.", styles: [{ id: "jaune", name: "Jaune et marine", sw: "#fbaa08" }] });

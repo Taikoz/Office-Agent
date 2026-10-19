@@ -42,7 +42,8 @@ export function revalidateSpots() {
     if (l.spot && !l.spot.key?.startsWith("stand:") && !keys.has(l.spot.key)) { l.spot = null; l.next = 0; l.busy = false; }
     else if (l.spot?.key?.startsWith("stand:") && keys.size && !l.busy) l.next = 0;  // something new to use: they go
   }
-  if (chief.lspot && !chief.lspot.key?.startsWith("stand:") && !keys.has(chief.lspot.key)) chief.lspot = null;
+  const own = k => k?.startsWith("stand:") || k?.startsWith("use:");  // standing, or on an object he chose (world/interact.js)
+  if (chief.room === "lounge" && chief.lspot && !own(chief.lspot.key) && !keys.has(chief.lspot.key)) chief.lspot = null;
 }
 export function pickSpot(name) {
   const free = SPOTS().filter(spotFree);
