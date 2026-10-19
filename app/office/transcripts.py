@@ -9,6 +9,7 @@ from typing import Any
 
 from .config import ASK_RE, HEAD_BYTES, TAIL_BYTES, TICKET_RE
 from .questions import match_question
+from .waiting import call_key
 
 LESSONS_MARK = "## Leçons des missions précédentes (Agent Office)"  # lessons.MARK (not imported: lessons.py imports this package)
 LESSON_IDS = re.compile(r"\[(L-\d{4})\]")
@@ -74,6 +75,7 @@ def scan(path: Path, now: float) -> dict[str, Any]:
     tools = errors = tokens = 0
     last_tool, last_error, stop, handback = "", "", None, False
     open_calls: dict[str, str] = {}
+    open_keys: dict[str, str] = {}  # the same calls' keys, to find the one waiting for a permission (waiting.py)
     seen: set[str] = set()
     for rec in tail:
         msg = rec.get("message") or {}
@@ -89,10 +91,12 @@ def scan(path: Path, now: float) -> dict[str, Any]:
                     handback = handback or c.get("name") == "SubagentHandback"
                     last_tool = describe_tool(c.get("name", ""), c.get("input") or {})
                     open_calls[c.get("id", "")] = str((c.get("input") or {}).get("command", ""))
+                    open_keys[c.get("id", "")] = call_key(c.get("name", ""), c.get("input") or {})
         elif rec.get("type") == "user" and isinstance(content, list):
             for c in content:
                 if c.get("type") == "tool_result":
                     open_calls.pop(c.get("tool_use_id", ""), None)
+                    open_keys.pop(c.get("tool_use_id", ""), None)
                     if c.get("is_error"):
                         errors += 1
                         last_error = text_of(c.get("content"))[:120] or "erreur"
@@ -114,6 +118,7 @@ def scan(path: Path, now: float) -> dict[str, Any]:
         "updated": mtime,
         "lastText": text_of((last.get("message") or {}).get("content"))[-160:] if finished else "",
         "asks": [cmd for cmd in open_calls.values() if ASK_RE.search(cmd)],
+        "openKeys": list(open_keys.values()),
     }
 
 

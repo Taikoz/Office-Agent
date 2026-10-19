@@ -1,4 +1,4 @@
-// Browser notifications: a question, a blocked dev, a delivery, an MR or a dev turning in circles. Off by default.
+// Browser notifications: a question, a permission to give in a terminal, a blocked dev, a delivery, an MR or a dev turning in circles. Off by default.
 
 import { hub, provide } from "../hub.js";
 import { clip, data, specialty } from "./core.js";
@@ -53,22 +53,23 @@ renderNotifyBtn();
 // compare each agent with the previous poll; the first sight of an agent never notifies
 function notifyChanges() {
   for (const s of data.sessions) {
-    const people = [...s.agents, { ...s.chief, id: `chief:${s.id}`, status: s.chief.question ? "asking" : "working", type: s.chief.agent || "chef" }];
+    const people = [...s.agents, { ...s.chief, id: `chief:${s.id}`, status: s.chief.question ? "asking" : "working", type: s.chief.agent || "chef" }];  // permission: kept from s.chief
     for (const a of people) {
-      const now = { status: a.status, mr: a.game?.mr || null, stuck: isStuck(a), q: a.question?.id || null, over: !a.id.startsWith("chief:") && overBudget(a), ci: pipeOf(a.game?.mr)?.ci || null, clash: collisionMap.get(a.id)?.file || null };
+      const now = { status: a.status, mr: a.game?.mr || null, stuck: isStuck(a), q: a.question?.id || null, over: !a.id.startsWith("chief:") && overBudget(a), ci: pipeOf(a.game?.mr)?.ci || null, clash: collisionMap.get(a.id)?.file || null, perm: a.permission?.created || null };
       const prev = notifySeen.get(a.id);
       notifySeen.set(a.id, now);
       if (!prev) continue;
       const chiefRow = a.id.startsWith("chief:"), who = chiefRow ? "La session principale" : crew.ids[`${s.id}|${a.id}`] || specialty(a.type);
       const target = chiefRow ? "chief" : a.id;
       // their sound (world/sounds.js), in the page too: a doorbell, two low notes, a fanfare, a broken CI, a spiral
-      const ring = now.q && now.q !== prev.q ? "question" : chiefRow ? "" : now.status !== prev.status && now.status === "blocked" ? "blocked"
+      const ring = now.q && now.q !== prev.q || now.perm && now.perm !== prev.perm ? "question" : chiefRow ? "" : now.status !== prev.status && now.status === "blocked" ? "blocked"
         : now.status !== prev.status && now.status === "done" ? "deliver" : now.ci === "failed" && prev.ci !== "failed" ? "ci" : now.stuck && !prev.stuck ? "stuck" : "";
       if (ring) hub.sfx?.(ring);
       if (ring === "deliver") hub.comicReady?.(`${s.id}|${a.id}`, who, a.ticket);  // its comic strip (ui/comic.js)
       const tl = { question: `❓ ${who} a une question`, blocked: `⛔ ${who} est bloqué`, deliver: `✓ ${who} livre${a.ticket ? ` ${a.ticket}` : ""}`, ci: `✗ CI rouge pour ${who}`, stuck: `🌀 ${who} tourne en rond` }[ring];
       if (tl) hub.timelapseEvent?.(tl);
       if (!chiefRow && now.mr && now.mr !== prev.mr) hub.timelapseEvent?.(`🔔 ${who} ouvre une MR`);  // the day's events, for the timelapse (ui/timelapse.js)
+      if (now.perm && now.perm !== prev.perm) notify(`🔐 ${who} attend ta permission`, `${a.permission.detail || a.permission.tool} — à valider dans son terminal`, s.id, target, true);
       if (now.q && now.q !== prev.q) notify(`❓ ${who} a une question`, a.question.question, s.id, target, true, a.question);
       if (chiefRow) continue;
       if (now.status !== prev.status && now.status === "blocked") notify(`⛔ ${who} est bloqué`, a.lastError || a.action, s.id, target, true);

@@ -5,6 +5,8 @@
                              needed, open the page if no tab is watching
     office.py hook-lessons   PreToolUse(Agent): only add the validated lessons to the subagent's prompt (lessons.py)
     office.py hook-session   SessionStart: refresh the ask.py shim; on /clear, empty the office
+    office.py hook-permission  PermissionRequest: note that an agent waits for the user's go in its terminal (prints
+                             nothing: the dialog goes on as usual)
     office.py open           start if needed and always open the page (prints the URL)
     office.py ensure         start if needed, open only if no tab is watching (used by ask.py)
     office.py status | stop
@@ -201,6 +203,9 @@ def main() -> int:
             if e.get("source") == "clear" and not config.excluded(str(e.get("cwd", ""))):
                 STATE.mkdir(parents=True, exist_ok=True)
                 config.CLEAR_MARK.touch()
+        elif cmd == "hook-permission":
+            from office import waiting
+            waiting.record(event())
         elif cmd == "ensure":
             if start() and CFG["open_browser"] and not viewed():
                 open_page()

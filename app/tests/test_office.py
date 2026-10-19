@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts, waiting  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -56,6 +56,46 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual(len(state["asks"]), 1)
         q = {"id": "q-1", "question": "Draft ?"}
         self.assertIs(questions.match_question(state["asks"], [q]), q)
+
+
+class WaitingTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.dir = Path(tempfile.mkdtemp())
+        patcher = mock.patch.object(waiting, "WAITING", self.dir / "waiting")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_open_call_waits_until_its_result(self) -> None:
+        cmd = "git push -u origin ABC-1"
+        path = write_transcript(self.dir / "agent-a3.jsonl", [tool_use("t1", "Bash", command=cmd, description="Push")])
+        state = transcripts.scan(path, time.time())
+        waiting.record({"session_id": "s1", "tool_name": "Bash", "tool_input": {"command": cmd, "description": "Push"}, "cwd": "/repo"})
+        items = waiting.pending()["s1"]
+        got = waiting.assign(items, {"a3": set(state["openKeys"]), "": set()}, {"a3": state["updated"], "": 0.0})
+        self.assertEqual((got["a3"]["tool"], got["a3"]["detail"]), ("Bash", "Push"))
+        # allowed: the call gets its result, the transcript moves on, the dialog is forgotten
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(tool_result("t1")) + "\n")
+        os.utime(path, (time.time() + 10, time.time() + 10))
+        state = transcripts.scan(path, time.time())
+        self.assertEqual(waiting.assign(items, {"a3": set(state["openKeys"]), "": set()}, {"a3": state["updated"], "": 0.0}), {})
+        self.assertEqual(waiting.pending(), {})
+
+    def test_allowed_command_still_running_no_longer_waits(self) -> None:
+        cmd = "uv run pytest tests/checkout -k routes"
+        waiting.record({"session_id": "s3", "tool_name": "Bash", "tool_input": {"command": cmd}}, now=100.0)
+        items = waiting.pending(now=110.0)["s3"]
+        key = items[0]["key"]
+        with mock.patch.object(waiting, "running", return_value={items[0]["probe"]}):
+            self.assertEqual(waiting.assign(items, {"a5": {key}}, {"a5": 99.0}, now=110.0), {})
+        self.assertEqual(waiting.pending(now=110.0), {})
+
+    def test_call_not_written_yet_goes_to_the_hook_agent(self) -> None:
+        waiting.record({"session_id": "s2", "agent_id": "a4", "tool_name": "Write", "tool_input": {"file_path": "/repo/x.py"}}, now=100.0)
+        items = waiting.pending(now=100.0)["s2"]
+        self.assertIn("a4", waiting.assign(items, {"a4": set(), "": set()}, {"a4": 99.0, "": 99.0}, now=110.0))
+        self.assertEqual(waiting.assign(items, {"a4": set(), "": set()}, {"a4": 99.0, "": 99.0}, now=200.0), {})  # answered by now
+        self.assertIsNone(waiting.record({"session_id": "../x", "tool_name": "Bash"}))
 
 
 class RunTests(unittest.TestCase):
