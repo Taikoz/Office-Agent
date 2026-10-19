@@ -1018,7 +1018,7 @@ class IsoAvatar extends SvgArt {
     const ph = walk != null ? (walk % 8) / 8 * 2 * Math.PI : null, bz = breath ? 0.35 : 0;
     const zt = seated ? 4 : 8, zh = zt + 9.5 + bz - (arms === "type" && f ? 0.3 : 0);  // the body's bottom, the head's bottom (a nod while typing)
     // legs and shoes (seated: the thighs forward, the shins down)
-    const robe = outfit === "robe", legs = robe ? shade(shirt, 0.9) : pants;  // a wizard's robe: down to the shoes
+    const robe = outfit === "robe", suit = outfit === "flight", legs = robe ? shade(shirt, 0.9) : suit ? shirt : pants;  // a wizard's robe: down to the shoes; a flight suit: all of a piece
     if (seated) {
       for (const x of [-3.4, 0.4]) { block(x, -0.5, 3, 6.5, 2.4, 3, legs); block(x, 5, 3, 2, 0, 3, legs); block(x - 0.1, 6, 3.2, 2, 0, 1.4, shoes); }
     } else if (robe) {
@@ -1038,10 +1038,15 @@ class IsoAvatar extends SvgArt {
     else if (outfit === "shirt") front.push(["front", 3, 8, 2, 1.5, shade(skin, 0.84)], ["front", 3.7, 6, 0.6, 0.6, shade(shirt, 0.6)], ["front", 3.7, 4, 0.6, 0.6, shade(shirt, 0.6)], ["front", 3.7, 2, 0.6, 0.6, shade(shirt, 0.6)]);
     else if (outfit === "hoodie") front.push(["front", 2, 7.5, 4, 2, shade(shirt, 0.85)], ["front", 3, 8.5, 2, 1, shade(skin, 0.84)], ["front", 2.6, 4.6, 0.5, 3, "#f4f2ea"], ["front", 4.9, 4.6, 0.5, 3, "#f4f2ea"], ["front", 1.6, 0.6, 4.8, 2.6, shade(shirt, 0.82)]);
     else if (outfit === "polo") front.push(["front", 3, 8, 2, 1.5, shade(skin, 0.84)], ["front", 1.8, 8.2, 1.4, 1.3, shade(shirt, 1.3)], ["front", 4.8, 8.2, 1.4, 1.3, shade(shirt, 1.3)], ["front", 3.7, 6.4, 0.6, 0.6, shade(shirt, 0.6)]);
+    else if (suit) front.push(["front", 2.2, 4.4, 3.6, 2.8, "#1a222c"], ["front", 2.6, 5.4, 0.8, 0.8, "#00e5ff"], ["front", 3.8, 5.4, 0.8, 0.8, "#ff3df2"], ["front", 0, 0, 0.8, 9.5, tie], ["front", 7.2, 0, 0.8, 9.5, tie], ["front", 1.6, 8.6, 4.8, 0.9, shade(shirt, 0.8)]);  // the chest panel, the stripes, the collar
     else if (robe) front.push(["front", 3.6, 0, 0.8, 9.5, tie], ["front", 2.2, 7.4, 3.6, 2.1, shade(shirt, 0.8)], ["front", 3.4, 8.2, 1.2, 1, "#d4a640"]);  // the trim, the collar, the clasp
     else front.push(["front", 3, 8.2, 2, 1.3, shade(skin, 0.84)], ["front", 1.6, 0.4, 4.8, 0.8, shade(shirt, 0.8)]);
     block(-4, -2.4, 8, 4.8, zt, 9.5 + bz, shirt, [...front, ...(dark ? [] : [["back", 1, 8.6, 6, 0.9, shade(shirt, 0.8)]])]);
     block(-1.2, -1.2, 2.4, 2.4, zt + 9.5 + bz, 0.6, shade(skin, 0.84));  // the neck
+    if (look.jetpack) {  // a jetpack on the back: two tanks, a light, flames under it while walking
+      block(-3.2, -4.9, 6.4, 2.6, zt + 2, 8, "#9aa6b4", [["back", 1, 6, 4.4, 0.8, "#00e5ff"]]);
+      for (const x of [-2.8, 1]) { block(x, -4.7, 1.8, 1.8, zt + 0.6, 1.4, "#2a3340"); if (ph != null) block(x + 0.4, -4.3, 1, 1, zt - 1.6, 2.2, "#ff9a3b"); }
+    }
     if (look.scarf) {  // a striped scarf: around the neck, one end down the front
       const [sa, sb = "#f4f2ea"] = String(look.scarf).split(",");
       block(-2.6, -2.6, 5.2, 5.2, zt + 8.4 + bz, 1.8, sa, [["front", 1, 0, 0.8, 1.8, sb], ["front", 2.8, 0, 0.8, 1.8, sb], ["left", 1.6, 0, 0.8, 1.8, sb]]);
@@ -1127,6 +1132,11 @@ class IsoAvatar extends SvgArt {
     else if (hat === "crown") { block(-3.4, -3.4, 6.8, 6.8, zh + 9.2, 1.4, "#fbaa08"); for (const [x, y] of [[-3.4, -3.4], [2.2, -3.4], [-3.4, 2.2], [2.2, 2.2]]) block(x, y, 1.2, 1.2, zh + 10.6, 1.6, "#fbaa08"); }
     else if (hat === "fedora") { block(-5, -5, 10, 10, zh + 8.4, 0.8, "#4a3826"); block(-3.4, -3.4, 6.8, 6.8, zh + 9.2, 3, "#5c4632", [["front", 0, 0, 6.8, 0.8, "#1c1c24"]]); }
     else if (hat === "vr") { block(-4.3, -4.3, 8.6, 8.6, zh + 3.4, 2.8, "#1c1c22", [["front", 0.8, 0.5, 7, 1.6, "#3bc4ff"]]); block(-4.4, -4.4, 8.8, 8.8, zh + 6.6, 0.6, "#2a2a33"); }
+    else if (hat === "helmet") {  // the astronaut's helmet: a collar, a glass bubble over the head, a glint
+      block(-4.4, -4.4, 8.8, 8.8, zh - 1.6, 1.2, "#c9d2dc");
+      block(-4.9, -4.9, 9.8, 9.8, zh - 0.4, 11, ["#d8f2ff55", "#bfe9ff44", "#9fd0ee44"], [["front", 1, 5.6, 2.2, 3.4, "#ffffff66"]]);
+    }
+    else if (hat === "visor") { block(-3.75, -3.75, 7.5, 7.5, zh + 4.8, 0.8, "#2a3340"); block(-3.9, 3.3, 7.8, 0.7, zh + 3.2, 2.2, "#00e5ff", [["front", 0, 1.4, 7.8, 0.5, "#e8ffff"]]); }
     else if (hat === "wizard") {  // the pointed hat: a wide brim, a gold band, a bent tip, a star
       const c = "#2a2350";
       block(-5.2, -5.2, 10.4, 10.4, zh + 8.2, 0.8, c); block(-3.4, -3.4, 6.8, 6.8, zh + 9, 3, c, [["front", 0, 0, 6.8, 0.9, "#d4a640"], ["front", 2.6, 1.4, 1.2, 1.2, "#ffe14d"]]);

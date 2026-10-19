@@ -145,6 +145,19 @@ function paintRug(p, x0, y0, w, h, type, base) {
     for (let x = x0 + 6; x < x0 + w - 5; x += 6) for (let yy = y0 + 6; yy < y0 + h - 5; yy += 6) rect(x, yy, 0.6, 0.6, "rgba(255, 255, 255, 0.07)");
   } else if (type === "rayé") {
     for (let y = y0 + 4, k = 0; y < y0 + h - 4; y += 4, k++) rect(x0 + 1.5, y, w - 3, 2, k % 2 ? light : dark);
+  } else if (type === "grille") {  // a simulator floor: a cyan grid, glowing nodes, a border of light
+    const cy = "#00e5ff";
+    rect(x0 + 2, y0 + 2, w - 4, 0.6, cy); rect(x0 + 2, y0 + h - 2.6, w - 4, 0.6, cy); rect(x0 + 2, y0 + 2, 0.6, h - 4, cy); rect(x0 + w - 2.6, y0 + 2, 0.6, h - 4, cy);
+    for (let x = x0 + 6; x < x0 + w - 4; x += 6) rect(x, y0 + 3, 0.25, h - 6, "rgba(0, 229, 255, 0.35)");
+    for (let y = y0 + 6; y < y0 + h - 4; y += 6) rect(x0 + 3, y, w - 6, 0.25, "rgba(0, 229, 255, 0.35)");
+    for (let x = x0 + 6, i = 0; x < x0 + w - 4; x += 6) for (let y = y0 + 6; y < y0 + h - 4; y += 6, i++) if (i % 5 === 2) rect(x - 0.5, y - 0.5, 1.2, 1.2, i % 3 ? cy : "#ff3df2");
+  } else if (type === "hexa") {  // honeycomb cells, a few lit
+    const r = 3.2, dx = r * 1.732, dy = r * 1.5;
+    for (let row = 0, y = y0 + 4; y < y0 + h - 3; y += dy, row++) for (let i = 0, x = x0 + 4 + (row % 2) * dx / 2; x < x0 + w - 3; x += dx, i++) {
+      const lit = (i * 7 + row * 3) % 11 === 0, pts = Array.from({ length: 6 }, (_, k) => [x + Math.cos(Math.PI / 6 + k * Math.PI / 3) * r, y + Math.sin(Math.PI / 6 + k * Math.PI / 3) * r]);
+      p.poly(pts, lit ? "rgba(0, 229, 255, 0.55)" : light);
+      p.poly(pts.map(([px2, py2]) => [x + (px2 - x) * 0.82, y + (py2 - y) * 0.82]), lit ? "rgba(0, 229, 255, 0.3)" : base);
+    }
   } else if (type === "etoiles") {  // a night sky: a gold border, stars of all sizes, a crescent moon, a comet
     const gold = "#d9a441";
     rect(x0 + 2.5, y0 + 2.5, w - 5, 0.6, gold); rect(x0 + 2.5, y0 + h - 3.1, w - 5, 0.6, gold); rect(x0 + 2.5, y0 + 2.5, 0.6, h - 5, gold); rect(x0 + w - 3.1, y0 + 2.5, 0.6, h - 5, gold);
