@@ -10,9 +10,13 @@ export const today = () => new Date().toISOString().slice(0, 10);
 
 /* laser pointer: hold Shift over the office, Brume chases the dot, then gets bored */
 export const laser = { on: false, x: 0, y: 0, over: false };
-addEventListener("keydown", ev => { if (ev.key === "Shift") laser.on = true; });
+// Shift typed in a field (a capital letter) is not the laser; the pointer's own events say whether Shift is really
+// down, so a key release the page missed cannot leave it on (Brume would then sit under every click)
+addEventListener("keydown", ev => { if (ev.key === "Shift" && !ev.target.closest?.("input, textarea, select, [contenteditable]")) laser.on = true; });
 addEventListener("keyup", ev => { if (ev.key === "Shift") laser.on = false; });
+for (const type of ["pointermove", "pointerdown"]) addEventListener(type, ev => { if (!ev.shiftKey) laser.on = false; }, true);
 addEventListener("blur", () => { laser.on = false; });
+document.addEventListener("visibilitychange", () => { if (document.hidden) laser.on = false; });
 function laserActive() { return laser.on && laser.over && view === "office"; }
 export function stepLaser(dt, t) {
   if (!laserActive()) { if (hub.cat.mode === "chase") { hub.cat.mode = "sit"; hub.cat.until = t + 2000; } return false; }

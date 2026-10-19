@@ -227,7 +227,7 @@ class OfficeRoom extends Room {
     const pager = hitBoardPager(x, y);  // before people: a dev walking past the board must not hide its arrows
     if (pager) return pager;
     const hp = Happening.hitAt(x, y) || hub.hitDog(x, y); if (hp) return hp;  // client visit, breaker box (js/happenings/), the dog (pets.js)
-    if (Math.abs(x - cat.x) <= 7 && y >= cat.y - 10 && y <= cat.y + 2) return "cat";
+    if (cat.mode !== "chase" && Math.abs(x - cat.x) <= 7 && y >= cat.y - 10 && y <= cat.y + 2) return "cat";  // chasing the laser she is under the pointer: the click is for what is there
     const boss = hitBoss(x, y);
     if (boss) return boss;
     for (const e of ents.values()) {

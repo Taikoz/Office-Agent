@@ -5,7 +5,7 @@ import { CHIEF_NAME, px } from "../core/core.js";
 import { crewAdd } from "../sims/crew.js";
 import { Item } from "./base.js";
 
-class Plant extends Item {
+export class Plant extends Item {
   over(it, t, G) {  // watered: drops falling on it
     if (t >= (it.wetUntil || 0)) return;
     const [x0, y0, x1, y1] = this.footprint(it);

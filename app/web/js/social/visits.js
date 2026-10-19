@@ -1,5 +1,6 @@
 // The free devs of the break room go to the gym or the library now and then (rooms/extra.js): to the gym when they are
-// bored (sportsmen first), to the library when they are tired or want some calm (loners first). They take a free spot
+// bored (sportsmen first), to the library when they are tired or want some calm (loners first); out on the terrace
+// (rooms/built.js) when they need some air or company, if it does not rain: the hot tub, the picnic table, the hammock. They take a free spot
 // of a machine or a place to read, stay a minute or two, and come back better: fun and mood from the gym (more
 // tired), rest and calm from the library.
 
@@ -19,11 +20,16 @@ const ROOMS = {
     go: ["Je vais lire un peu à la bibliothèque 📚", "Un peu de calme, ça me fera du bien.", "Je file finir mon livre."],
     there: ["Chut…", "Ce chapitre est génial.", "J'apprends plein de trucs.", "On est bien, ici.", "Encore une page…", "Ce livre sur l'architecture est top."],
     back: { fatigue: -14, ennui: -12, moral: 4 }, moodlet: ["library", "📚", "Un moment de lecture"] },
+  terrace: { wants: (n, m) => wet() ? 0 : m.ennui >= 40 || (m.social ?? 60) < 45 ? 0.3 : 0.08,
+    go: ["Je vais prendre l'air sur la terrasse 🌿", "Un peu de soleil, ça ne se refuse pas.", "Qui vient au jacuzzi ?"],
+    there: ["Quelle vue !", "On est bien, là.", "Je pourrais rester ici toute la journée.", "Ça fait du bien de sortir.", "L'eau est parfaite !", "On se fait un barbecue vendredi ?"],
+    back: { ennui: -16, social: 12, moral: 5, fatigue: -4 }, moodlet: ["terrace", "🌿", "Un moment au grand air"], leaveIf: () => wet(), leaveLine: "Il se met à pleuvoir, je rentre ☔" },
 };
+const wet = () => ["rain", "storm"].includes(typeof hub.weather === "function" ? hub.weather() : "clear");
 // the free spots of a room: its objects with spots (def.visit), not taken
 function freeSpots(room) {
   const taken = new Set([...loungers.values()].filter(l => l.partyRoom === room && l.roomSpot).map(l => l.roomSpot.key));
-  return hub.itemsIn(room).flatMap(it => { const d = hub.defOf(it.type); if (d.visit !== room && d.act !== "read") return []; return hub.spotsOf(it).map(s => ({ ...s, pose: d.pose || (d.act === "read" ? { seated: true, book: true } : {}) })); })
+  return hub.itemsIn(room).flatMap(it => { const d = hub.defOf(it.type); if (d.visit !== room && d.act !== "read") return []; return hub.spotsOf(it).map(s => ({ ...s, pose: d.pose || (d.act === "read" ? { seated: true, book: true } : { seated: true }) })); })
     .filter(s => !taken.has(s.key));
 }
 function stepVisits(t) {
@@ -31,9 +37,10 @@ function stepVisits(t) {
   for (const [room, R] of Object.entries(ROOMS)) {
     if (!hub.con.rooms.includes(room)) continue;
     // who comes back
-    for (const l of loungers.values()) if (l.partyRoom === room && l.roomSpot && t > l.visitUntil) {
-      crewAdd(l.name, R.back); addMoodlet(l.name, R.moodlet[0], R.moodlet[1], R.moodlet[2], hasTrait(l.name, room === "gym" ? "sportif" : "solitaire") ? 6 : 4, 60);
-      Object.assign(l, { partyRoom: null, roomSpot: null, busy: false, next: 0 }); loungeSay(l.name, room === "gym" ? "Ça fait du bien ! 💪" : "Me revoilà, reposé.", t);
+    const leave = R.leaveIf?.();
+    for (const l of loungers.values()) if (l.partyRoom === room && l.roomSpot && (t > l.visitUntil || leave)) {
+      crewAdd(l.name, R.back); addMoodlet(l.name, R.moodlet[0], R.moodlet[1], R.moodlet[2], hasTrait(l.name, { gym: "sportif", library: "solitaire", terrace: "party" }[room]) ? 6 : 4, 60);
+      Object.assign(l, { partyRoom: null, roomSpot: null, busy: false, next: 0 }); loungeSay(l.name, leave ? R.leaveLine : room === "gym" ? "Ça fait du bien ! 💪" : room === "terrace" ? "Ah, ça m'a fait du bien de sortir 🌿" : "Me revoilà, reposé.", t);
     }
     // who goes
     const spots = freeSpots(room); if (!spots.length) continue;

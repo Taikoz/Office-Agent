@@ -92,6 +92,8 @@ export function chiefToRoom(room, then = null) {
     c.room = room; c.at = room; c.lx = e.x; c.ly = e.y; c.lspot = null;
     c.lpath = [then ? { x: then.x, y: then.y } : { x: e.x + 16, y: e.y + 10 }];
     if (hub.view === from || hub.view === room) hub.setView(room);
+    const w = room === "terrace" && hub.weather?.();  // out in the weather
+    if (["rain", "storm", "snow"].includes(w)) { c.bubble = { rain: "Il pleut ! ☔ Je ne reste pas longtemps.", storm: "Quel orage ! ⛈️", snow: "De la neige ! ❄️" }[w]; c.until = performance.now() + 3500; }
   };
   chief.lspot = null;
   const dx = from === "lounge" ? LOUNGE_DOOR_X[room] : null;

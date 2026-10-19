@@ -39,7 +39,10 @@ const CHAIR_C = COLORS({ ardoise: ["Ardoise", "#3a3f52"], marine: ["Marine", "#2
 const BAG_C = COLORS({ bleu: ["Bleu", "#1f75be"], orange: ["Orange", "#de8001"], rouge: ["Rouge", "#d64545"], vert: ["Vert", "#2f9e44"], violet: ["Violet", "#8f4fe0"] });
 const WOOD = [{ id: "chene", name: "Chêne", sw: "#8a6a4a", w: "#8a6a4a" }, { id: "noyer", name: "Noyer", sw: "#5c3d27", w: "#5c3d27" }, { id: "blanc", name: "Laqué blanc", sw: "#e6e2d8", w: "#e6e2d8" }, { id: "noir", name: "Laqué noir", sw: "#2a2a33", w: "#3a3a44" }];
 // the hour, the season, the Friday afterwork: what an object shows outdoors (a lit fire pit, the neon of the bar)
-const envNow = t => { const h = clockNow().getHours(), dim = h >= 19 || h < 8, party = !!dayState.party; return { dim, party, lit: dim || party, season: hub.seasonNow(), still: hub.focusMode, t }; };
+const envNow = t => {
+  const h = clockNow().getHours(), dim = h >= 19 || h < 8, party = !!dayState.party, w = hub.weather?.() || "clear";
+  return { dim, dark: h >= 22 || h < 6, party, lit: dim || party, season: hub.seasonNow(), still: hub.focusMode, t, weather: w, wet: ["rain", "storm"].includes(w) };
+};
 export class Colored extends Furniture { isoState(it, t) { return this.env ? this.env(envNow(t), it) : {}; } artState(st) { return { ...(st.c ? { c: st.c } : {}), ...(st.w ? { w: st.w } : {}), ...(st.kind ? { kind: st.kind } : {}), ...(st.towel ? { towel: st.towel } : {}) }; } }
 const addC = def => new Colored(def);
 
@@ -194,7 +197,7 @@ new TeamPlant({ type: "teamplant", cat: "plantes", name: "Plante de l'équipe", 
 addC({ type: "bar", cat: "exterieur", name: "Bar", price: 2200, room: "any", w: 88, d: 26, rots: 2, art: "isobar", env: e => ({ neon: e.lit }), surface: { z: 22, rect: [0, 12, 88, 14] }, desc: "Comptoir, bouteilles, néon.", styles: [{ id: "bois", name: "Bois", sw: "#8a5d3a" }] });
 addC({ type: "grill", cat: "exterieur", name: "Barbecue", price: 600, room: "any", w: 20, d: 14, art: "isogrill", env: e => ({ on: e.party || e.season === "été" }), desc: "S'allume pour l'afterwork.", styles: [{ id: "noir", name: "Noir", sw: "#1c1c24" }] });
 addC({ type: "firepit", cat: "exterieur", name: "Brasero", price: 700, room: "any", w: 28, d: 24, art: "isofirepit", env: e => ({ lit: e.lit || e.season === "hiver", frame: e.still ? 0 : Math.floor(e.t / 160) % 3 }), desc: "Allumé le soir.", styles: [{ id: "pierre", name: "Pierre", sw: "#8d929c" }] });
-addC({ type: "parasol", cat: "exterieur", name: "Parasol", price: 250, room: "any", w: 16, d: 16, art: "isoparasol", walkable: false, desc: "À rayures.", styles: [{ id: "jaune", name: "Jaune et marine", sw: "#fbaa08" }] });
+addC({ type: "parasol", cat: "exterieur", name: "Parasol", price: 250, room: "any", w: 16, d: 16, art: "isoparasol", walkable: false, env: e => ({ closed: e.wet || e.dark }), desc: "À rayures. Replié sous la pluie et la nuit, ouvert au soleil.", styles: [{ id: "jaune", name: "Jaune et marine", sw: "#fbaa08" }] });
 addC({ type: "pergola", cat: "exterieur", name: "Pergola et banquet", price: 3000, room: "any", w: 122, d: 48, art: "isopergola", env: e => ({ season: e.season }), desc: "Une grande table sous une treille.", styles: [{ id: "chene", name: "Chêne", sw: "#8a6a4a" }] });
 addC({ type: "outsofa", cat: "exterieur", name: "Canapé d'extérieur", price: 1100, room: "any", w: 92, d: 20, rots: 2, art: "isooutsofa", desc: "Teck et coussins.", styles: [{ id: "creme", name: "Crème", sw: "#efe6d2" }] });
 addC({ type: "chaise", cat: "exterieur", name: "Transat", price: 250, room: "any", w: 28, d: 12, rots: 2, art: "isochaise", chair: true, desc: "Avec sa serviette.",
