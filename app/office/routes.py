@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, framecheck, gitlab, history, net, quips, savegame, schedules, slack, team, terminal
+from . import blueprints, claudefiles, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, slack, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
@@ -68,6 +68,10 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 "/api/term/read": lambda: terminal.read(arg("id"), int(arg("since", "0") or 0)),
                 "/api/claudefiles": lambda: {"files": claudefiles.list_files()},
                 "/api/claudefile": lambda: claudefiles.read(arg("path")),
+                "/api/insights": lambda: insights.insights(force=arg("force") == "1"),
+                "/api/lessons": lambda: lessons.overview(GAME),
+                "/api/knowhow": lambda: knowhow.knowhow(GAME, force=arg("force") == "1"),
+                "/api/process": lambda: improve.get(arg("tab", "process"), GAME, tickets, force=arg("force") == "1"),
                 "/api/schedules": lambda: {**schedules.load(), "agents": agents()},
                 "/api/dashboard": lambda: history.dashboard(GAME, min(90.0, max(1.0, float(arg("days", "30")) if arg("days", "30").isdigit() else 30.0))),
             }
@@ -186,7 +190,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -250,7 +254,8 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     self.reply(200 if ok else 400, "application/json", json.dumps({"ok": ok, "output": output}, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/team":
-                    ok, output = team.save(data if isinstance(data, dict) else {})
+                    data = data if isinstance(data, dict) else {}
+                    ok, output = team.save_roles(data["roles"]) if "roles" in data and "team" not in data else team.save(data)
                     self.reply(200 if ok else 400, "application/json", json.dumps({"ok": ok, "output": output}, ensure_ascii=False).encode())
                     return
                 if self.path in ("/api/quips", "/api/quip", "/api/comic"):  # quips.py: each line costs a small model call
@@ -258,6 +263,31 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                             else quips.quip(str(data.get("s", "")), str(data.get("a", "")), str(data.get("who", ""))[:30], str(data.get("traits", ""))[:120])
                             if self.path == "/api/quip"
                             else quips.comic(str(data.get("s", "")), str(data.get("a", "")), str(data.get("who", ""))[:30], data.get("moments") or []))
+                    self.reply(200, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/insights":  # insights.py: dismiss a proposal, the Claude Haiku texts on or off, written now
+                    action = str(data.get("action", "")) if isinstance(data, dict) else ""
+                    body = (insights.dismiss(str(data.get("key", ""))) if action == "dismiss" else insights.set_ai(bool(data.get("on"))) if action == "ai"
+                            else insights.write_ai(insights.insights()["items"]) if action == "write" else {"error": "inconnu"})
+                    self.reply(200, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/process":  # improve.py: ignore a missing step, a permission rule, an MMX archive proposal
+                    try:
+                        body = improve.act(data if isinstance(data, dict) else {})
+                    except (ValueError, OSError) as err:
+                        body = {"ok": False, "error": str(err)}
+                    self.reply(200, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/lessons":  # lessons.py: the user's decisions, a harvest now, a preview
+                    action, lid = str(data.get("action", "")), str(data.get("id", ""))[:12]
+                    if action == "harvest":
+                        lessons.harvest_async(GAME, force=True)
+                        body = {"ok": True}
+                    elif action == "preview":
+                        chosen = lessons.select(str(data.get("agent", ""))[:60], str(data.get("prompt", ""))[:4000], str(data.get("cwd", ""))[:300])
+                        body = {"ids": [x["id"] for x in chosen], "block": lessons.block(chosen).strip() if chosen else ""}
+                    else:
+                        body = lessons.decide(lid, action, {k: data[k] for k in ("text", "agent", "project") if k in data})
                     self.reply(200, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/launch":

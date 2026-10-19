@@ -1,7 +1,7 @@
 // Side panel (agent details) and canvas input.
 
 import { hub, provide } from "../hub.js";
-import { CHIEF_NAME, DESKS, H, TEAM, W, booted, chief, clip, curSession, current, cv, data, detailTimer, ents, fetchAgent, mmx, selected, specialty, storeStamp, typeColor } from "../core/core.js";
+import { CHIEF_NAME, DESKS, H, TEAM, W, booted, chief, clip, curSession, current, cv, data, detailTimer, devOfType, ents, fetchAgent, mmx, selected, specialty, storeStamp, typeColor } from "../core/core.js";
 import { boardPagers, flipBoard } from "../world/scene.js";
 import { crew, renderTeam } from "../sims/crew.js";
 import { chiefLoungeAct, chiefToLounge, chiefToOffice } from "../world/chief.js";
@@ -24,6 +24,7 @@ function hit(ev) {
   const { x, y, uid, wall } = canvasPoint(ev);
   if (uid != null && wall === "back" && !hub.buy.on) { const own = hub.Room.current().hit(x, y); if (own && own !== `item:${uid}`) return own; }  // on the right wall: the board's cards, the whiteboard, the TV first
   if (uid != null) {  // an object bought (build.js), in front of anything else drawn there; the MMX cabinet and the trophies keep their panels
+    const inc = !hub.buy.on && [...Incident.all.values()].find(i => i.on && i.uid === uid); if (inc) return `incident:${inc.id}`;  // broken or thirsty: the click fixes it
     const role = hub.defOf(hub.itemByUid(uid)?.type)?.role;
     return role === "mmx" ? "store" : role === "trophies" ? "trophies" : `item:${uid}`;
   }
@@ -216,7 +217,7 @@ export async function loadDetail() {
   if (!d) return;
   const isChief = d.id === "chief";
   const tag = document.getElementById("p-tag");
-  tag.textContent = isChief ? `${CHIEF_NAME} · ${d.type}` : `${crew.ids[d.id] ? `${crew.ids[d.id]} · ` : ""}${specialty(d.type)}`; tag.title = d.type; tag.style.background = isChief ? "#fbaa08" : typeColor(d.type);
+  tag.textContent = isChief ? `${CHIEF_NAME} · ${d.type}` : `${crew.ids[d.id] ? `${crew.ids[d.id]} · ` : ""}${specialty(d.type)}${crew.ids[d.id] && devOfType(d.type) && crew.ids[d.id] !== devOfType(d.type) ? " · renfort" : ""}`; tag.title = d.type; tag.style.background = isChief ? "#fbaa08" : typeColor(d.type);
   const yt = data.tickets[d.ticket];
   document.getElementById("p-title").textContent = `${d.ticket || (isChief ? (d.type === "tech-lead" ? "Tech lead" : "Chef de session") : "Sans ticket")}${yt?.state ? ` · ${yt.state}` : ""}`;
   document.getElementById("p-mission").textContent = d.description || d.prompt || "";

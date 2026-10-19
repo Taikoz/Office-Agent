@@ -86,6 +86,16 @@ const DEFAULT_TEAM = ["Alice", "Bruno", "Chloé", "David", "Emma", "Farid", "Ga�
 export const CHIEF_NAME = OFFICE_CFG.chief || "Chef";
 export const TEAM = [...DEFAULT_TEAM];
 (OFFICE_CFG.team || []).forEach((n, i) => { if (i < TEAM.length) TEAM[i] = n; });
+// one agent type per desk (team.json "roles", ChiefOS → Équipe): the dev of that desk takes that type's missions; a type
+// with no desk of its own goes to the general-purpose dev (the main session's stand-in too)
+export const ROLES = [...(OFFICE_CFG.roles || [])];
+export const GENERALISTS = ["general-purpose", "Explore"];
+export const roleOf = name => ROLES[TEAM.indexOf(name)] || "";
+export function devOfType(type) {
+  let i = ROLES.indexOf(type);
+  if (i < 0) i = ROLES.indexOf("general-purpose");
+  return i >= 0 ? TEAM[i] : null;
+}
 export const CAT_NAME = OFFICE_CFG.cat || "Brume";
 export const SKINS = ["#f1c7a3", "#d9a47c", "#a8714f", "#7a4b32", "#f5d6bf"];
 export const HAIRS = ["#2b1d14", "#5b3a20", "#c9a24b", "#8c2f1e", "#1c1c24", "#d8d8d8"];

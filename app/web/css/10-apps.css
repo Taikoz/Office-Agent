@@ -58,3 +58,100 @@
   /* ChiefOS → the hidden dev app (apps/dev.js) */
   #chiefos .devhead { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; padding: 10px 12px; background: #13261a; border-left: 3px solid #2f9e44; border-radius: 8px; }
   #chiefos .devhead b { font-family: "Ubuntu Mono", monospace; color: #8ff0a4; }
+
+/* ChiefOS → 💡 Idées (apps/ideas.js): one proposal per card, stacked */
+#chiefos .idrow { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+#chiefos .idrow code { white-space: pre-wrap; word-break: break-word; }
+#chiefos .idsteps { color: var(--ub-accent, #fbaa08); }
+#chiefos .idol { margin: 0; padding-left: 20px; }
+#chiefos .idrow .osacts { justify-content: flex-end; }
+
+/* ChiefOS → 📚 Leçons (apps/lessons.js) */
+#chiefos .lstext, #chiefos .lsprevtext { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; }
+#chiefos .lsexp { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 8px; }
+#chiefos .lsexp > div { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--ub-card); border-radius: 8px; }
+#chiefos .lsblock { white-space: pre-wrap; margin: 0; padding: 8px; background: #111; border-radius: 6px; font-size: 12px; }
+#chiefos .lslink { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+
+/* ChiefOS → 🗺️ Compétences (apps/skillmap.js): the matrix specialty / dev × topic */
+#chiefos .kmwrap { margin-bottom: 6px; }
+#chiefos .kmtable { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; table-layout: fixed; }
+#chiefos .kmtable th, #chiefos .kmtable td { padding: 2px 3px; }
+#chiefos .kmcorner, #chiefos .kmtopic-c { width: 170px; }
+#chiefos .kmdev { position: sticky; top: 0; z-index: 1; background: var(--ub-bg); padding: 6px 3px 6px; text-align: center; font-weight: normal; border-bottom: 3px solid var(--kc); vertical-align: bottom; }
+#chiefos .kmdev b { display: block; color: #fff; font-size: 13px; }
+#chiefos .kmdev small { display: block; color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chiefos .kmdev.on b { color: #fbaa08; }
+#chiefos .kmcatrow th { text-align: left; padding: 12px 6px 4px; color: var(--ub-accent, #fbaa08); font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #555; }
+#chiefos .kmcatrow small { color: #888; font-weight: normal; }
+#chiefos .kmtable tbody tr:not(.kmcatrow):hover { background: rgba(255, 255, 255, .05); }
+#chiefos .kmtable tbody tr.on { background: rgba(251, 170, 8, .12); }
+#chiefos .kmtopic-c { text-align: left; font-weight: normal; }
+#chiefos .kmtopic { width: 100%; background: none; border: 0; padding: 4px 6px; color: #e8e8e8; font: inherit; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 4px; }
+#chiefos .kmtopic:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+#chiefos .kmtopic-c { position: relative; }
+#chiefos .kmhide { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); visibility: hidden; background: #444; border: 0; border-radius: 4px; color: #ddd; font-size: 11px; padding: 2px 6px; cursor: pointer; }
+#chiefos .kmhide:hover { background: #c0392b; color: #fff; }
+#chiefos .kmtable tr:hover .kmhide { visibility: visible; }
+#chiefos .kmhidden { margin: 6px 0; font-size: 12px; }
+#chiefos .kmhidden > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+#chiefos .kmshow { background: var(--ub-card); border: 1px dashed #666; border-radius: 12px; color: #ccc; font: inherit; padding: 3px 10px; cursor: pointer; }
+#chiefos .kmshow:hover { border-color: #19b6ee; color: #fff; }
+#chiefos .kmempty { text-align: center; color: #555; }
+#chiefos .kmcell { display: block; white-space: nowrap; width: 100%; min-width: 34px; height: 26px; border: 0; border-radius: 5px; cursor: pointer; font: inherit; font-weight: bold; font-variant-numeric: tabular-nums; text-align: center;
+  background: color-mix(in srgb, #19b6ee calc(var(--k, .5) * 100%), #2a3442); color: #fff; }
+#chiefos .kmcell.lo { color: #cfe6f2; font-weight: normal; }
+#chiefos .kmcell.hi { color: #081746; }
+#chiefos .kmcell:hover { filter: brightness(1.15); }
+#chiefos .kmcell.best { box-shadow: inset 0 0 0 2px #fbaa08; }
+#chiefos .kmcell.on, #chiefos .kmtopic.on { outline: 2px solid #fff; outline-offset: 1px; }
+#chiefos .kmlegend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+#chiefos .kmlegend .kmcell { display: inline-block; width: auto; min-width: 0; height: auto; padding: 2px 8px; cursor: default; }
+#chiefos .kmlegend .kmcell.lo { --k: .25; } #chiefos .kmlegend .kmcell.mid { --k: .55; } #chiefos .kmlegend .kmcell.hi { --k: 1; }
+#chiefos .kmapp .idrow, #chiefos .kmadvice { display: flex; flex-direction: column; gap: 4px; }
+
+/* ChiefOS → 👥 Équipe: the agent type of each desk (apps/team.js) */
+#chiefos .teamrole { max-width: 100%; margin-top: 3px; font-size: 11px; text-overflow: ellipsis; }
+
+/* ChiefOS → 🧭 Process (apps/process.js): tabs, cards of lines, gauges, tables */
+#chiefos .prtabs { position: sticky; top: -12px; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -4px 0 10px; padding: 6px 0; background: var(--ub-bg); border-bottom: 1px solid #444; }
+#chiefos .prtabs > button { padding: 5px 12px; color: #ddd; background: #333; border: 0; border-radius: 14px; cursor: pointer; font: inherit; font-size: 13px; }
+#chiefos .prtabs > button:hover { background: #444; } #chiefos .prtabs > button.on { color: #fff; background: var(--ub-orange, #e95420); }
+#chiefos .prtools { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+#chiefos .prtools button { padding: 3px 10px; color: #ddd; background: #333; border: 0; border-radius: 6px; cursor: pointer; }
+#chiefos .prn { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #c0392b; color: #fff; font-size: 11px; font-weight: bold; text-align: center; }
+#chiefos .prmsg { padding: 6px 10px; border-radius: 6px; background: rgba(251, 170, 8, .15); color: #fbaa08; }
+#chiefos .prcard { margin: 0 0 10px; padding: 8px 10px; background: var(--ub-card); border-radius: 10px; }
+#chiefos .prcard.prwarn { box-shadow: inset 3px 0 #ff6b6b; }
+#chiefos .prhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 2px 0 6px; }
+#chiefos .prline { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-top: 1px solid #2c2c2c; }
+#chiefos .prline:first-child, #chiefos .prhead + .prline { border-top: 0; }
+#chiefos .prline > span:first-child { flex: 1; min-width: 0; }
+#chiefos .prline code, #chiefos .prcause code { font-size: 12px; word-break: break-all; }
+#chiefos .prline .osacts { flex: none; margin: 0; }
+#chiefos .prgauge { display: inline-block; width: 80px; height: 8px; border-radius: 4px; background: #222; overflow: hidden; vertical-align: middle; }
+#chiefos .prgauge i { display: block; height: 100%; background: #888; } #chiefos .prgauge.ok i { background: #51cf66; } #chiefos .prgauge.mid i { background: #fbaa08; } #chiefos .prgauge.bad i { background: #ff6b6b; }
+#chiefos .prbad { color: #ff6b6b; } #chiefos .prgood { color: #51cf66; }
+#chiefos .prok { color: #8fd19e; margin-right: 6px; } #chiefos .prko { color: #ffa8a8; margin-right: 6px; }
+#chiefos .prscore { flex: none; width: 38px; height: 38px; display: grid; place-content: center; border-radius: 50%; font-weight: bold; font-size: 15px; color: #081746; }
+#chiefos .prscore.ok { background: #51cf66; } #chiefos .prscore.mid { background: #fbaa08; } #chiefos .prscore.bad { background: #ff6b6b; }
+#chiefos .prchance { flex: none; display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 90px; }
+#chiefos .prchance b { font-size: 16px; }
+#chiefos .prchip { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #333; color: #ddd; font-size: 12px; }
+#chiefos .prchip.bad { background: rgba(255, 107, 107, .18); color: #ffa8a8; } #chiefos .prchip.good { background: rgba(81, 207, 102, .18); color: #8fd19e; }
+#chiefos .prtable { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+#chiefos .prtable th { text-align: left; font-weight: normal; color: #aaa; font-size: 12px; padding: 4px 6px; border-bottom: 1px solid #444; }
+#chiefos .prtable td { padding: 5px 6px; border-bottom: 1px solid #2c2c2c; font-variant-numeric: tabular-nums; }
+#chiefos .prtable tr.on td { background: rgba(251, 170, 8, .08); }
+#chiefos .prdiff { max-height: 320px; overflow: auto; margin: 8px 0 0; padding: 8px; background: #111; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+#chiefos .prdiff .add { color: #8fd19e; } #chiefos .prdiff .del { color: #ffa8a8; }
+#chiefos .prsplit { display: grid; grid-template-columns: auto 1fr; gap: 16px; margin-bottom: 10px; }
+#chiefos .prweeks { display: flex; gap: 8px; align-items: flex-end; padding: 8px; background: var(--ub-card); border-radius: 10px; }
+#chiefos .prweeks > div { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
+#chiefos .prbar { position: relative; width: 26px; height: 90px; display: block; }
+#chiefos .prbar i { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 3px 3px 0 0; } #chiefos .prbar .all { background: #3a4a5a; } #chiefos .prbar .bad { background: #ff6b6b; }
+#chiefos .prcauses { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; align-content: start; }
+#chiefos .prcause { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; background: var(--ub-card); border-radius: 8px; margin-bottom: 6px; }
+#chiefos .prcause small { color: #bbb; }
+#chiefos .pradvice { margin-top: 4px; padding: 6px 10px; border-radius: 6px; background: rgba(25, 182, 238, .12); }
+#chiefos .pradvice.switch { background: rgba(81, 207, 102, .14); } #chiefos .pradvice.up { background: rgba(251, 170, 8, .12); }

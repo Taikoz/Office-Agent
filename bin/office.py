@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Agent Office launcher, used by the plugin hooks and the /office command.
 
-    office.py hook-launch    PreToolUse(Agent): start the server if needed, open the page if no tab is watching
+    office.py hook-launch    PreToolUse(Agent): add the validated lessons to the subagent's prompt, start the server if
+                             needed, open the page if no tab is watching
+    office.py hook-lessons   PreToolUse(Agent): only add the validated lessons to the subagent's prompt (lessons.py)
     office.py hook-session   SessionStart: refresh the ask.py shim; on /clear, empty the office
     office.py open           start if needed and always open the page (prints the URL)
     office.py ensure         start if needed, open only if no tab is watching (used by ask.py)
@@ -12,6 +14,7 @@ Hooks read the event JSON on stdin and never fail the session: any problem is lo
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import os
@@ -138,6 +141,33 @@ def write_shim() -> None:
             shim.write_text(body, encoding="utf-8")
 
 
+def lessons_for(e: dict) -> dict | None:
+    """PreToolUse(Agent): the subagent's input with the validated lessons that fit its mission (lessons.py), or None."""
+    try:
+        from office import lessons
+        return lessons.hook_output(e)
+    except Exception as err:  # a broken lessons file never blocks an agent
+        STATE.mkdir(parents=True, exist_ok=True)
+        with LOG.open("a", encoding="utf-8") as fh:
+            fh.write(f"office.py lessons: {err!r}\n")
+        return None
+
+
+@contextlib.contextmanager
+def quiet_stdout():
+    """Sends this process's and its children's stdout to /dev/null for the duration."""
+    sys.stdout.flush()
+    saved = os.dup(1)
+    try:
+        with open(os.devnull, "w") as null:
+            os.dup2(null.fileno(), 1)
+            yield
+    finally:
+        sys.stdout.flush()
+        os.dup2(saved, 1)
+        os.close(saved)
+
+
 def event() -> dict:
     try:
         data = json.loads(sys.stdin.read() or "{}")
@@ -153,9 +183,18 @@ def main() -> int:
             e = event()
             if config.excluded(str(e.get("cwd", ""))):
                 return 0
-            write_shim()
-            if start() and CFG["open_browser"] and not viewed():
-                open_page()
+            out = lessons_for(e)
+            with quiet_stdout():  # the hook's stdout must be the lessons' JSON alone (the browser opener may print)
+                write_shim()
+                if start() and CFG["open_browser"] and not viewed():
+                    open_page()
+            if out:
+                print(json.dumps(out, ensure_ascii=False), flush=True)
+        elif cmd == "hook-lessons":  # the lessons alone, for a PreToolUse(Agent) hook set by hand (no server started)
+            e = event()
+            out = None if config.excluded(str(e.get("cwd", ""))) else lessons_for(e)
+            if out:
+                print(json.dumps(out, ensure_ascii=False), flush=True)
         elif cmd == "hook-session":
             e = event()
             write_shim()
