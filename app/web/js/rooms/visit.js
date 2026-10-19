@@ -32,7 +32,7 @@ function cleanItems(list, room) {
   return (Array.isArray(list) ? list : []).filter(it => it && it.room === room && hub.defOf(it.type) && !hub.defOf(it.type).anchor).slice(0, 400).map(it => ({
     uid: clamp(it.uid, 0, 1e9, 0), type: it.type, room: "visit", x: clamp(it.x, -50, 900, 0), y: clamp(it.y, 0, 500, 70), rot: clamp(it.rot, 0, 3, 0) | 0,
     style: typeof it.style === "string" ? it.style.slice(0, 20) : null, ...(it.side === "left" || it.side === "back" ? { side: it.side } : {}),
-    ...(it.on_ != null ? { on_: clamp(it.on_, 0, 1e9, 0) } : {}), on: !!it.on, closed: !!it.closed, off: !!it.off }));
+    ...(it.on_ != null ? { on_: clamp(it.on_, 0, 1e9, 0) } : {}), ...(it.on != null ? { on: !!it.on } : {}), closed: !!it.closed, off: !!it.off }));  // a lamp left on automatic stays so
 }
 // the doors of the visited room, where its owner's page has them (rooms/office.js, rooms/lounge.js, rooms/built.js): the
 // office's to the break room at its right end, the break room's back to the office and to the meeting room and the

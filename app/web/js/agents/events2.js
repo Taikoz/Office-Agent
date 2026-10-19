@@ -46,7 +46,7 @@ function checkAlerts() {
     alarmSeen.add(id);
     if (first) continue;
     alarm = { until: performance.now() + 20000, f };
-    sfx("fail"); setTimeout(() => sfx("fail"), 400);
+    sfx("alarm");  // then the siren, while it lasts (world/sounds.js)
     hub.notify(`🚨 Faille ${SEV_FR[f.severity] || f.severity} trouvée`, `${f.vulnerability || ""} — ${f.repo || ""} ${f.file || ""}`, current, null, true);
     const auditor = [...ents.values()].find(e => !e.leaving && e.seated && /security|audit/.test(e.agent.type));
     if (auditor) {

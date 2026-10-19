@@ -41,7 +41,9 @@ function clear(g, a, b, skipEnds = true) {
 export function isFree(room, x, y) { const g = grid(room), [cx, cy] = cellOf(g, x, y); return free(g, cx, cy); }
 // the way from a to b in a room: the points to walk through, b last
 export function route(room, a, b) {
-  if (b.y < 70 || a.y < 70) return [b];  // toward the wall (the board, the coffee): straight
+  // toward the wall (the board, the coffee machine) or from it: around the furniture to the wall's foot, then straight
+  if (b.y < 70 && a.y >= 70) return [...route(room, a, { x: b.x, y: 72 }), b];
+  if (a.y < 70) return b.y < 70 ? [b] : [{ x: a.x, y: 72 }, ...route(room, { x: a.x, y: 72 }, b)];
   const g = grid(room);
   if (clear(g, a, b)) return [b];
   const [sx, sy] = cellOf(g, a.x, a.y), [tx, ty] = cellOf(g, b.x, b.y), N = g.cols * g.rows;

@@ -22,6 +22,7 @@ import { P, anchored } from "../iso/engine.js";
 import { isoItems, lampsOver, leftWallDecor } from "../iso/rooms.js";
 import { clockNow, dayState, drawPartyOver } from "../sims/days.js";
 import { Room } from "./base.js";
+import { doorOpen, drawDoorOpen, terraceRain } from "../world/physics.js";
 
 export class BuiltRoom extends Room {
   get open() { return hub.con.rooms.includes(this.id); }
@@ -41,7 +42,7 @@ export class BuiltRoom extends Room {
   // on the wall: the baseboard, the door back to the office, the wall objects
   wallStrip(t) {
     px(0, 66.5, W, 3.5, "#2a1f18"); px(0, 66.5, W, 0.6, "#4a3828");
-    doorSprite("office").draw(8, 20); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
+    drawDoorOpen(() => doorSprite("office").draw(8, 20), 8, 20, doorOpen(this.id, 23)); text("← BUREAU", 23, 14, "#51cf66", 4, "center");
     drawRoomItems(this.id, t, "wall");
   }
 }
@@ -173,6 +174,21 @@ class MeetingRoom extends BuiltRoom {
     ctx.drawImage(this.boardImage(), Math.round(at.x * S), Math.round(at.y * S));
     if (this.stroke && at === BOARD) { ctx.save(); ctx.lineCap = ctx.lineJoin = "round"; this.paintStroke(ctx, this.stroke, Math.round(BOARD.x * S), Math.round(BOARD.y * S)); ctx.restore(); }
     if (!boardSlot.data.strokes.length && !this.stroke) text("Dessine ici ✏️", at.x + at.w / 2, at.y + 16, "#b8bcc8", 5, "center");
+    this.drawMissions(at);
+  }
+  // the missions of the day on post-its, down the board's right edge: ticket or task, colour by state
+  drawMissions(at) {
+    const agents = (curSession()?.agents || []).filter(a => a.status !== "gone").slice(-4);
+    if (!agents.length || at.x < -100) return;
+    const COL = { working: "#fff3a8", asking: "#ffd8a8", blocked: "#ffb3b3", done: "#c8f0c0" };
+    const x = at.x + at.w - 25;
+    text("MISSIONS", x + 11.5, at.y + 1.2, "#081746", 3.2, "center");
+    agents.forEach((a, i) => {
+      const y = at.y + 5.5 + i * 9;
+      px(x + 0.4, y + 0.4, 23, 8, "#00000022"); px(x, y, 23, 8, COL[a.status] || "#fff3a8"); px(x + 9, y - 0.8, 5, 1.6, "#ffffffaa");  // the note, its tape
+      text(clip(a.ticket || a.description || a.type || "mission", 13), x + 1.2, y + 1.1, "#1c1c24", 3, "left");
+      text(a.status === "done" ? "✓ livré" : a.status === "blocked" ? "✗ bloqué" : a.status === "asking" ? "? question" : "▶ en cours", x + 1.2, y + 4.6, "#4a4e58", 2.6, "left");
+    });
   }
   // the wall clock, at the real time
   drawClock(at = CLOCK) {
@@ -297,7 +313,7 @@ class TerraceRoom extends BuiltRoom {
     for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
       const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length], x = sp.x, y = sp.y;
       items.push({ y, draw: () => { drawPerson(x, y, l.look, { arms: Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down", frame: Math.floor(t / 300), smile: true }); px(x + 4, y - 13, 2.5, 3, "#f4c430"); } });
-      items.push({ y: y + 0.1, draw: () => { badge(x, y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(x, y - 24, l.say, "#f7f7f7", "#081746"); } });
+      items.push({ y: y + 0.1, draw: () => { badge(x, y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(x, y - 24, l.say, "#f7f7f7", "#081746", l.name); } });
     }
     items.push(...roomDepthItems("terrace", t));
     items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
@@ -310,6 +326,7 @@ class TerraceRoom extends BuiltRoom {
     if (lit) { glow(348, 79, 9, "#ff5fa2", 0.12); glow(109, 205, 5, "#ffd27a", 0.18); }  // the neon, the lantern
     if (lit || season === "hiver") glow(196, 177, 12, "#ff9f43", 0.14 + (still ? 0 : Math.sin(t / 120) * 0.03));  // the fire
     hub.drawSeasonTerrace(t);  // seasons.js: snow, leaves, petals
+    terraceRain(t);  // the rain: streaks, rings on the deck (world/physics.js)
     drawPartyOver("terrace", t);
     drawBuyOverlay("terrace", t);
   }
@@ -368,7 +385,7 @@ class TerraceRoom extends BuiltRoom {
     G.drawSorted(items);
     for (const l of loungers.values()) if (l.partyRoom === "terrace" && !l.path.length) {
       const sp = TerraceRoom.SPOTS[(l.partySpot || 0) % TerraceRoom.SPOTS.length];
-      anchored(sp.x, sp.y, () => { badge(sp.x, sp.y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(sp.x, sp.y - 24 - headroom(), l.say, "#f7f7f7", "#081746"); });
+      anchored(sp.x, sp.y, () => { badge(sp.x, sp.y + 2, nameTag(l.name), "#4090d7"); if (t < l.sayUntil) bubble(sp.x, sp.y - 24 - headroom(), l.say, "#f7f7f7", "#081746", l.name); });
     }
     // the hour: darker at dusk and at night, then what shines
     if (dim) fillScreen(dark ? "rgba(8, 12, 40, .38)" : "rgba(40, 20, 60, .16)");

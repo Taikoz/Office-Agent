@@ -37,7 +37,7 @@ let nSprite = 0, nScratch = 0;
 function sprite() {
   let s = sprites[nSprite++];
   if (!s) { s = new PIXI.Sprite(); sprites.push(s); }
-  s.alpha = 1; return s;
+  s.alpha = 1; s.tint = PX.pieceTint; return s;
 }
 function scratchCanvas(w, h) {
   let k = scratch[nScratch++];
@@ -52,6 +52,8 @@ function scratchCanvas(w, h) {
 }
 
 export const PX = {
+  tint: 0xffffff,       // the colour of the hour (iso/rooms.js: warm at sunset)
+  pieceTint: 0xffffff,  // the light of the piece being drawn (iso/engine.js drawSorted, iso/rooms.js spriteTint)
   get on() { return !!app && !failed; },
   // a frame starts: the layers at the scene's size and place, the back layer cleared, the world emptied, the
   // scene's canvas cleared (it only carries what floats over the world now)

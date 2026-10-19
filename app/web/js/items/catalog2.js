@@ -10,6 +10,7 @@ import { sfx } from "../sims/progress.js";
 import { Item } from "./base.js";
 import { Colored } from "./furniture.js";
 import { Lamp } from "./lamp.js";
+import "../svg/isolights.js";  // the lights' drawings
 
 const all = st => { const { id: _i, name: _n, sw: _s, ...art } = st; return art; };
 const sty = (key, list) => list.map(([id, name, sw, more]) => ({ id, name, sw, ...(more || { [key]: sw }) }));
@@ -83,7 +84,7 @@ win("windowblind", "Fenêtre à store vénitien", 480, 58, 41, { x: 4, y: 4, w: 
 const lamp = (type, name, price, w, d, art, light, desc, styles, more = {}) => new (class extends Lamp { artState(st) { return all(st); } })({
   type, cat: "lumiere", name, price, room: "any", w, d, art, light, desc: `${desc} Clic : allumer, éteindre.`, styles, ...more });
 lamp("lamparc", "Lampadaire arc", 420, 14, 14, "isolamparc", 38, "Un pied en marbre, un arc d'acier, une coupole qui flotte au-dessus du canapé.",
-  sty("c", [["chrome", "Chrome", "#c9ccd6"], ["laiton", "Laiton", "#c9a24b"], ["noir", "Noir", "#2a2a30"]]), { lightR: 52 });
+  sty("c", [["chrome", "Chrome", "#c9ccd6"], ["laiton", "Laiton", "#c9a24b"], ["noir", "Noir", "#2a2a30"]]), { lightR: 52, lightAt: [11.5, 2.5] });  // its light: under the dome, far from the foot
 lamp("lamptripod", "Lampe trépied", 260, 12, 12, "isolamptripod", 34, "Trois pieds en bois, un grand abat-jour tambour.",
   sty("c", [["noir", "Abat-jour noir", "#2a2a30"], ["blanc", "Abat-jour blanc", "#e6e2d8"], ["moutarde", "Abat-jour moutarde", "#c89a2a"]]));
 lamp("lampled", "Colonne LED", 300, 8, 8, "isolampled", 30, "Une barre de lumière colorée, ambiance gaming.",
@@ -101,6 +102,14 @@ class Sconce extends Item {
   state(it) { return !it.off; }
 }
 new Sconce({ type: "sconce", cat: "lumiere", name: "Applique murale", price: 140, room: "any", kind: "wall", w: 10, h: 14, hang: 20, glow: true, desc: "Au mur, une lumière douce le soir. Clic : allumer, éteindre.",
-  art2d: new FrameArt("wallsconce", 10, 14, ({ f = "#c9a24b", on = true }) => `<rect x="4" y="9" width="2" height="5" rx=".6" fill="${f}"/><rect x="4.6" y="5" width=".8" height="5" fill="${f}"/>`
-    + `<path fill="${on ? "#fff3c4" : "#d9d4c4"}" d="M1.5 6H8.5L7 1H3Z"/><path fill="none" stroke="${shade(f, 0.7)}" stroke-width=".4" d="M1.5 6H8.5L7 1H3Z"/>${on ? '<ellipse cx="5" cy="6.4" rx="3" ry="1" fill="#fff3c4" fill-opacity=".6"/>' : ""}`),
+  // a brass wall plate, a curved arm, a pleated shade; lit: the bulb glows under it and the shade is warm
+  art2d: new FrameArt("wallsconce", 10, 14, ({ f = "#c9a24b", on = true }) => `<defs><linearGradient id="sc" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>`
+    + `<radialGradient id="sg"><stop offset="0" stop-color="#fffbe6"/><stop offset=".5" stop-color="#ffe08a" stop-opacity=".8"/><stop offset="1" stop-color="#ffb84a" stop-opacity="0"/></radialGradient></defs>`
+    + `<rect x="3.6" y="9.4" width="2.8" height="4.4" rx="1.2" fill="${shade(f, 0.75)}"/><rect x="3.9" y="9.6" width="2.2" height="4" rx="1" fill="${f}"/><rect x="3.9" y="9.6" width="2.2" height="4" rx="1" fill="url(#sc)"/><circle cx="5" cy="11.6" r=".35" fill="${shade(f, 0.6)}"/>`
+    + `<path fill="none" stroke="${shade(f, 0.7)}" stroke-width=".9" d="M5 10.4C5 8.6 5 8 5 6.4"/><path fill="none" stroke="${f}" stroke-width=".5" d="M5 10.4C5 8.6 5 8 5 6.4"/>`
+    + (on ? `<ellipse cx="5" cy="6.6" rx="3.6" ry="1.8" fill="url(#sg)"/>` : "")
+    + `<path fill="${on ? "#fff1c4" : "#e8e2cf"}" d="M1.7 6.4H8.3L7 .8H3Z"/><path fill="url(#sc)" d="M1.7 6.4H8.3L7 .8H3Z"/>`
+    + `<path fill="none" stroke="${on ? "#e8b860" : "#c9bfa4"}" stroke-opacity=".7" stroke-width=".2" d="M3.6 .9L3 6.3M5 .9V6.3M6.4 .9L7 6.3"/>`
+    + `<rect x="1.5" y="6.1" width="7" height=".55" rx=".25" fill="${shade(f, 0.85)}"/><rect x="2.9" y=".6" width="4.2" height=".45" rx=".2" fill="${shade(f, 0.85)}"/>`
+    + (on ? `<ellipse cx="5" cy="6.9" rx="1.2" ry=".5" fill="#fffbe6"/>` : "")),
   styles: [["laiton", "Laiton", "#c9a24b"], ["noir", "Noire", "#2a2a30"], ["blanc", "Blanche", "#e6e6ea"]].map(([id, name, f]) => ({ id, name, sw: f, f, c: "#ffd678" })) });

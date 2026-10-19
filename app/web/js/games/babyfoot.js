@@ -99,7 +99,7 @@ function footBall(m, b, h, t) {
   if (b.x < x0 + r || b.x > x1 - r) {
     const left = b.x < x0 + r;
     if (Math.abs(b.y - cy) < goal - r) return footGoal(m, left ? "a" : "p", t);
-    b.x = left ? x0 + r : x1 - r; b.vx = (left ? 1 : -1) * Math.abs(b.vx) * 0.8; hub.sfx("commit");
+    b.x = left ? x0 + r : x1 - r; b.vx = (left ? 1 : -1) * Math.abs(b.vx) * 0.8; hub.sfx("wall");
   }
   for (const rod of m.rods) {
     const kicking = t < rod.kick;
@@ -115,7 +115,7 @@ function footBall(m, b, h, t) {
       b.vy = Math.max(-0.22, Math.min(0.22, (b.y - my) * 0.014 + rod.v * 0.45));
       b.x = rod.x + out * (FOOT.manW + r + 0.2);
       if (kicking && front) { rod.kick = 0; m.shot = { t, side: rod.side }; }
-      hub.sfx("commit");
+      hub.sfx("kick");
       return;
     }
   }

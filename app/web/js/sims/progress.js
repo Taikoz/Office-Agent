@@ -39,7 +39,7 @@ function react(a, ev) {
   const e = ents.get(a.id);
   const kind = { tests_pass: "pass", tests_fail: "fail", boss_defeated: "boss", to_verify: "verify" }[ev.kind] || ev.kind;
   sfx(kind);
-  if (["mr", "verify", "boss"].includes(kind)) catCheer();
+  if (["mr", "verify", "boss"].includes(kind)) { catCheer(); hub.cheer?.(); }  // the chief raises his cup (world/upkeep.js)
   if (!e || e.queued) return;
   crewAdd(e.who, { pass: { moral: 5 }, fail: { moral: -6, fatigue: 2 }, push: { moral: 3 }, commit: { moral: 2 }, mr: { moral: 10 },
     verify: { moral: 8, ennui: -5 }, boss: { moral: 15 } }[kind] || {});
@@ -204,37 +204,42 @@ document.getElementById("p-game").addEventListener("click", ev => { const c = ev
 document.getElementById("loungebtn").onclick = () => setView(view === "lounge" ? "office" : "lounge");
 setInterval(() => setView(view), 1000);  // keeps the head count fresh
 
-// 8-bit sounds, synthesized (no file); off by default, the choice is remembered
+// 8-bit sounds, synthesized (no file); on by default (the browser waits for a first click), the choice is remembered;
+// their volume is the "Effets" slider of the sound panel (world/ambience.js)
 export const SFX = {
   meow: [[740, .07, "triangle"], [988, .06, "triangle"], [620, .22, "triangle"]],
   pass: [[523, .08], [659, .08], [784, .14]], fail: [[220, .15, "sawtooth"], [165, .28, "sawtooth"]], push: [[392, .06], [523, .06], [784, .1]],
   mr: [[880, .1, "triangle"], [1175, .3, "triangle"]], verify: [[660, .08, "triangle"], [990, .2, "triangle"]], commit: [[660, .05]],
   boss: [[392, .07], [523, .07], [659, .07], [1047, .32]], level: [[523, .09], [659, .09], [784, .09], [1047, .09], [1319, .35]],
   achievement: [[784, .1, "triangle"], [1047, .1, "triangle"], [1568, .32, "triangle"]],
+  tap: [[1320, .025, "triangle"], [990, .03, "triangle"]],  // a button pressed, a door, a lever
+  alarm: [[880, .2], [660, .2], [880, .2], [660, .2]],
 };
+// the sounds of world/sounds.js without an 8-bit version of their own
+const SFX_ALIAS = { pong: "commit", dart: "commit", kick: "commit", wall: "commit", ding: "verify", question: "verify", deliver: "verify", blocked: "fail", ci: "fail", stuck: "fail" };
 let audio = null, soundOn = false;
-const soundFlag = new Flag("office-sound");
+const soundFlag = new Flag("office-sound", true);
 soundOn = soundFlag.on;
 export function sfx(kind) {
-  if (!soundOn || !SFX[kind]) return;
+  const vol = 0.05 * (hub.mix?.sfx ?? 1);
+  if (!soundOn || vol <= 0 || hub.snd?.(kind)) return;  // the softer sounds of world/sounds.js, once the audio runs
+  kind = SFX_ALIAS[kind] || kind;
+  if (!SFX[kind]) return;
   try {
     audio = audio || new AudioContext();
     let at = audio.currentTime + 0.01;
     for (const [f, d, type = "square"] of SFX[kind]) {
       const o = audio.createOscillator(), g = audio.createGain();
       o.type = type; o.frequency.value = f;
-      g.gain.setValueAtTime(0.05, at); g.gain.exponentialRampToValueAtTime(0.0001, at + d);
+      g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + d);
       o.connect(g).connect(audio.destination); o.start(at); o.stop(at + d);
       at += d * 0.9;
     }
   } catch (_) { /* audio unavailable */ }
 }
 function renderSoundBtn() { const b = document.getElementById("sndbtn"); b.innerHTML = `${soundOn ? "🔊" : "🔈"}<span class="lbl"> SON : ${soundOn ? "ON" : "OFF"}</span>`; b.classList.toggle("on", soundOn); }
-document.getElementById("sndbtn").onclick = () => {
-  soundOn = !soundOn;
-  soundFlag.set(soundOn);
-  renderSoundBtn(); sfx("pass");
-};
+export function setSound(on) { soundOn = !!on; soundFlag.set(soundOn); renderSoundBtn(); hub.onSound?.(soundOn); }
+document.getElementById("sndbtn").onclick = () => { setSound(!soundOn); sfx("pass"); };
 renderSoundBtn();
 
 // used by modules loaded before this one, or written by another module (js/hub.js)

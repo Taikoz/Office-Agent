@@ -1,13 +1,25 @@
-// A floor lamp: a click switches it on or off.
+// A floor lamp: on its own in the evening (Sims style), or switched on or off by a click (and back to automatic).
 
 import { hub } from "../hub.js";
 import { sfx } from "../sims/progress.js";
 import { Item } from "./base.js";
 
+// lit when switched on, or on its own once the evening comes when nobody switched it (it.on unset); iso/rooms.js lights it
+export const lampLit = it => it.on === true || (it.on == null && hub.nightLevel?.() > 0);
 export class Lamp extends Item {
   thumbState() { return true; }
-  pie(it) { return [["lamp", it.on ? "🌑" : "💡", it.on ? "Éteindre" : "Allumer"]]; }
-  act(it, id) { if (id !== "lamp") return false; it.on = !it.on; hub.saveBuild(); sfx("commit"); return true; }
+  state(it) { return lampLit(it); }
+  pie(it) {
+    const lit = lampLit(it);
+    return [["lamp", lit ? "🌑" : "💡", lit ? "Éteindre" : "Allumer"], ...(it.on != null ? [["lampauto", "🌗", "Automatique (le soir)"]] : [])];
+  }
+  act(it, id) {
+    if (id === "lamp") it.on = !lampLit(it);
+    else if (id === "lampauto") delete it.on;
+    else return false;
+    hub.saveBuild(); sfx("commit"); return true;
+  }
+  center(it) { return `<span class="muted">${it.on == null ? "🌗 automatique : s'allume le soir" : it.on ? "💡 allumée" : "🌑 éteinte"}</span>`; }
 }
 new Lamp({ type: "lamp", cat: "lumiere", name: "Lampe à pied", price: 150, room: "any", w: 11, d: 11, art: "isolamp", walkable: false, light: 40,
   desc: "Clic : allumer, éteindre. Elle éclaire surtout le soir.",

@@ -166,8 +166,10 @@ class IsoView {
       for (let i = 0; i < n; i++) if (!done[i] && indeg[i] === 0 && (best < 0 || mid[i] < mid[best])) best = i;
       if (best < 0) for (let i = 0; i < n; i++) if (!done[i] && (best < 0 || indeg[i] < indeg[best] || (indeg[i] === indeg[best] && mid[i] < mid[best]))) best = i;  // a cycle: the least blocked
       done[best] = true; for (const j of out[best]) indeg[j]--;
-      PX.piece(items[best].box || this.boxOf(B[best], items[best]), items[best].draw);
+      const b = B[best]; PX.pieceTint = hub.spriteTint ? hub.spriteTint((b[0] + b[2]) / 2, (b[1] + b[3]) / 2) : 0xffffff;  // its light (iso/rooms.js)
+      PX.piece(items[best].box || this.boxOf(b, items[best]), items[best].draw);
     }
+    PX.pieceTint = 0xffffff;
   }
   // where a piece may draw on the screen: its footprint up to h (people: their height and some room for what they hold)
   boxOf([x0, y0, x1, y1], it) {

@@ -10,12 +10,14 @@
 //    strip (0..70), w × h its art's size.
 
 import { hub } from "../hub.js";
-import { ctx } from "../core/core.js";
+import { S, ctx } from "../core/core.js";
 import { ART } from "../svg/base.js";
 import { P } from "../iso/engine.js";
+import { PX } from "../iso/pixi.js";
 import { footOf, partsOf, surfaceOf } from "../world/place.js";
 
 export const CATALOG = [];
+const mulTint = (a, b) => [16, 8, 0].reduce((v, s) => v | (Math.round(((a >> s) & 255) * ((b >> s) & 255) / 255) << s), 0);
 export class Item {
   // type, cat, name, price, room ("any" or a list), desc, styles [{ id, name, sw, map? }], kind, w, d (h for a wall
   // object), art (an iso art's name), art2d (a wall object's 2D art), parts [{ art, rect: [x, y, w, d], state? }],
@@ -38,14 +40,23 @@ export class Item {
   // its parts, each a piece of the world sorted by depth: [{ fp, draw }]; alpha < 1: a ghost (the buy mode)
   pieces(it, t, G, alpha = 1) {
     const st = { ...this.artFor(hub.styleOf(it), this.state(it, t)), ...this.isoState(it, t) }, z = this.baseZ(it), back = it.rot >= 2, flip = it.rot % 2 === 1;
-    const out = partsOf(it, this).map((p, k) => {
+    const mo = alpha >= 1 ? hub.pieceMotion?.(it, this, t) : null;  // a chair pushed back, a plant in the draught (world/physics.js)
+    const out = partsOf(it, this).map((p0, k) => {
+      const p = mo ? { ...p0, x: p0.x + mo.dx, y: p0.y + mo.dy } : p0;
       const art = ART[p.art], ps = p.state ? { ...st, ...p.state(it, t) } : st;
-      return { fp: [p.x, p.y, p.x + p.w, p.y + p.d], h: (art?.H || 30) + z, z, draw: () => {
+      return { fp: [p0.x, p0.y, p0.x + p0.w, p0.y + p0.d], h: (art?.H || 30) + z, z, draw: () => {
         if (!art) return;
-        const q = P(p.x, p.y, z), [aw, ad] = flip ? [p.d, p.w] : [p.w, p.d];  // a mirrored art: its back corner moves by (w - d) of the model
+        const q = P(p.x, p.y, z + (mo?.lift || 0)), [aw, ad] = flip ? [p.d, p.w] : [p.w, p.d];  // a mirrored art: its back corner moves by (w - d) of the model
         if (alpha < 1) ctx.globalAlpha = alpha;
-        art.draw(flip ? q.x - (aw - ad) * 0.6 : q.x, q.y, back ? { ...ps, back: true } : ps, { flip });
-        ctx.globalAlpha = 1;
+        const lit = PX.pieceTint; if (mo?.tint) PX.pieceTint = mulTint(lit, mo.tint);  // a thirsty plant yellows (world/upkeep.js)
+        if (mo?.sway) {  // leaning from its foot: its top moves, its base stays
+          const b = P(p.x + p.w / 2, p.y + p.d / 2, z);
+          ctx.save(); ctx.translate(b.x * S, b.y * S); ctx.transform(1, 0, mo.sway, 1, 0, 0); ctx.translate(-b.x * S, -b.y * S);
+          art.draw(flip ? q.x - (aw - ad) * 0.6 : q.x, q.y, back ? { ...ps, back: true } : ps, { flip });
+          ctx.restore();
+        } else art.draw(flip ? q.x - (aw - ad) * 0.6 : q.x, q.y, back ? { ...ps, back: true } : ps, { flip });
+        PX.pieceTint = lit; ctx.globalAlpha = 1;
+        if (k === 0 && alpha >= 1) hub.itemOverlay?.(it, t);  // its state: cups left on it, scale, thirst (world/upkeep.js)
         if (alpha >= 1) G.boxRegion(p.x, p.y, p.x + p.w, p.y + p.d, Math.max(4, (art.H || 20) * 0.85), { x: (p.x + p.w / 2), y: (p.y + p.d / 2), uid: it.uid });
         if (k === 0 && alpha >= 1) this.over(it, t, G);
       } };

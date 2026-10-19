@@ -15,6 +15,7 @@ import { loungeSay, loungerPose, loungers } from "./lounge.js";
 import { toast } from "../sims/progress.js";
 import { Room } from "../rooms/base.js";
 import { lookTraits } from "../svg/figures.js";
+import { devHold } from "./scene.js";
 
 const said = new Map();  // name → { text, until }: what a dev answered a visitor
 const ROOM_WHAT = { gym: "à la salle de sport", library: "à la bibliothèque", meeting: "en réunion", terrace: "sur la terrasse" };
@@ -43,7 +44,7 @@ function officeDev(e, t) {
     const still = !!e.pauseUntil || !e.path.length;
     out = { st: e.pose === "coffee" ? "coffee" : e.asking && still ? "question" : "walk",
       b: e.pose === "coffee" ? "☕ pause café" : e.asking && still ? "❓ attend le chef" : "",
-      pose: { dir: still ? null : dirOf(e.path[0], e.x, e.y), walk: !still, back: !still && e.path[0].y < e.y, arms: e.pose === "pick" || e.pose === "file" ? "up" : "down" } };
+      pose: { dir: still ? null : dirOf(e.path[0], e.x, e.y), walk: !still, back: !still && e.path[0].y < e.y, arms: e.pose === "pick" || e.pose === "file" ? "up" : e.pose === "coffee" ? "reach" : "down", hold: devHold(e, still, t) } };
   }
   const c = common(name, t);
   return { n: name, room: "office", x: e.x, y: e.y, look: lookTraits(e.look), tag: specialty(a.type), c: typeColor(a.type), what: `au bureau · ${{ work: "au travail", think: "réfléchit", blocked: "bloqué", done: "a livré", coffee: "pause café", question: "attend le chef", rest: "à son poste", walk: "se déplace" }[out.st]}`,
@@ -57,7 +58,7 @@ function lounger(l, t) {
   if (!l.partyRoom) {
     const pose = loungerPose(l, t), walking = l.path.length > 0, act = !walking && l.spot?.act;
     return { ...base, room: "lounge", x: l.x, y: l.y, st: walking ? "walk" : "rest", what: `salle de repos · ${walking ? "se déplace" : act?.label || "se pose"}`,
-      pose: { seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", dir: pose.dir || null, walk: walking, z: walking ? 0 : l.spot?.lift || 0 } };
+      pose: { seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", hold: pose.hold || "", dir: pose.dir || null, walk: walking, z: walking ? 0 : l.spot?.lift || 0 } };
   }
   const room = l.partyRoom, what = ROOM_WHAT[room] || "ailleurs", st = ROOM_ST[room] || "rest";
   if (l.roomSpot) {  // the gym, the library (rooms/extra.js)

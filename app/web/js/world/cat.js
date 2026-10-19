@@ -1,5 +1,6 @@
 // Brume, the office cat.
 
+import { walkStep } from "./motion.js";
 import { hub, provide } from "../hub.js";
 import { isoDrawing, petRot } from "../iso/engine.js";
 import { CAB, CAT_NAME, COFFEE, DESKS, LANE, ctx, ents, px, text } from "../core/core.js";
@@ -68,11 +69,8 @@ function stepCat(dt, t) {
     return catNext(t);
   }
   hub.routeAhead(cat.path, cat.x, cat.y, "office");  // around the furniture (world/route.js)
-  const tgt = cat.path[0], dx = tgt.x - cat.x, dy = tgt.y - cat.y, dist = Math.hypot(dx, dy), sp = 0.035 * dt;
-  if (dx) cat.dir = Math.sign(dx);
-  if (dist > sp) { cat.x += dx / dist * sp; cat.y += dy / dist * sp; return; }
-  cat.x = tgt.x; cat.y = tgt.y; cat.path.shift();
-  if (cat.path.length) return;
+  const dx = cat.path[0].x - cat.x; if (dx) cat.dir = Math.sign(dx);
+  if (!walkStep(cat, cat.path, dt, 0.035, "office") || cat.path.length) return;  // with some weight (world/motion.js)
   const n = cat.next || { mode: "sit" };
   cat.mode = n.mode; cat.comfort = n.mode === "comfort" ? n.who : null;
   if (n.mode === "sleep") { cat.desk = n.desk; cat.y = n.desk.y; cat.until = t + 20000 + Math.random() * 25000; }
@@ -112,7 +110,7 @@ export function drawCat(t) {
 export function drawCatSay(t, y = cat.y) {
   if (hub.focusMode) return;
   const { x, mode } = cat, head = mode === "sleep" ? 8 : 15;
-  if (t < cat.sayUntil) bubble(x, y - head, cat.say, "#f4f2ea");
+  if (t < cat.sayUntil) bubble(x, y - head, cat.say, "#f4f2ea", undefined, "cat");
   else if (mode === "comfort" && Math.floor(t / 3000) % 2) bubble(x, y - head, `♥ courage ${cat.comfort || ""}`, "#f4c2d7");
   else if (mode === "hide") bubble(x, y - head, "🙀", "#f4f2ea");
   else if (cat.hover) text(CAT_NAME.toUpperCase(), x, y + 1, "#d5eeff", 3.6, "center");

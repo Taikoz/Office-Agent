@@ -127,7 +127,7 @@ function dartsEnd(who, t) {
 }
 function dartsThrow(x, y, t) {
   const m = match, who = m.turn, s = dartScore(x, y);
-  m.darts.push({ x, y, s, who }); hub.sfx(s.v ? "commit" : "fail");
+  m.darts.push({ x, y, s, who }); hub.sfx(s.v ? "dart" : "fail");
   const res = dartsApply(m, who, s), x01 = m.mode === "501" || m.mode === "301";
   m.msg = `${who === "p" ? CHIEF_NAME : m.name} : ${s.label}${res === "bust" ? " · BUST !" : ""}`;
   if (res !== "bust") m.why = "";

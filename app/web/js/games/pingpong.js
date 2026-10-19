@@ -35,7 +35,7 @@ class Pingpong extends MiniGame {
     if (b.y < 42 || b.y > 190) { b.vy = -b.vy; b.y = Math.max(42, Math.min(190, b.y)); }
     const paddle = (px0, py0, side) => {
       if (Math.abs(b.x - px0) < 3 && Math.abs(b.y - py0) < 13 && Math.sign(b.vx) === side) {
-        b.vx = -b.vx * 1.06; b.vy += (b.y - py0) * 0.006; b.x = px0 - side * 3; hub.sfx("commit");
+        b.vx = -b.vx * 1.06; b.vy += (b.y - py0) * 0.006; b.x = px0 - side * 3; hub.sfx("pong");
       }
     };
     paddle(40, m.py, -1); paddle(360, m.ay, 1);

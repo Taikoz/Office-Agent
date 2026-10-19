@@ -37,7 +37,7 @@ class VisitRoom extends BuiltRoom {
     isoItems(this.id, t, G, items);
     G.drawSorted(items);
     lampsOver(this.id);
-    for (const l of here) { const s = l.roomSpot; anchored(s.x, s.y, () => { badge(s.x, s.y + 2, nameTag(l.name), this.tint); if (t < l.sayUntil) bubble(s.x, s.y - 24 - headroom() - (s.lift || 0), l.say, "#f7f7f7", "#081746"); }); }
+    for (const l of here) { const s = l.roomSpot; anchored(s.x, s.y, () => { badge(s.x, s.y + 2, nameTag(l.name), this.tint); if (t < l.sayUntil) bubble(s.x, s.y - 24 - headroom() - (s.lift || 0), l.say, "#f7f7f7", "#081746", l.name); }); }
     if (!hub.itemsIn(this.id).length && isoDrawing()) text(`Pièce vide : achète ses meubles (🛒 ACHAT → ${this.id === "gym" ? "Sport" : "Bibliothèque"})`, 200, 26, "#d5eeff", 5, "center");
     drawBuyOverlayIso(this.id, t, G);
   }

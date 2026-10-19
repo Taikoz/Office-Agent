@@ -302,9 +302,9 @@ const walkingNow = s => s.v > 0.01;  // 10 units a second (a walk: about 60)
 // the drawPerson options of someone shown from the network: walking (it moves on screen) or its pose
 export function netPose(p, s, t, extra = {}) {
   const pose = s.pose || p.pose || {};
-  if (walkingNow(s)) { const d = s.dir || pose.dir; return { ...extra, step: stepOf(s, s.x, s.y), dir: d, back: !!d && d[1] < 0 && Math.abs(d[1]) >= Math.abs(d[0]) }; }
+  if (walkingNow(s)) { const d = s.dir || pose.dir; return { ...extra, step: stepOf(s, s.x, s.y), dir: d, back: !!d && d[1] < 0 && Math.abs(d[1]) >= Math.abs(d[0]), hold: pose.hold === "sip" ? "cup" : pose.hold || "" }; }
   stepOf(s, s.x, s.y);
-  return { ...extra, frame: pose.arms === "type" || pose.arms === "up" ? Math.floor(t / 260) : 0, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", dir: pose.dir || (pose.seated ? null : s.dir) };  // still: turned where it went
+  return { ...extra, frame: ["type", "up", "reach"].includes(pose.arms) ? Math.floor(t / 260) : 0, seated: !!pose.seated, back: !!pose.back, arms: pose.arms || "down", hold: pose.hold || "", dir: pose.dir || (pose.seated ? null : s.dir) };  // still: turned where it went
 }
 export const liftOf = (p, s, t) => walkingNow(s) ? 0 : (s.pose || p.pose)?.z || 0;
 // an emote's body language: arms up and down, a little jump for a dance
@@ -319,7 +319,7 @@ export function drawPeer(p, t, x, y, s) {
   const said = net.said.get(p.name), em = EMOTE_INFO[p.emote], text = em ? `${em[0]} ${em[1]}` : said && t < said.until ? said.text : p.bubble;
   drawPerson(x, y, { skin: "#f1c7a3", hair: "#3a2a1a", shirt: "#2a4a8a", ...p.look }, emotePose(p.emote, t, netPose(p, s, t, { tux: true, smile: true, hat: p.look?.hat, talk: !!text && !em })));
   badge(x, y + ((s.pose || p.pose)?.seated ? -3 : 2), `${PRESENCE_INFO[p.status]?.[0] || "🌐"} ${p.name}`, p.host ? "#fbaa08" : "#3bc4ff");
-  if (text) bubble(x, y - 24 - headroom(), text.slice(0, 80), em ? "#fff3c4" : "#d5eeff", "#081746");
+  if (text) bubble(x, y - 24 - headroom(), text.slice(0, 80), em ? "#fff3c4" : "#d5eeff", "#081746", p.name);
 }
 export const personBox = (x, y) => ({ x: x - 9, y: y - 34, w: 18, h: 37, to: { x, y: y - 8 } });
 // at home: only who visits us, in the room they are in (iso/rooms.js isoItems)

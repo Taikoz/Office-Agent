@@ -16,7 +16,7 @@ export function enqueue(icon, label, fn, urgent = false) {
 }
 // the chief is free when nothing of a task is still going on: no walk, no conversation, no dish on the stove, no plate
 function chiefIdle() {
-  return !chief.pendingSocial && !chief.lpath.length && !chief.path.length && !convos.some(c => c.a === CHIEF_NAME || c.b === CHIEF_NAME)
+  return !chief.pendingSocial && !chief.lpath.length && !chief.path.length && !chief.svc && !chief.svcArrive && !chief.carry && !chief.pendingOffice && !convos.some(c => c.a === CHIEF_NAME || c.b === CHIEF_NAME)
     && cooking?.cook !== CHIEF_NAME && !eaters.has(CHIEF_NAME) && !(fire && fire.hero === CHIEF_NAME);
 }
 function stepActQueue(t) {
@@ -53,6 +53,7 @@ export function chiefActivity() {
     const a = chief.lspot?.act;
     return a?.task ? { icon: a.icon, label: a.task } : { icon: "🛋️", label: "Se détend en salle de repos" };
   }
+  if (chief.svc) return { icon: "🧰", label: "Entretien" };
   return { coffee: { icon: "☕", label: "Pause café" }, console: { icon: "🎮", label: "Joue à la console" }, pc: { icon: "💻", label: "Joue sur l'ordinateur" }, chiefos: { icon: "🖥️", label: "Sur ChiefOS" }, podium: { icon: "👑", label: "Dirige l'équipe" } }[chief.at] || { icon: "🧍", label: "Fait un tour" };
 }
 

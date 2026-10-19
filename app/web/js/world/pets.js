@@ -2,6 +2,7 @@
 // a dog, Biscuit, can be adopted in the buy mode (🐾 Animaux): it wanders around the office, visits the devs at
 // work, and the chief can pet it, feed it or throw it a ball. Kept in this browser.
 
+import { walkStep } from "./motion.js";
 import { hub, provide } from "../hub.js";
 import { isoDrawing, petRot } from "../iso/engine.js";
 import { CAT_NAME, CHIEF_NAME, DOOR, LANE, TEAM, badge, chief, ents, px } from "../core/core.js";
@@ -58,10 +59,8 @@ function stepDog(dt, t) {
   if (!petBook.dog) return;
   if (dog.path.length) {
     hub.routeAhead(dog.path, dog.x, dog.y, "office");  // around the furniture (world/route.js)
-    const tgt = dog.path[0], dx = tgt.x - dog.x, dy = tgt.y - dog.y, dist = Math.hypot(dx, dy), sp = (dog.ball ? 0.09 : 0.045) * dt;
-    if (Math.abs(dx) > 0.5) dog.dir = dx > 0 ? 1 : -1;
-    if (dist > sp) { dog.x += dx / dist * sp; dog.y += dy / dist * sp; return; }
-    dog.x = tgt.x; dog.y = tgt.y; dog.path.shift();
+    const dx = dog.path[0].x - dog.x; if (Math.abs(dx) > 0.5) dog.dir = dx > 0 ? 1 : -1;
+    if (!walkStep(dog, dog.path, dt, dog.ball ? 0.09 : 0.045, "office")) return;  // with some weight (world/motion.js)
     if (!dog.path.length) {
       dog.mode = "sit"; dog.until = t + 4000 + Math.random() * 8000;
       if (dog.ball) { dog.ball = null; dog.say = "🎾 !"; dog.sayUntil = t + 2000; dogGo(chief.x + 10, chief.y); petBook.dog.love = clamp(petBook.dog.love + 12); crewAdd(CHIEF_NAME, { ennui: -10 }); }
@@ -84,7 +83,7 @@ function drawDog(t) {
   else ART.dog.draw(dog.x, dog.y, { frame: f, sit: !walking }, { flip: dog.dir < 0 });
   if (dog.ball && dog.ballAt) { const k = Math.min(1, (t - dog.ballAt) / 700); px(dog.ball.x0 + (dog.ball.x - dog.ball.x0) * k, dog.ball.y0 + (dog.ball.y - dog.ball.y0) * k - Math.sin(k * Math.PI) * 18, 2.4, 2.4, "#d4e157"); }
   badge(dog.x, dog.y + 1, `🐶 ${DOG_NAME}`, "#c98b4f");
-  if (t < dog.sayUntil) bubble(dog.x, dog.y - 13, dog.say, "#f4f2ea");
+  if (t < dog.sayUntil) bubble(dog.x, dog.y - 13, dog.say, "#f4f2ea", undefined, "dog");
 }
 const hitDog = (x, y) => petBook.dog && view === "office" && Math.abs(x - dog.x) <= 9 && y >= dog.y - 12 && y <= dog.y + 2 ? "dog" : null;
 function dogPie() { return [["pet", "🤗", "Caresser"], ["ball", "🎾", "Lancer la balle"], ["feed", "🍖", "Nourrir · § 5"]]; }
