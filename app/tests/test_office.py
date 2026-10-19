@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts, waiting  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts, waiting, worktrees  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -142,6 +142,41 @@ class LauncherTests(unittest.TestCase):
             argv = popen.call_args.args[0]
             self.assertEqual(argv, [r"C:\Users\u\.local\bin\claude.exe", "--agent", "feature-builder", "Deliver ABC-1 & calc"])
             self.assertIn("creationflags", popen.call_args.kwargs)
+
+    def test_worktree_needs_git_and_is_named_after_the_ticket(self) -> None:
+        repo, plain = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (repo / ".git").mkdir()
+        with mock.patch.object(launcher, "agent_files", lambda: {"feature-builder": Path("x.md")}), \
+                mock.patch.object(launcher.sys, "platform", "linux"), mock.patch.dict(launcher.os.environ, {"DISPLAY": ":0"}), \
+                mock.patch.object(launcher.shutil, "which", lambda n: f"/usr/bin/{n}" if n in ("claude", "gnome-terminal") else None), \
+                mock.patch.object(launcher.subprocess, "Popen") as popen:
+            ok, out = launcher.launch("feature-builder", "Deliver ABC-123", plain, worktree=True)
+            self.assertFalse(ok)
+            popen.assert_not_called()
+            ok, out = launcher.launch("feature-builder", "Deliver ABC-123", repo, worktree=True)
+            self.assertTrue(ok)
+            self.assertIn("ABC-123-feature-builder", out)
+            argv = popen.call_args.args[0]
+            self.assertEqual(argv[argv.index("--"):], ["--", "/usr/bin/claude", "--agent", "feature-builder", "--worktree", "ABC-123-feature-builder", "Deliver ABC-123"])
+            self.assertEqual(popen.call_args.kwargs["cwd"], repo)
+
+    def test_worktree_names_and_paths(self) -> None:
+        repo = Path(tempfile.mkdtemp())
+        self.assertEqual(worktrees.name_for("mr-reviewer", None, repo), "mr-reviewer")
+        (repo / ".claude" / "worktrees" / "ABC-1-x").mkdir(parents=True)
+        self.assertRegex(worktrees.name_for("x", "ABC-1", repo), r"^ABC-1-x-\d{6}$")
+        self.assertEqual(worktrees.name_for("a b/../c", None, repo), "a-b-..-c")
+        self.assertEqual(worktrees.split("/home/u/repos/app/.claude/worktrees/ABC-1-x/src"), ("/home/u/repos/app", "ABC-1-x"))
+        self.assertEqual(worktrees.root("/home/u/repos/app/.claude/worktrees/ABC-1-x/src"), "/home/u/repos/app/.claude/worktrees/ABC-1-x")
+        self.assertIsNone(worktrees.split("/home/u/repos/app"))
+        self.assertIsNone(launcher.home_dir("/etc"))
+        self.assertEqual(launcher.home_dir("~"), Path.home().resolve())
+
+    def test_scan_reports_the_worktree_and_branch(self) -> None:
+        path = write_transcript(Path(tempfile.mkdtemp()) / "agent-w1.jsonl", [
+            {"type": "user", "cwd": "/home/u/app/.claude/worktrees/ABC-1-fb", "gitBranch": "worktree-ABC-1-fb", "message": {"content": "Deliver ABC-1"}}])
+        state = transcripts.scan(path, time.time())
+        self.assertEqual((state["worktree"], state["branch"]), ("ABC-1-fb", "worktree-ABC-1-fb"))
 
     def test_launched_claude_does_not_inherit_the_parent_session(self) -> None:
         env = launcher.clean_env({"PATH": "/bin", "DISPLAY": ":0", "CLAUDECODE": "1", "CLAUDE_PID": "1",

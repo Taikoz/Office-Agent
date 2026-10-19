@@ -63,6 +63,7 @@ export function renderHud() {
         <span class="tag" style="background:${typeColor(a.type)}" title="${esc(a.type)}">${esc(specialty(a.type))}</span></div>
       <div class="what">${a.ticket ? `${ticketLink(a.ticket)}${yt?.state ? ` · ${esc(yt.state)}` : ""} — ` : ""}${esc(a.description)}</div>
       <div class="act">${esc(now || "démarre…")}</div>
+      ${a.worktree ? `<div class="wtline" title="worktree git à lui : ses fichiers ne sont pas ceux des autres agents">🌿 worktree ${esc(a.worktree)}${a.branch ? ` · ⎇ ${esc(a.branch)}` : ""}</div>` : a.branch ? `<div class="wtline dim">⎇ ${esc(a.branch)}</div>` : ""}
       ${a.permission && a.status === "working" ? `<div class="permline">🔐 attend ta permission dans son terminal : ${esc(a.permission.detail || a.permission.tool)} · ${ago(Math.round(nowS - a.permission.created))}</div>` : ""}
       ${stuck ? `<div class="warnline">🌀 tourne en rond ? ${g.sinceProgress} outils sans modif ni test depuis ${ago(Math.round(nowS - (g.progressT || g.first)))}</div>` : ""}
       ${hub.collisionLine(a)}

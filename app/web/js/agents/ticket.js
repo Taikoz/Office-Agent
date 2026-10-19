@@ -43,7 +43,8 @@ export async function relaunch(agentId) {
     prompt = d?.prompt || prompt;
   } catch (_) { /* the short description will do */ }
   const why = a.status === "blocked" ? `bloquée sur : ${a.lastError || a.action}` : isStuck(a) ? `tournait en rond (${a.game.sinceProgress} outils sans modif ni test)` : `s'est arrêtée (dernière action : ${a.action})`;
-  launchPreset = { agent: a.type, prompt: `${prompt}\n\nReprise : la tentative précédente ${why}. Reprends depuis l'état actuel du dépôt et de la branche, sans refaire ce qui est déjà fait.` };
+  launchPreset = { agent: a.type, prompt: `${prompt}\n\nReprise : la tentative précédente ${why}. Reprends depuis l'état actuel du dépôt et de la branche, sans refaire ce qui est déjà fait.`,
+    worktree: a.worktreePath ? { path: a.worktreePath, name: a.worktree } : null };  // its worktree: picked up there, not a new one
   const desk = Math.max(0, DESKS.findIndex(hub.freeDesk));
   openPanel(`launch:${desk}:${a.ticket || ""}::retry${++relaunchN}`);
 }

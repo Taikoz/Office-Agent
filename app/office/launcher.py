@@ -1,6 +1,7 @@
 """Start an agent from the office: opens an interactive `claude --agent <name>` in a new terminal.
 
-The session stays interactive, so every permission prompt still goes to the user; nothing runs headless.
+The session stays interactive, so every permission prompt still goes to the user; nothing runs headless. In a git
+repository it can get a worktree of its own (`--worktree`), so that agents working side by side never touch the same files.
 """
 
 from __future__ import annotations
@@ -12,7 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .config import LAUNCH_DIR, agent_files
+from . import worktrees
+from .config import LAUNCH_DIR, TICKET_RE, agent_files
 
 PROMPT_MAX = 2000
 
@@ -50,32 +52,48 @@ def terminal(cmd: list[str], cwd: Path = LAUNCH_DIR) -> list[str] | None:
     return None
 
 
-def launch(agent: str, prompt: str, cwd: Path | None = None) -> tuple[bool, str]:
-    """Open a terminal running claude as `agent` with `prompt` (in `cwd`, else the launch dir); argv only, no shell."""
+def home_dir(cwd: str | Path | None) -> Path | None:
+    """`cwd` resolved when it is a folder of the home (the home itself included), else None."""
+    if not cwd:
+        return None
+    p, home = Path(cwd).expanduser().resolve(), Path.home().resolve()
+    return p if p.is_dir() and (p == home or home in p.parents) else None
+
+
+def launch(agent: str, prompt: str, cwd: Path | None = None, worktree: bool = False) -> tuple[bool, str]:
+    """Open a terminal running claude as `agent` with `prompt` (in `cwd`, else the launch dir; in a worktree of its own
+    when asked); argv only, no shell."""
     cwd = cwd if cwd and cwd.is_dir() else LAUNCH_DIR
     if agent not in agents():
         return False, "agent inconnu"
     prompt = prompt.strip()
     if not prompt or len(prompt) > PROMPT_MAX:
         return False, "mission vide ou trop longue"
+    extra, where = [], ""
+    if worktree:
+        if not worktrees.is_repo(cwd):
+            return False, f"{cwd.name} n'est pas un dépôt git : pas de worktree possible"
+        tickets = TICKET_RE.findall(prompt)
+        name = worktrees.name_for(agent, tickets[0] if tickets else None, cwd)
+        extra, where = ["--worktree", name], f" (worktree {name})"
     claude = shutil.which("claude") or str(Path.home() / ".local" / "bin" / "claude")
     if sys.platform == "win32":
-        return launch_windows(claude, agent, prompt, cwd)
-    argv = terminal([claude, "--agent", agent, prompt], cwd)
+        return launch_windows(claude, agent, prompt, cwd, extra)
+    argv = terminal([claude, "--agent", agent, *extra, prompt], cwd)
     if argv is None:
         return False, "pas de terminal graphique disponible"
     subprocess.Popen(argv, cwd=cwd, env=clean_env(dict(os.environ)), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
-    return True, f"{agent} lancé dans un nouveau terminal"
+    return True, f"{agent} lancé dans un nouveau terminal{where}"
 
 
-def launch_windows(claude: str, agent: str, prompt: str, cwd: Path = LAUNCH_DIR) -> tuple[bool, str]:
+def launch_windows(claude: str, agent: str, prompt: str, cwd: Path = LAUNCH_DIR, extra: list[str] = ()) -> tuple[bool, str]:
     """Windows: claude.exe in a new console window, argv only. A claude.cmd (npm install) would go through cmd.exe,
     which reparses the mission text: refused rather than risking it."""
     exe = claude if claude.lower().endswith(".exe") else shutil.which("claude.exe") or ""
     if not exe:
         return False, "claude.exe introuvable (installation npm ?) : lance l'agent depuis Claude Code"
-    subprocess.Popen([exe, "--agent", agent, prompt], cwd=cwd, env=clean_env(dict(os.environ)),
+    subprocess.Popen([exe, "--agent", agent, *extra, prompt], cwd=cwd, env=clean_env(dict(os.environ)),
                      creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0x10))
     return True, f"{agent} lancé dans une nouvelle console"
 

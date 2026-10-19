@@ -87,6 +87,7 @@ class OfficeRoom extends Room {
       if (e.fxKind === "mr" && t < e.fxUntil) drawBell(e.desk.x + 13, e.desk.y - 24, t);
       badge(e.desk.x, e.desk.y + 23, e.who ? nameTag(e.who) : specialty(a.type), typeColor(a.type));
       if (a.ticket) text(a.ticket, e.desk.x, e.desk.y + 29.5, "#d5eeff", 4.2, "center");
+      if (a.worktree) text(`🌿 ${clip(a.worktree, 16)}`, e.desk.x, e.desk.y + (a.ticket ? 34.5 : 29.5), "#9be59b", 3.6, "center");  // its own worktree
       let msg = "", bg = "#f4f2ea", fg = "#1c1c24";
       if (st === "working") msg = a.idle > 45 ? "… réfléchit" : clip(a.action, 34);
       else if (st === "blocked") { msg = clip(a.lastError || "bloqué", 34); bg = "#ff6b6b"; }

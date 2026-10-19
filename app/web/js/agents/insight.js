@@ -34,7 +34,7 @@ function refreshCollisions() { collisionMap = collisions(); }
 export const shortFile = f => f.split("/").slice(-2).join("/");
 function collisionLine(a) {
   const c = collisionMap.get(a.id);
-  return c ? `<div class="overline">⚠ collision : ${esc(crew.ids[c.other.id] || specialty(c.other.type))} modifie aussi ${esc(shortFile(c.file))}</div>` : "";
+  return c ? `<div class="overline">⚠ collision : ${esc(crew.ids[c.other.id] || specialty(c.other.type))} modifie aussi ${esc(shortFile(c.file))} <small>— la prochaine fois, 🌿 worktree séparé au lancement</small></div>` : "";
 }
 
 /* time left: the median duration of the delivered runs of the same type (30 days) */
