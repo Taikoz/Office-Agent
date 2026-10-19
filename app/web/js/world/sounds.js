@@ -16,7 +16,7 @@ import { CHIEF_NAME, W, chief, ents, hash } from "../core/core.js";
 import { Activity } from "../activities/base.js";
 import { cat } from "./cat.js";
 import { cooking } from "../social/kitchen.js";
-import { burst, graph, midi, mix, onTick, pick, rnd, scene, tone } from "./ambience.js";
+import { burst, duck, graph, midi, mix, onTick, pick, rnd, scene, tone } from "./ambience.js";
 
 const panOf = x => Math.max(-0.8, Math.min(0.8, (x / W) * 2 - 1));
 const live = () => { const A = graph(); return A && hub.soundOn && A.ctx.state === "running" ? A : null; };
@@ -108,6 +108,7 @@ function speak(A, who, msg, x, { sing = false, tv = false } = {}) {
     at += s.d + s.gap;
   }
   env.gain.setTargetAtTime(0, at, 0.06);
+  if (!tv && !sing) duck(at - t + 0.4);
   for (const o of [tri, sine, vib]) { o.start(t); o.stop(at + 0.5); }
   breath.start(t, Math.random() * 3); breath.stop(at + 0.5);
 }

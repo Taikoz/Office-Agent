@@ -33,19 +33,24 @@ function renderQuestion(q) {
   box.querySelector("#q-send").onclick = () => { const v = box.querySelector("#q-free").value.trim(); if (v) sendAnswer(q.id, v); };
 }
 
-async function sendAnswer(id, answer) {
-  const box = document.getElementById("p-q"), msg = box.querySelector("#q-msg");
-  box.querySelectorAll("button, textarea").forEach(x => { x.disabled = true; });
-  let ok = false;
-  if (DEMO) { hub.demoAnswered.add(id); ok = true; }
+// send an answer (the side panel, the phone's Agents app): "" when it went, else why it did not
+export async function answerQuestion(id, answer) {
+  let err = "";
+  if (DEMO) hub.demoAnswered.add(id);
   else try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN },
       body: JSON.stringify({ id, answer }) });
-    ok = res.ok;
-    if (!ok) msg.textContent = `Échec (${res.status}) — page à recharger ?`;
-  } catch (err) { msg.textContent = `serveur injoignable (${err.message})`; }
-  if (ok) { sentQ.add(id); msg.textContent = "Envoyé ✓ — l'agent reprend."; poll(); }
-  else box.querySelectorAll("button, textarea").forEach(x => { x.disabled = false; });
+    if (!res.ok) err = `Échec (${res.status}) — page à recharger ?`;
+  } catch (e) { err = `serveur injoignable (${e.message})`; }
+  if (!err) { sentQ.add(id); hub.countWeekly?.("answer"); poll(); }
+  return err;
+}
+async function sendAnswer(id, answer) {
+  const box = document.getElementById("p-q"), msg = box.querySelector("#q-msg");
+  box.querySelectorAll("button, textarea").forEach(x => { x.disabled = true; });
+  const err = await answerQuestion(id, answer);
+  msg.textContent = err || "Envoyé ✓ — l'agent reprend.";
+  if (err) box.querySelectorAll("button, textarea").forEach(x => { x.disabled = false; });
 }
 
 function renderBadge() {

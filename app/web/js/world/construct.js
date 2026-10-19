@@ -21,12 +21,12 @@ const saveCon = () => SaveSlot.get("office-construct").save(con);
 const hasRoom = r => con.rooms.includes(r);
 const HIRES = ["Inès", "Jules", "Karim", "Léa", "Malik", "Nina", "Oscar", "Paul"];
 export const PROJECTS = [
-  { id: "open1", icon: "🏢", name: "Recruter deux devs", desc: "Deux devs de plus dans l'équipe (leurs bureaux s'achètent à part).", price: 5000, ok: () => con.level === 0, done: () => con.level >= 1 },
-  { id: "open2", icon: "🏙️", name: "Recruter deux devs de plus", desc: "L'équipe passe à douze.", price: 9000, ok: () => con.level === 1, done: () => con.level >= 2, needs: "Recruter les deux premiers d'abord" },
-  { id: "meeting", icon: "🤝", name: "Salle de réunion", desc: "Une grande table : réunis l'équipe (social, moral).", price: 4000, ok: () => !hasRoom("meeting"), done: () => hasRoom("meeting") },
-  { id: "terrace", icon: "🌿", name: "Terrasse", desc: "En plein air, avec barbecue : l'afterwork du vendredi s'y tient.", price: 6000, ok: () => !hasRoom("terrace"), done: () => hasRoom("terrace") },
-  { id: "gym", icon: "🏋️", name: "Salle de sport", desc: "Les devs s'ennuient moins et y retrouvent le moral (les sportifs adorent).", price: 5000, ok: () => !hasRoom("gym"), done: () => hasRoom("gym") },
-  { id: "library", icon: "📚", name: "Bibliothèque", desc: "Un coin calme où les devs fatigués viennent lire et se reposer.", price: 4500, ok: () => !hasRoom("library"), done: () => hasRoom("library") },
+  { id: "open1", icon: "🏢", name: "Recruter deux devs", desc: "Deux devs de plus dans l'équipe (leurs bureaux s'achètent à part).", price: 5000, lvl: 2, ok: () => con.level === 0, done: () => con.level >= 1 },
+  { id: "open2", icon: "🏙️", name: "Recruter deux devs de plus", desc: "L'équipe passe à douze.", price: 9000, lvl: 4, ok: () => con.level === 1, done: () => con.level >= 2, needs: "Recruter les deux premiers d'abord" },
+  { id: "meeting", icon: "🤝", name: "Salle de réunion", desc: "Une grande table : réunis l'équipe (social, moral).", price: 4000, lvl: 2, ok: () => !hasRoom("meeting"), done: () => hasRoom("meeting") },
+  { id: "terrace", icon: "🌿", name: "Terrasse", desc: "En plein air, avec barbecue : l'afterwork du vendredi s'y tient.", price: 6000, lvl: 5, ok: () => !hasRoom("terrace"), done: () => hasRoom("terrace") },
+  { id: "gym", icon: "🏋️", name: "Salle de sport", desc: "Les devs s'ennuient moins et y retrouvent le moral (les sportifs adorent).", price: 5000, lvl: 4, ok: () => !hasRoom("gym"), done: () => hasRoom("gym") },
+  { id: "library", icon: "📚", name: "Bibliothèque", desc: "Un coin calme où les devs fatigués viennent lire et se reposer.", price: 4500, lvl: 3, ok: () => !hasRoom("library"), done: () => hasRoom("library") },
 ];
 
 /* ---------- the open space grows: new devs hired (their desks are bought in the buy mode, build.js) ---------- */
@@ -43,8 +43,10 @@ function hire(n) {
   }
   saveCon(); applyTeam();
 }
+// a project waits for the office's level (sims/weekly.js: the agents' XP and the stars of the weekly challenges)
+export const roomLocked = p => (p.lvl || 0) > (hub.officeLevel?.() || 1);
 export function buyProject(id) {
-  const p = PROJECTS.find(x => x.id === id); if (!p || !p.ok() || !spend(p.price, p.name)) return;
+  const p = PROJECTS.find(x => x.id === id); if (!p || !p.ok() || roomLocked(p) || !spend(p.price, p.name)) return;
   if (id === "open1" || id === "open2") {
     con.level++; const before = TEAM.length; hire(2);
     toast("CONSTRUCTION 🏗️", `${p.name} : ${TEAM.length} devs`, `Bienvenue à ${TEAM.slice(before).join(" et ")} ! Achète-leur un bureau.`);
@@ -94,8 +96,9 @@ function sizesHtml() {
 document.getElementById("buy").addEventListener("click", ev => { const b = ev.target.closest("[data-resize]"); if (!b) return; const [r, dw, dh] = b.dataset.resize.split(":"); resizeRoom(r, +dw, +dh); });
 function constructGridHtml() {
   return sizesHtml() + PROJECTS.map(p => {
-    const done = p.done(), ok = p.ok();
+    const done = p.done(), lock = !done && roomLocked(p), ok = p.ok() && !lock;
     return `<div class="bitem${done ? " own" : ""}"><span class="bthumb big">${p.icon}</span><b>${esc(p.name)}</b><span class="muted" style="font-size:14px">${esc(p.desc)}</span>
+      ${lock ? `<span class="lockmsg">🔒 Niveau ${p.lvl} du bureau (tu es niveau ${hub.officeLevel()}) : réussis des défis de la semaine.</span>` : ""}
       <span class="price">${done ? "✓ construit" : fmtSim(p.price)}</span>${done ? "" : `<button data-project="${p.id}"${!ok || wallet.funds < p.price ? " disabled" : ""}${!ok && p.needs ? ` title="${esc(p.needs)}"` : ""}>Construire</button>`}</div>`;
   }).join("");
 }
@@ -144,4 +147,4 @@ function stepMeeting(t) {
 setInterval(() => stepMeeting(performance.now()), 1000);
 
 // used by modules loaded before this one, or written by another module (js/hub.js)
-provide({ get MEET_SEATS() { return MEET_SEATS; }, get syncMeeting() { return syncMeeting; }, get buyProject() { return buyProject; }, get con() { return con; }, get constructGridHtml() { return constructGridHtml; }, get curRoom() { return curRoom; }, get hasRoom() { return hasRoom; }, get meeting() { return meeting; }, get renderRoomBar() { return renderRoomBar; }, get startMeeting() { return startMeeting; } });
+provide({ get PROJECTS() { return PROJECTS; }, get MEET_SEATS() { return MEET_SEATS; }, get syncMeeting() { return syncMeeting; }, get buyProject() { return buyProject; }, get con() { return con; }, get constructGridHtml() { return constructGridHtml; }, get curRoom() { return curRoom; }, get hasRoom() { return hasRoom; }, get meeting() { return meeting; }, get renderRoomBar() { return renderRoomBar; }, get startMeeting() { return startMeeting; } });

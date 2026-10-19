@@ -140,7 +140,7 @@ function received(m, t) {
   if (m.kind === "text") {
     const c = conv(m.to ? other : "all"); c.msgs.push(m); c.msgs.splice(0, c.msgs.length - 100);
     if (net.quiet || mineMsg) return;
-    if (net.open !== (m.to ? other : "all")) c.unread++;
+    if (net.open !== (m.to ? other : "all")) { c.unread++; hub.phoneBanner?.({ icon: "💬", app: "thread", thread: m.to ? other : "all", title: m.to ? m.name : `${m.name} · Tout le monde`, body: m.text }); }
     if (!m.to) net.said.set(m.name, { text: m.text, until: t + 5000 });
     hub.sfx?.("commit");
     return;

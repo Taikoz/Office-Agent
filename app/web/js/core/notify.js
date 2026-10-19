@@ -59,7 +59,7 @@ function notifyChanges() {
       const prev = notifySeen.get(a.id);
       notifySeen.set(a.id, now);
       if (!prev) continue;
-      const chiefRow = a.id.startsWith("chief:"), who = chiefRow ? "La session principale" : crew.ids[a.id] || specialty(a.type);
+      const chiefRow = a.id.startsWith("chief:"), who = chiefRow ? "La session principale" : crew.ids[`${s.id}|${a.id}`] || specialty(a.type);
       const target = chiefRow ? "chief" : a.id;
       // their sound (world/sounds.js), in the page too: a doorbell, two low notes, a fanfare, a broken CI, a spiral
       const ring = now.q && now.q !== prev.q ? "question" : chiefRow ? "" : now.status !== prev.status && now.status === "blocked" ? "blocked"
@@ -71,7 +71,7 @@ function notifyChanges() {
       if (now.status !== prev.status && now.status === "done") notify(`✓ ${who} a livré${a.ticket ? ` ${a.ticket}` : ""}`, missionSummary(a, false) || a.description, s.id, target);
       if (now.mr && now.mr !== prev.mr) notify(awaitingReview(a, s) ? `📝 ${who} attend une review` : `🔔 ${who} a ouvert une MR`, `${a.ticket || ""} ${now.mr}`, s.id, target);
       if (now.ci === "failed" && prev.ci !== "failed") notify(`✗ CI rouge sur la MR de ${who}`, `${a.ticket || ""} ${a.game.mr}`, s.id, target, true);
-      if (now.clash && now.clash !== prev.clash && a.id < collisionMap.get(a.id).other.id) { const c = collisionMap.get(a.id); notify(`⚠ Collision : ${who} et ${crew.ids[c.other.id] || specialty(c.other.type)}`, `Les deux modifient ${c.file}`, s.id, target, true); }
+      if (now.clash && now.clash !== prev.clash && a.id < collisionMap.get(a.id).other.id) { const c = collisionMap.get(a.id); notify(`⚠ Collision : ${who} et ${crew.ids[`${s.id}|${c.other.id}`] || specialty(c.other.type)}`, `Les deux modifient ${c.file}`, s.id, target, true); }
       if (now.over && !prev.over) notify(`💸 ${who} dépasse son budget`, `${money(a.game.cost)} pour un budget de ${money(budgetOf(a.type))} — ${a.description}`, s.id, target, true);
       if (now.stuck && !prev.stuck) notify(`🌀 ${who} tourne en rond`, `${a.game.sinceProgress} outils sans modif ni test — ${a.action}`, s.id, target, true);
     }
@@ -81,7 +81,7 @@ function notifyChanges() {
 // page in front: a toast for what needs you (the scene already celebrates the rest); otherwise a system notification.
 // A question gets its first options as buttons (Chrome shows 2): one click answers, like in the side panel.
 export function notify(title, body, sessionId, agentId, urgent = false, question = null) {
-  if (document.hasFocus()) { if (urgent) toast("ALERTE", title, clip(body, 120)); return; }
+  if (document.hasFocus()) { if (urgent && !hub.phoneBanner?.({ icon: "🤖", app: "agents", title, body })) toast("ALERTE", title, clip(body, 120)); return; }
   if (!notifyOn || !("Notification" in window) || Notification.permission !== "granted") return;
   const opts = question?.options?.length && !DEMO ? question.options : [];
   const max = Notification.maxActions || 2;
