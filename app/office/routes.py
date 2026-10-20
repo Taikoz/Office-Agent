@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, slack, team, terminal
+from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, slack, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
 from .detail import agent_detail
@@ -129,7 +129,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             elif self.path.startswith("/api/gitlab/"):  # read-only, with the user's token kept server-side (gitlab.py)
                 what, q = urlparse(self.path).path.rsplit("/", 1)[-1], parse_qs(urlparse(self.path).query)
                 num = lambda k: int(q.get(k, ["0"])[0]) if q.get(k, ["0"])[0].isdigit() else 0
-                fn = {"status": gitlab.status, "mrs": gitlab.my_mrs, "pipelines": gitlab.failing_pipelines,
+                fn = {"status": gitlab.status, "mrs": gitlab.my_mrs, "pipelines": gitlab.failing_pipelines, "deliveries": lambda: deliveries.deliveries(tickets, force=q.get("force") == ["1"]),
                       "mr": (lambda: gitlab.mr_detail(num("project"), num("iid"))) if num("project") and num("iid") else None,
                       "job": (lambda: gitlab.job_log(num("project"), num("job"))) if num("project") and num("job") else None}.get(what)
                 code, body = gitlab.safe(fn) if fn else (404, {"error": "inconnu"})

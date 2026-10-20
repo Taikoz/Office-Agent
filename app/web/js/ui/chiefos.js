@@ -52,37 +52,93 @@ export function openChiefOs(app) {
   osBox.hidden = false; renderChiefOs();
 }
 export function closeChiefOs() { osBox.hidden = true; if (chief.at === "chiefos") chief.at = "free"; }
-export function setOsApp(id) { osApp = id; osOverview = false; osFilter = ""; OsApp.get(id)?.open(); }
+export function setOsApp(id) { osApp = id; osOverview = false; osFilter = ""; osFolder = null; const sp = OsApp.spaceOf(id); if (sp) spaceLast[sp.id] = id; OsApp.get(id)?.open(); }
+// a space opens on the app last used in it (its first one otherwise); an app id opens that app
+const spaceLast = {};
+function openEntry(id) {
+  const sp = OsApp.space(id); if (!sp) return setOsApp(id);
+  const apps = OsApp.appsOf(sp); setOsApp(apps.find(a => a.id === spaceLast[id])?.id || apps[0]?.id || id);
+}
+/* ---------- folders, like an iPhone: the spaces, saved here (OsApp.setSpaces). A folder opens over the screen; drag an
+   app onto a folder to move it there, onto another loose app to make a folder of both, out of an open folder to take it
+   out; the folder's title is its name (click to rename); an empty folder goes away ---------- */
+// known: the apps the folders have already seen; a new app (a newer version of the office) joins its default folder
+// once, an app the user took out of its folder stays out
+const folderBook = new SaveSlot("office-folders", { folders: OsApp.DEFAULT_SPACES, known: [] }).data;
+{
+  const placed = new Set(folderBook.folders.flatMap(f => f.apps)), known = new Set(folderBook.known.length ? folderBook.known : placed);
+  for (const def of OsApp.DEFAULT_SPACES) for (const id of def.apps) {
+    if (known.has(id) || placed.has(id)) continue;
+    const home = folderBook.folders.find(f => f.id === def.id);
+    if (home) home.apps.push(id);
+  }
+  folderBook.known = [...new Set([...known, ...OsApp.DEFAULT_SPACES.flatMap(d => d.apps)])];
+  if (!DEMO) SaveSlot.get("office-folders").save(folderBook);
+}
+OsApp.setSpaces(folderBook.folders);
+let osFolder = null, folderOpened = 0;  // the folder open on screen (its id), and since when (its zoom-in plays once)
+function openFolder(id) { osFolder = id; folderOpened = performance.now(); renderChiefOs(); }
+function saveFolders(list = OsApp.SPACES) {
+  folderBook.folders = list.filter(s => s.apps.length).map(({ id, label, apps }) => ({ id, label, apps: [...apps] }));
+  OsApp.setSpaces(folderBook.folders); SaveSlot.get("office-folders").save(folderBook);
+  if (osFolder && !OsApp.space(osFolder)) osFolder = null;
+}
+const outOfFolders = (...ids) => OsApp.SPACES.map(s => ({ ...s, label: s.label, apps: s.apps.filter(x => !ids.includes(x)) }));
+function moveToFolder(appId, folderId) {  // folderId null: out of every folder
+  const list = outOfFolders(appId); list.find(s => s.id === folderId)?.apps.push(appId); saveFolders(list); renderChiefOs();
+}
+function makeFolder(target, dropped) {
+  const id = `f${Date.now().toString(36)}`;
+  saveFolders([...outOfFolders(target, dropped), { id, label: "Dossier", apps: [target, dropped] }]); openFolder(id);
+}
+const unfold = id => { saveFolders(OsApp.SPACES.filter(s => s.id !== id)); renderChiefOs(); };
+// the icon of a folder: its first apps in a 3 × 3 grid; an app: its emoji
+const FOLDER_TINT = "#7a7a7a";
+function iconOf(id, cls = "ic") {
+  const sp = OsApp.space(id);
+  return sp ? `<span class="${cls} fold">${OsApp.appsOf(sp).slice(0, 9).map(a => `<i style="--tint:${a.tint}">${a.icon}</i>`).join("")}</span>` : `<span class="${cls}">${OsApp.get(id)?.icon || ""}</span>`;
+}
 // Ubuntu look (GNOME, Yaru): top bar with Activités and the clock, the dock on the left, the app in a window;
 // Activités (or ⋮⋮⋮ in the dock) shows the grid of applications with a search field
 export let osOverview = false, osFilter = "";
-function osBadge(id) { const n = OsApp.get(id)?.badge(); return n ? `<b class="osbadge">${n}</b>` : ""; }
-/* ---------- the dock: the main apps only, pinned and ordered by the user (right click, drag and drop, Réglages) ---------- */
-const DOCK_DEFAULT = ["questions", "notifs", "terminal", "gitlab", "browser", "blueprint", "dashboard", "planning", "settings"];
-let dockBook = new SaveSlot("office-dock", { apps: DOCK_DEFAULT }).data;
-const dockApps = () => dockBook.apps.filter(id => OsApp.get(id) && !OsApp.get(id).hidden);
+// a dock entry: a space (OsApp.SPACES) or a single app; a space's badge adds up its apps'
+const entry = id => OsApp.space(id) || OsApp.get(id);
+const entryShown = id => { const sp = OsApp.space(id); return sp ? OsApp.appsOf(sp).length > 0 : !!OsApp.get(id) && !OsApp.get(id).hidden; };
+function osBadge(id) { const sp = OsApp.space(id), n = sp ? OsApp.appsOf(sp).reduce((t, a) => t + (+a.badge() || 0), 0) : OsApp.get(id)?.badge(); return n ? `<b class="osbadge">${n}</b>` : ""; }
+/* ---------- the dock: the spaces (and any app pinned alone), ordered by the user (right click, drag and drop, Réglages) ---------- */
+const DOCK_DEFAULT = [...OsApp.DEFAULT_SPACES.map(s => s.id), "settings"];
+// version 2: the dock holds spaces; an older dock (apps) becomes the spaces of its apps, the old default the new one
+const OLD_DEFAULT = ["questions", "notifs", "terminal", "gitlab", "browser", "blueprint", "dashboard", "planning", "settings"];
+let dockBook = new SaveSlot("office-dock", { apps: DOCK_DEFAULT }, { version: 2, migrations: {
+  2: old => ({ apps: String(old?.apps) === String(OLD_DEFAULT) ? DOCK_DEFAULT : [...new Set((old?.apps || []).map(id => OsApp.spaceOf(id)?.id || id))] }) } }).data;
+const dockApps = () => dockBook.apps.filter(entryShown);
+// the dock icon lit for the app shown: the app itself when pinned alone, its space otherwise
+const dockOf = id => dockApps().includes(id) ? id : dockApps().includes(OsApp.spaceOf(id)?.id) ? OsApp.spaceOf(id).id : null;
 function saveDock(apps) { dockBook.apps = [...new Set(apps)]; SaveSlot.get("office-dock").save(dockBook); renderChiefOs(); }
-const pinApp = id => { if (!OsApp.get(id)?.hidden) saveDock([...dockApps(), id]); };
+const pinApp = id => { if (entryShown(id)) saveDock([...dockApps(), id]); };
 const unpinApp = id => saveDock(dockApps().filter(x => x !== id));
 function moveApp(id, delta) { const a = dockApps(), i = a.indexOf(id), j = Math.max(0, Math.min(a.length - 1, i + delta)); if (i < 0 || i === j) return; a.splice(i, 1); a.splice(j, 0, id); saveDock(a); }
 let osMenu = null;  // the open context menu: { id, x, y, from }
 function dockIcon(id, extra = "") {
-  const { icon: ic, label: l } = OsApp.get(id);
-  return `<button data-os-app="${id}" data-dock="${id}" draggable="true" class="${osApp === id && !osOverview ? "on" : ""}${extra}" title="${esc(l)}" style="--tint:${OsApp.get(id).tint}"><span class="ic">${ic}</span>${osBadge(id)}</button>`;
+  const { label: l, tint } = entry(id), sp = OsApp.space(id);
+  const tip = sp ? `${l} : ${OsApp.appsOf(sp).map(a => a.label).join(", ")}` : l;
+  return `<button data-os-open="${id}" data-dock="${id}" draggable="true" class="${(osFolder ? osFolder === id : dockOf(osApp) === id && !osOverview) ? "on" : ""}${extra}" title="${esc(tip)}" style="--tint:${sp ? FOLDER_TINT : tint}">${iconOf(id)}${osBadge(id)}</button>`;
 }
 function menuHtml() {
   if (!osMenu) return "";
-  const { id } = osMenu, pinned = dockApps().includes(id), i = dockApps().indexOf(id), { icon: ic, label: l } = OsApp.get(id);
-  const items = [["open", "Ouvrir"], pinned ? ["unpin", "Retirer du dock"] : ["pin", "Épingler au dock"], ...(pinned && i > 0 ? [["up", "Monter"]] : []), ...(pinned && i < dockApps().length - 1 ? [["down", "Descendre"]] : [])];
+  const { id } = osMenu, pinned = dockApps().includes(id), i = dockApps().indexOf(id), { icon, label: l } = entry(id), sp = OsApp.space(id), ic = sp ? "📁" : icon;
+  const items = [["open", "Ouvrir"], pinned ? ["unpin", "Retirer du dock"] : ["pin", "Épingler au dock"], ...(pinned && i > 0 ? [["up", "Monter"]] : []), ...(pinned && i < dockApps().length - 1 ? [["down", "Descendre"]] : []),
+    ...(sp ? [["unfold", "Défaire le dossier"]] : OsApp.spaceOf(id) ? [["out", "Sortir du dossier"]] : [])];
   return `<div class="ubmenu" style="left:${osMenu.x}px;top:${osMenu.y}px"><div class="ubmtitle">${ic} ${esc(l)}</div>${items.map(([a, t]) => `<button data-menu="${a}" data-id="${id}">${t}</button>`).join("")}</div>`;
 }
 export function dockSettingsHtml() {
-  const pinned = dockApps(), others = OsApp.list().map(a => a.id).filter(id => !pinned.includes(id));
-  const row = (id, isPinned, i) => { const { icon: ic, label: l } = OsApp.get(id); return `<div class="osrow"><b><span class="ubappic" style="--tint:${OsApp.get(id).tint}">${ic}</span> ${esc(l)}</b><span class="muted">${isPinned ? `position ${i + 1}` : "dans Activités"}</span>
+  const pinned = dockApps(), others = [...OsApp.SPACES.map(s => s.id), ...OsApp.list().map(a => a.id)].filter(id => entryShown(id) && !pinned.includes(id));
+  const where = id => { const sp = OsApp.space(id); return sp ? `dossier : ${OsApp.appsOf(sp).map(a => a.label).join(", ")}` : OsApp.spaceOf(id) ? `dans le dossier ${OsApp.spaceOf(id).label}` : "dans Activités"; };
+  const row = (id, isPinned, i) => { const { label: l, tint } = entry(id); return `<div class="osrow"><b><span style="--tint:${OsApp.space(id) ? FOLDER_TINT : tint}">${iconOf(id, "ubappic")}</span> ${esc(l)}</b><span class="muted">${isPinned ? `position ${i + 1} · ` : ""}${esc(where(id))}</span>
     <span class="osacts">${isPinned ? `<button data-dockset="up" data-id="${id}"${i === 0 ? " disabled" : ""} title="Monter">↑</button><button data-dockset="down" data-id="${id}"${i === pinned.length - 1 ? " disabled" : ""} title="Descendre">↓</button><button data-dockset="unpin" data-id="${id}">Retirer</button>` : `<button data-dockset="pin" data-id="${id}">📌 Épingler</button>`}</span></div>`; };
-  return `<h4>DOCK</h4><p class="muted">Les applications du dock, dans l'ordre. Aussi : clic droit sur une icône (dock ou Activités), ou glisser-déposer dans le dock.</p>
-    ${pinned.map((id, i) => row(id, true, i)).join("")}<h4>AUTRES APPLICATIONS</h4>${others.map(id => row(id, false)).join("") || `<p class="muted">Toutes sont dans le dock.</p>`}
-    <div class="osacts"><button data-dockset="reset">↺ Dock par défaut</button></div>`;
+  return `<h4>DOCK</h4><p class="muted">Les dossiers (et applications) du dock, dans l'ordre. Un dossier s'ouvre comme sur un iPhone ; ses applications s'affichent ensuite en onglets. Aussi : clic droit sur une icône (dock ou Activités), ou glisser-déposer dans le dock. Dans Activités : glisse une application sur un dossier pour l'y ranger, sur une autre application pour créer un dossier, hors d'un dossier ouvert pour l'en sortir.</p>
+    ${pinned.map((id, i) => row(id, true, i)).join("")}<h4>AUTRES DOSSIERS ET APPLICATIONS</h4>${others.map(id => row(id, false)).join("") || `<p class="muted">Toutes sont dans le dock.</p>`}
+    <div class="osacts"><button data-dockset="reset">↺ Dock par défaut</button><button data-dockset="resetfolders">↺ Dossiers par défaut</button></div>`;
 }
 export function renderChiefOs() {
   if (osBox.hidden) return;
@@ -90,41 +146,59 @@ export function renderChiefOs() {
   const skin = osSkin(), holo = skin === "holo", book = skin === "grimoire", crypt = skin === "crypte", ship = skin === "galion", zen = skin === "zen", trop = skin === "tropic";
   for (const k of ["holo", "grimoire", "crypte", "galion", "zen", "tropic"]) osBox.classList.toggle(k, skin === k);
   const day = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }), time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  const pinned = dockApps(), running = !osOverview && !pinned.includes(osApp) ? osApp : null;  // the open app shows up while it runs, like Ubuntu
+  const pinned = dockApps(), running = !osOverview && !dockOf(osApp) ? osApp : null;  // the open app shows up while it runs, like Ubuntu
   const dock = pinned.map(id => dockIcon(id)).join("") + (running ? `<span class="ubrun"></span>${dockIcon(running, " running")}` : "");
-  const apps = OsApp.list().filter(a => !osFilter || a.label.toLowerCase().includes(osFilter.toLowerCase()));
+  // Activités, like an iPhone home screen: the folders, then the apps outside every folder; a search lists the apps
+  // themselves (a folder's name finds all its apps)
+  const q = osFilter.toLowerCase(), hit = a => { const sp = OsApp.spaceOf(a.id); return a.label.toLowerCase().includes(q) || !!sp?.label.toLowerCase().includes(q); };
+  const tile = ({ id, label: l, tint }, loose) => `<button data-os-app="${id}" data-dock="${id}"${loose ? ` data-loose="${id}"` : ""} draggable="true" style="--tint:${tint}">${iconOf(id)}${osBadge(id)}${pinned.includes(id) ? '<span class="ubpin" title="Dans le dock">📌</span>' : ""}<small>${esc(l)}</small></button>`;
+  const folderTile = sp => `<button data-fold="${sp.id}" data-dock="${sp.id}" draggable="true" style="--tint:${FOLDER_TINT}" title="${esc(OsApp.appsOf(sp).map(a => a.label).join(", "))}">${iconOf(sp.id)}${osBadge(sp.id)}<small>${esc(sp.label)}</small></button>`;
+  const home = q ? OsApp.list().filter(hit).map(a => tile(a)).join("")
+    : OsApp.SPACES.filter(sp => OsApp.appsOf(sp).length).map(folderTile).join("") + OsApp.list().filter(a => !OsApp.spaceOf(a.id)).map(a => tile(a, true)).join("");
+  const tabs = OsApp.spaceOf(osApp) ? OsApp.appsOf(OsApp.spaceOf(osApp)) : [];
+  const fsp = osFolder && OsApp.space(osFolder);
+  const folder = fsp ? `<div class="ubfolderbg${performance.now() - folderOpened < 300 ? " fresh" : ""}"><div class="ubfolder"><input class="ubfname" value="${esc(fsp.label)}" maxlength="30" aria-label="Nom du dossier" title="Renommer le dossier">
+      <div class="ubgrid">${OsApp.appsOf(fsp).map(a => tile(a)).join("")}</div><p class="ubhint">Glisse une application hors du dossier pour l'en sortir.</p></div></div>` : "";
   const body = osOverview
     ? `<div class="ubover"><input class="ubsearch" placeholder="Rechercher une application…" value="${esc(osFilter)}" aria-label="Rechercher une application">
-        <div class="ubgrid">${apps.map(({ id, icon: ic, label: l, tint }) => `<button data-os-app="${id}" data-dock="${id}" style="--tint:${tint}"><span class="ic">${ic}</span>${osBadge(id)}${pinned.includes(id) ? '<span class="ubpin" title="Dans le dock">📌</span>' : ""}<small>${esc(l)}</small></button>`).join("") || `<p>Aucune application.</p>`}</div>
-        <p class="ubhint">Clic droit sur une application : l'épingler au dock ou l'en retirer.</p></div>`
+        <div class="ubgrid">${home || `<p>Aucune application.</p>`}</div>
+        <p class="ubhint">Glisse une application sur un dossier pour l'y ranger, ou sur une autre pour créer un dossier. Clic droit : épingler au dock, défaire un dossier.</p></div>`
     : `<section class="ubwin"><div class="ubhead"><span class="ubappic" style="--tint:${app.tint}">${icon}</span><b>${esc(label)}</b>
         <span class="ubctl"><button data-os="overview" title="Réduire">–</button><button data-os="max" title="Agrandir">▢</button><button class="x" data-os="close" title="Fermer (Échap)">×</button></span></div>
+        ${tabs.length > 1 ? `<nav class="ubtabs" aria-label="${esc(OsApp.spaceOf(osApp).label)}">${tabs.map(a => `<button data-os-app="${a.id}" class="${a.id === osApp ? "on" : ""}" style="--tint:${a.tint}">${a.icon} ${esc(a.label)}${osBadge(a.id)}</button>`).join("")}</nav>` : ""}
         <div class="osapp">${app.render()}</div></section>`;
   const boot = BOOT[skin] && performance.now() < bootUntil ? `<div class="hoboot"><b>${BOOT[skin].title}</b><span>${holo ? `v${now.getFullYear() - 2000}.${now.getMonth() + 1}` : crypt ? "🕯 🦇 🕯" : ship ? "⚓ 🏴‍☠️ ⚓" : zen ? "⛩ 🌸 ⛩" : trop ? "🌴 ☀️ 🌴" : "✦ ✦ ✦"}</span>${BOOT[skin].lines.map((l, i) => `<i style="--d:${i * 0.22}s">${l}</i>`).join("")}<em></em></div>` : "";
   osBox.innerHTML = `${boot}<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">${holo ? "◈ MODULES" : book ? "✦ Sortilèges" : crypt ? "☾ Séances" : ship ? "⚓ Cap" : zen ? "⛩ Chemins" : trop ? "🌴 Spots" : "Activités"}</button><span class="ubtitle">${holo ? `▸ ${esc(label).toUpperCase()}` : book ? `📜 ${esc(label)}` : crypt ? `🕯️ ${esc(label)}` : ship ? `🗺️ ${esc(label)}` : zen ? `🎴 ${esc(label)}` : trop ? `🌺 ${esc(label)}` : `${icon} ${esc(label)}`}</span>
       <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : book ? `${esc(now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))} · ${time.replace(":", " h ")}` : crypt ? `☾ ${esc(day)} · ${time}${now.getHours() === 0 ? " · minuit…" : ""}` : ship ? `⚓ ${esc(day)} · ${time} · cap au ${["N", "NE", "E", "SE", "S", "SO", "O", "NO"][now.getHours() % 8]}` : zen ? `${esc(day)} · ${time} · ${["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][Math.floor(((now.getHours() + 1) % 24) / 2)]}の刻` : trop ? `☀️ ${esc(day)} · ${time}${now.getHours() >= 18 ? " · happy hour 🍹" : ""}` : `${esc(day)}  ${time}`}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
-    <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}</div>${menuHtml()}`;
-  if (osOverview) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+    <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}${folder}</div>${menuHtml()}`;
+  if (osOverview && !fsp) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   else app.mount();
 }
-osBox.addEventListener("input", ev => { if (ev.target.classList.contains("ubsearch")) { osFilter = ev.target.value; renderChiefOs(); } });
-osBox.addEventListener("keydown", ev => { if (ev.target.classList.contains("ubsearch") && ev.key === "Enter") { const first = osBox.querySelector(".ubgrid [data-os-app]"); if (first) first.click(); } });
+osBox.addEventListener("input", ev => {
+  if (ev.target.classList.contains("ubsearch")) { osFilter = ev.target.value; renderChiefOs(); }
+  if (ev.target.classList.contains("ubfname") && OsApp.space(osFolder)) { const name = ev.target.value.trim() || "Dossier"; saveFolders(OsApp.SPACES.map(s => s.id === osFolder ? { ...s, label: name, apps: s.apps } : s)); }
+});
+osBox.addEventListener("change", ev => { if (ev.target.classList.contains("ubfname")) renderChiefOs(); });
+osBox.addEventListener("keydown", ev => { if (ev.target.classList.contains("ubfname") && ev.key === "Enter") ev.target.blur(); if (ev.target.classList.contains("ubsearch") && ev.key === "Enter") { const first = osBox.querySelector(".ubgrid [data-os-app]"); if (first) first.click(); } });
 osBox.addEventListener("click", ev => {
+  if (osFolder && ev.target.classList?.contains("ubfolderbg")) { osFolder = null; return renderChiefOs(); }  // a click beside the open folder closes it
   const b = ev.target.closest("button"); if (!b) return;
   if (b.dataset.os === "close") return closeChiefOs();
-  if (b.dataset.os === "overview") { osOverview = !osOverview; osFilter = ""; return renderChiefOs(); }
+  if (b.dataset.os === "overview") { osOverview = !osOverview; osFilter = ""; osFolder = null; return renderChiefOs(); }
+  if (b.dataset.fold) return openFolder(b.dataset.fold);
   if (b.dataset.os === "max") { osBox.classList.toggle("max"); return; }
   if (b.dataset.osApp) { setOsApp(b.dataset.osApp); return renderChiefOs(); }
+  if (b.dataset.osOpen) { if (OsApp.space(b.dataset.osOpen)) return osFolder === b.dataset.osOpen ? (osFolder = null, renderChiefOs()) : openFolder(b.dataset.osOpen); openEntry(b.dataset.osOpen); return renderChiefOs(); }
   if (!osOverview && ev.target.closest(".osapp")) curApp().click(b, ev);  // the app's own buttons
 });
 osBox.addEventListener("input", ev => { if (!osOverview && ev.target.closest(".osapp")) curApp().input(ev); });
 osBox.addEventListener("change", ev => { if (!osOverview && ev.target.closest(".osapp")) curApp().change(ev); });
 // the handlers an app wired with OsApp.listen: only the app shown gets the events of its window
 for (const type of OsApp.EVENTS) osBox.addEventListener(type, ev => {
-  if (osOverview || !ev.target.closest?.(".ubwin")) return;
+  if (osOverview || !ev.target.closest?.(".ubwin") || ev.target.closest(".ubtabs")) return;  // the tabs belong to ChiefOS
   for (const fn of OsApp.handlers.get(osApp)?.[type] || []) fn(ev);
 });
-addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); closeChiefOs(); } }, true);  // Escape belongs to a terminal that has the focus
+addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); if (osFolder) { osFolder = null; renderChiefOs(); } else closeChiefOs(); } }, true);  // an open folder closes first  // Escape belongs to a terminal that has the focus
 document.getElementById("osbtn").onclick = () => chiefToDesk();
 // live apps refresh every 3 s (not while a field of theirs has the focus); forms and long pages stay still
 setInterval(() => { if (!osBox.hidden && !osOverview && curApp().live && !osBox.contains(document.activeElement?.closest("select, input, textarea"))) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
@@ -142,25 +216,49 @@ osBox.addEventListener("click", ev => {
   const m = ev.target.closest("[data-menu]"), d = ev.target.closest("[data-dockset]");
   if (m) {
     ev.stopImmediatePropagation(); const id = m.dataset.id; osMenu = null;
-    if (m.dataset.menu === "open") { setOsApp(id); return renderChiefOs(); }
+    if (m.dataset.menu === "open") { if (OsApp.space(id)) return openFolder(id); openEntry(id); return renderChiefOs(); }
+    if (m.dataset.menu === "unfold") return unfold(id);
+    if (m.dataset.menu === "out") return moveToFolder(id, null);
     return m.dataset.menu === "pin" ? pinApp(id) : m.dataset.menu === "unpin" ? unpinApp(id) : moveApp(id, m.dataset.menu === "up" ? -1 : 1);
   }
   if (d) {
     const id = d.dataset.id, a = d.dataset.dockset;
     if (a === "reset") return saveDock(DOCK_DEFAULT);
+    if (a === "resetfolders") { saveFolders(OsApp.DEFAULT_SPACES); return renderChiefOs(); }
     return a === "pin" ? pinApp(id) : a === "unpin" ? unpinApp(id) : moveApp(id, a === "up" ? -1 : 1);
   }
   if (osMenu && !ev.target.closest(".ubmenu")) { osMenu = null; renderChiefOs(); }
 }, true);
-// drag and drop in the dock to reorder; dropped from Activités onto the dock: pinned there
+// drag and drop in the dock to reorder; dropped from Activités onto the dock: pinned there. In Activités, like an
+// iPhone: an app dropped onto a folder goes in it, onto a loose app makes a folder of both, out of the open folder leaves it
 let dragApp = null;
+const dropTarget = ev => {
+  if (!dragApp) return null;
+  if (ev.target.closest(".ubdock")) return { kind: "dock" };
+  if (!OsApp.get(dragApp)) return null;  // a folder only goes to the dock
+  const f = ev.target.closest("[data-fold]"), l = ev.target.closest("[data-loose]");
+  if (f && !OsApp.space(f.dataset.fold)?.apps.includes(dragApp)) return { kind: "fold", el: f, id: f.dataset.fold };
+  if (l && l.dataset.loose !== dragApp && !OsApp.spaceOf(dragApp)) return { kind: "loose", el: l, id: l.dataset.loose };
+  if (osFolder && ev.target.classList.contains("ubfolderbg") && OsApp.space(osFolder)?.apps.includes(dragApp)) return { kind: "out" };
+  return null;
+};
 osBox.addEventListener("dragstart", ev => { const b = ev.target.closest("[data-dock]"); if (b) { dragApp = b.dataset.dock; ev.dataTransfer.effectAllowed = "move"; } });
-osBox.addEventListener("dragover", ev => { if (dragApp && ev.target.closest(".ubdock")) ev.preventDefault(); });
-osBox.addEventListener("drop", ev => {
-  if (!dragApp || !ev.target.closest(".ubdock")) return;
+osBox.addEventListener("dragover", ev => {
+  const t = dropTarget(ev); if (!t) return;
   ev.preventDefault();
-  const over = ev.target.closest("[data-dock]")?.dataset.dock, a = dockApps().filter(x => x !== dragApp), i = over && over !== dragApp ? a.indexOf(over) : a.length;
-  a.splice(i < 0 ? a.length : i, 0, dragApp); dragApp = null; saveDock(a);
+  for (const el of osBox.querySelectorAll(".dropon")) if (el !== t.el) el.classList.remove("dropon");
+  t.el?.classList.add("dropon");
+});
+osBox.addEventListener("dragleave", ev => ev.target.closest?.(".dropon")?.classList.remove("dropon"));
+osBox.addEventListener("drop", ev => {
+  const t = dropTarget(ev); if (!t) return;
+  ev.preventDefault();
+  const id = dragApp; dragApp = null;
+  if (t.kind === "fold") return moveToFolder(id, t.id);
+  if (t.kind === "loose") return makeFolder(t.id, id);
+  if (t.kind === "out") { osFolder = null; return moveToFolder(id, null); }
+  const over = ev.target.closest("[data-dock]")?.dataset.dock, a = dockApps().filter(x => x !== id), i = over && over !== id ? a.indexOf(over) : a.length;
+  a.splice(i < 0 ? a.length : i, 0, id); saveDock(a);
 });
 osBox.addEventListener("dragend", () => { dragApp = null; });
 

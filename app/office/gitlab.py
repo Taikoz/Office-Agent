@@ -110,6 +110,12 @@ def cached(key: str, fn: Any) -> Any:
     return value
 
 
+def drop(key: str) -> None:
+    """Forgets one cached answer (a refresh asked by the user)."""
+    with _lock:
+        _cache.pop(key, None)
+
+
 def tail(log: str, lines: int = 40) -> str:
     """The end of a job log, without colours nor GitLab section markers."""
     text = ANSI.sub("", log).replace("\r\n", "\n")
