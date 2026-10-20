@@ -48,6 +48,11 @@ DEFAULTS: dict[str, Any] = {
     "to_verify_regex": r"yt\.py command\b.*to verify",
     "lessons": True,                 # add the validated lessons (ChiefOS → Leçons) to the subagents' prompts
     "process_rules": None,           # ChiefOS → Process: [{"when": "feature-builder", "project": "front", "then": "guardian-test-writer"}, …]
+    "deploy_repo": None,             # ChiefOS → Livraisons: GitLab path of the deployment repo (Helm values per app and env), read-only
+    "deploy_path": "applications",   # its folder of <app>/<env>/*.yaml
+    "deploy_ref": None,              # its branch (default branch otherwise)
+    "deploy_projects": {},           # {"<app>": "<GitLab project path>"} when the image path does not tell the project
+    "deliveries_days": 14,           # how far back merged MRs are followed
 }
 
 COLOR_NAMES = {  # Claude Code agent frontmatter colors

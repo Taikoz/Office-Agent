@@ -47,8 +47,18 @@ cv.addEventListener("wheel", ev => {
   ev.preventDefault();
   flipBoard(pg.st, ev.deltaY > 0 ? 1 : -1);
 }, { passive: false });
-cv.addEventListener("mousemove", ev => { const p = canvasPoint(ev); laser.x = p.x; laser.y = p.y; laser.over = true; if (match) { match.mouseY = p.y; match.mouseX = p.x; } const id = hit(ev); hub.setHover?.(id, ev); cat.hover = id === "cat"; cv.classList.toggle("hover", !!id); cv.classList.toggle("hover-store", id === "store"); });
-cv.addEventListener("mouseleave", () => { hub.hideHover?.(); cv.classList.remove("hover-store"); cat.hover = false; laser.over = false; if (match) match.mouseY = match.mouseX = null; });
+// the label of a hovered object follows what is under the pointer even when the pointer stays still: the scene moves
+// under it (wheel zoom, camera, an object moved or sold, another room), so it is checked again each frame while shown
+let lastPointer = null;
+function recheckHover() {
+  if (!lastPointer || hub.hoverUid == null) return;
+  const id = hit(lastPointer);
+  if (id !== `item:${hub.hoverUid}`) hub.setHover?.(id, lastPointer);
+}
+(function watchHover() { recheckHover(); requestAnimationFrame(watchHover); })();
+addEventListener("blur", () => hub.hideHover?.());
+cv.addEventListener("mousemove", ev => { lastPointer = { clientX: ev.clientX, clientY: ev.clientY }; const p = canvasPoint(ev); laser.x = p.x; laser.y = p.y; laser.over = true; if (match) { match.mouseY = p.y; match.mouseX = p.x; } const id = hit(ev); hub.setHover?.(id, ev); cat.hover = id === "cat"; cv.classList.toggle("hover", !!id); cv.classList.toggle("hover-store", id === "store"); });
+cv.addEventListener("mouseleave", () => { lastPointer = null; hub.hideHover?.(); cv.classList.remove("hover-store"); cat.hover = false; laser.over = false; if (match) match.mouseY = match.mouseX = null; });
 cv.addEventListener("click", ev => {
   if (hub.ISO.takeDrag()) return;  // the scene was dragged (iso/engine.js camera), not clicked
   hub.closePie();

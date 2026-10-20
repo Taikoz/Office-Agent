@@ -165,6 +165,7 @@ import "./ui/gitlab.js";
 import "./apps/support.js";
 import "./apps/settings.js";
 import "./apps/pipes.js";
+import "./apps/deliveries.js";
 import "./apps/gitlab.js";
 import "./apps/browser.js";
 import "./apps/blueprint.js";
