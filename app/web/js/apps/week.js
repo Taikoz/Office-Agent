@@ -10,6 +10,7 @@ import { demoReport, durH, isoDay } from "../agents/report.js";
 import { clockNow, weekId } from "../sims/days.js";
 import { OsApp } from "./base.js";
 import { renderChiefOs } from "../ui/chiefos.js";
+import { CH, columns, legend, tile } from "../ui/charts.js";
 
 let weekData = null;
 function weekDays() { const out = [], d = clockNow(), back = (d.getDay() + 6) % 7; for (let i = back; i >= 0; i--) out.push(isoDay(i)); return out; }
@@ -30,12 +31,16 @@ function weekMarkdown(w) {
     "", "## Bloqués ou abandonnés", ...(w.stuck.length ? w.stuck.map(x => `- ${specialty(x.type)}${x.ticket ? ` · ${x.ticket}` : ""} — ${x.lastError || x.description}`) : ["- —"])].join("\n");
 }
 function weekAppHtml() {
-  if (!weekData) { loadWeek(); return `<p class="muted">Rassemblement des rapports de la semaine…</p>`; }
-  if (weekData.error) return `<p class="muted">Serveur injoignable.</p>`;
-  const w = weekData, max = Math.max(1, ...w.perDay.map(d => d.runs));
-  return `<div class="rstats"><div>runs<b>${w.runs}</b></div><div>livrés<b>${w.delivered.length}</b></div><div>MR<b>${w.mrs.length}</b></div><div>To Verify<b>${w.verified.length}</b></div><div>bloqués<b>${w.stuck.length}</b></div><div>temps agents<b>${durH(w.seconds)}</b></div></div>
-    <div class="weekbars">${w.perDay.map(d => `<div title="${d.day} : ${d.delivered} livré(s) / ${d.runs} run(s)"><i style="height:${Math.round(d.runs / max * 100)}%"></i><b style="height:${Math.round(d.delivered / max * 100)}%"></b><span>${["lun", "mar", "mer", "jeu", "ven", "sam", "dim"][(new Date(d.day).getDay() + 6) % 7]}</span></div>`).join("")}</div>
-    <div class="osacts"><button data-week="copy">📋 Copier en Markdown</button><button data-week="reload">↻ Actualiser</button></div><pre class="md">${esc(weekMarkdown(w))}</pre>`;
+  if (!weekData) { loadWeek(); return `<p class="muted osloading" role="status">Rassemblement des rapports de la semaine…</p>`; }
+  if (weekData.error) return `<div class="oserror" role="alert"><b>Le serveur ne répond pas</b><span>La semaine se rassemble à partir des rapports de chaque jour.</span><div class="osacts"><button data-week="reload">↻ Réessayer</button></div></div>`;
+  const w = weekData, fr = iso => new Date(`${iso}T12:00`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const stack = [{ key: "delivered", label: "Livrés", color: CH.done }, { key: "other", label: "Autres runs", color: CH.other }];
+  const rows = w.perDay.map(d => ({ label: fr(d.day), short: new Date(`${d.day}T12:00`).toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", ""), delivered: d.delivered, other: Math.max(0, d.runs - d.delivered) }));
+  return `<div class="chfilters"><span class="muted">Du ${esc(fr(w.from))} au ${esc(fr(w.to))}</span><span class="osacts"><button data-week="copy">📋 Copier en Markdown</button><button data-week="reload">↻ Actualiser</button></span></div>
+    <div class="chtiles">${tile({ label: "Runs", value: w.runs, spark: w.perDay.map(d => d.runs) })}${tile({ label: "Livrés", value: w.delivered.length, spark: w.perDay.map(d => d.delivered), hint: w.runs ? `${Math.round(100 * w.delivered.length / w.runs)} % des runs` : "" })}
+      ${tile({ label: "MR", value: w.mrs.length })}${tile({ label: "To Verify", value: w.verified.length })}${tile({ label: "Bloqués", value: w.stuck.length, tone: w.stuck.length ? "bad" : "" })}${tile({ label: "Temps agents", value: durH(w.seconds) })}</div>
+    <section class="chcard"><div class="chhead"><h4>Jour par jour</h4>${legend(stack.map(k => [k.label, k.color]))}</div>${columns({ rows, stack, height: 170, aria: "Runs et livraisons par jour de la semaine" })}</section>
+    <details class="chcard chmd" open><summary>Version Markdown, à partager</summary><pre class="md">${esc(weekMarkdown(w))}</pre></details>`;
 }
 OsApp.listen("week", "click", async ev => {
   const b = ev.target.closest("[data-week]"); if (!b) return;

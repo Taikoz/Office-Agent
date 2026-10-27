@@ -13,6 +13,7 @@ import { toast } from "../sims/progress.js";
 import { payKey } from "../sims/money.js";
 import { OsApp } from "./base.js";
 import { openChiefOs, renderChiefOs } from "../ui/chiefos.js";
+import { CH, bars, tile } from "../ui/charts.js";
 
 let debriefBook = new SaveSlot("office-debriefs", { list: [] }).data;
 let failBook = new SaveSlot("office-failures", { list: [] }).data;
@@ -41,12 +42,32 @@ function debriefMarkdown(x) {
     ...(x.errors.length ? ["", "### Erreurs rencontrées", ...x.errors.map(e => `- ${e}`)] : [])].join("\n");
 }
 let debriefSel = null;
+// the traps met by the agents (memory of failures), most frequent first: what to warn the next launch about
+function trapsHtml() {
+  const counts = {};
+  for (const f of failBook.list) counts[f.kind] = (counts[f.kind] || 0) + 1;
+  const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([kind, n]) => { const k = FAIL_KINDS.find(x => x[0] === kind) || classifyFail(""); return { key: k[2], label: esc(k[2]), values: { n }, meta: esc(k[3]) }; });
+  return `<section class="chcard"><div class="chhead"><h4>Pièges rencontrés</h4><span class="muted">${failBook.list.length} blocage${failBook.list.length > 1 ? "s" : ""} retenu${failBook.list.length > 1 ? "s" : ""} ; rappelés au lancement d'un agent du même type</span></div>
+    ${rows.length ? bars({ rows, stack: [{ key: "n", label: "Fois", color: CH.blocked }], fmt: v => `${v}×` }) : `<div class="cvclear">✓ Aucun piège retenu pour l'instant.</div>`}</section>`;
+}
+// one debrief as a sheet: who and when, the mission, the figures, then files, commands and errors
+function sheetHtml(x) {
+  const tests = x.tests ? (x.tests.ok ? `✓ verts${x.tests.n ? ` (${x.tests.n})` : ""}` : `✗ rouges (${x.tests.n})`) : "—";
+  return `<article class="dbsheet"><div class="dbhead"><span><b>${x.ticket ? ticketLink(x.ticket) : esc(specialty(x.type))}</b><small>${esc(x.who)} · ${esc(specialty(x.type))} · ${new Date(x.t).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</small></span>
+      <span class="osacts"><button data-copy-debrief="${esc(x.key)}">📋 Copier en Markdown</button>${x.mr ? `<a class="dbmr" href="${esc(x.mr)}" target="_blank" rel="noopener">Ouvrir la MR ↗</a>` : ""}</span></div>
+    ${x.mission ? `<p class="dbmission">${esc(x.mission)}</p>` : ""}
+    <div class="chtiles">${tile({ label: "Durée", value: x.mins == null ? "—" : `${x.mins} min` })}${tile({ label: "Outils", value: x.tools })}${tile({ label: "Coût estimé", value: money(x.cost) })}
+      ${tile({ label: "Tests", value: tests, tone: x.tests ? (x.tests.ok ? "good" : "bad") : "" })}${tile({ label: "Erreurs", value: x.errorsN, tone: x.errorsN ? "bad" : "" })}</div>
+    <section class="chcard"><div class="chhead"><h4>Fichiers modifiés</h4><span class="muted">${x.fileCount}</span></div>${x.files.length ? `<div class="dbfiles">${x.files.map(f => `<code>${esc(f)}</code>`).join("")}</div>` : `<p class="muted">Aucun.</p>`}</section>
+    <section class="chcard"><div class="chhead"><h4>Commandes clés</h4><span class="muted">${x.cmds.length}</span></div>${x.cmds.length ? `<ol class="dbcmds">${x.cmds.map(c => `<li class="${c.failed ? "bad" : ""}"><span aria-label="${c.failed ? "échec" : "réussie"}">${c.failed ? "✗" : "✓"}</span><code>${esc(c.cmd)}</code></li>`).join("")}</ol>` : `<p class="muted">Aucune.</p>`}</section>
+    ${x.errors.length ? `<section class="chcard"><div class="chhead"><h4>Erreurs rencontrées</h4></div><ul class="dberrs">${x.errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></section>` : ""}</article>`;
+}
 function debriefsAppHtml() {
   const list = debriefBook.list;
-  if (!list.length) return `<p class="muted">Pas encore de débrief : il se crée à chaque mission livrée.</p>`;
+  if (!list.length) return `<div class="osempty"><span class="osemptyic" aria-hidden="true">🧾</span><b>Pas encore de débrief</b><span>Une fiche se crée à chaque mission livrée : mission, fichiers, commandes, erreurs, coût.</span></div>${trapsHtml()}`;
   const x = list.find(d => d.key === debriefSel) || list[0];
-  return `<div class="osgrid"><div class="oslist">${list.map(d => `<button data-debrief="${esc(d.key)}" class="${d === x ? "on" : ""}"><b>${esc(d.ticket || specialty(d.type))}</b> · ${esc(d.who)}<small>${new Date(d.t).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</small></button>`).join("")}</div>
-    <div><div class="osacts"><button data-copy-debrief="${esc(x.key)}">📋 Copier en Markdown</button>${x.mr ? `<a href="${esc(x.mr)}" target="_blank" rel="noopener">Ouvrir la MR ↗</a>` : ""}${x.ticket ? ticketLink(x.ticket) : ""}</div><pre class="md">${esc(debriefMarkdown(x))}</pre></div></div>`;
+  return `<div class="dbwrap"><nav class="dblist" aria-label="Débriefs">${list.map(d => `<button data-debrief="${esc(d.key)}" class="${d === x ? "on" : ""}"${d === x ? ' aria-current="true"' : ""}><b>${esc(d.ticket || specialty(d.type))}</b><span>${esc(d.who)} · ${money(d.cost)}${d.tests ? (d.tests.ok ? " · ✓" : " · ✗") : ""}</span><small>${new Date(d.t).toLocaleString("fr-FR", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></button>`).join("")}</nav>
+    <div class="dbmain">${sheetHtml(x)}${trapsHtml()}</div></div>`;
 }
 OsApp.listen("debriefs", "click", async ev => {
   const b = ev.target.closest("[data-debrief], [data-copy-debrief]"); if (!b) return;
