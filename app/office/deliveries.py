@@ -28,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from . import gitlab
+from . import gitlab, vault
 from .config import CFG, TICKET_RE
 
 PROJECT_S = 3600       # image path → GitLab project (found or not)
@@ -125,7 +125,7 @@ def read_archive(conf: dict[str, Any], project: int, ref: str, folder: str) -> d
     query = urllib.parse.urlencode({"sha": ref, "path": folder})
     req = urllib.request.Request(f"{conf['url']}/api/v4/projects/{project}/repository/archive.tar.gz?{query}", headers={"PRIVATE-TOKEN": conf["token"]})
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with vault.open_authed(req, 30) as r:
             data = r.read(ARCHIVE_MAX)
     except urllib.error.HTTPError as err:
         raise gitlab.GitLabError(f"dépôt de déploiement : GitLab a répondu {err.code}") from err

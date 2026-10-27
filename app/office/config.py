@@ -103,6 +103,10 @@ def excluded(text: str) -> bool:
 PROJECTS = HOME_CLAUDE / "projects"
 CLEAR_MARK = STATE_DIR / "clear"
 QUESTIONS = STATE_DIR / "questions"
+# the key that seals the integrations' tokens (vault.py): outside ~/.claude, so a copy of ~/.claude opens nothing
+VAULT_KEY = Path(os.environ.get("AGENT_OFFICE_VAULT_KEY") or Path.home() / ".local" / "share" / "agent-office" / "vault.key")
+
+
 def lock_down(folder: Path) -> None:
     """The folder 0700 and everything in it 0600 / 0700: nothing of the state readable by another account."""
     try:

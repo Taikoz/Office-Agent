@@ -10,12 +10,14 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.error
+import urllib.request
 from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts, waiting, worktrees  # noqa: E402
+from office import billing, blueprints, claudefiles, config, framecheck, game, gitlab, history, insights, knowhow, launcher, lessons, net, pricing, questions, quips, routes, savegame, schedules, slack, team, terminal, transcripts, vault, waiting, worktrees  # noqa: E402
 
 
 def write_transcript(path: Path, records: list[dict]) -> Path:
@@ -395,7 +397,8 @@ class TokenTests(unittest.TestCase):
 class GitLabTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
-        self.patches = [mock.patch.object(gitlab, "STATE_DIR", self.tmp), mock.patch.object(gitlab, "CONF_FILE", self.tmp / "gitlab.json")]
+        self.patches = [mock.patch.object(gitlab, "STATE_DIR", self.tmp), mock.patch.object(gitlab, "CONF_FILE", self.tmp / "gitlab.json"),
+                        mock.patch.object(config, "VAULT_KEY", self.tmp / "vault" / "vault.key")]
         for p in self.patches:
             p.start()
         gitlab._cache.clear()
@@ -417,8 +420,10 @@ class GitLabTests(unittest.TestCase):
             st = gitlab.save("https://gitlab.com", "glpat-secret")
             self.assertEqual(st, {"configured": True, "url": "https://gitlab.com", "user": "taikoz"})
             self.assertNotIn("glpat-secret", json.dumps(gitlab.status()))
+            self.assertNotIn("glpat-secret", (self.tmp / "gitlab.json").read_text())  # sealed at rest
             if os.name != "nt":
                 self.assertEqual((self.tmp / "gitlab.json").stat().st_mode & 0o777, 0o600)
+                self.assertEqual((self.tmp / "vault" / "vault.key").stat().st_mode & 0o777, 0o600)
             gitlab.save("https://gitlab.com", "")  # an empty token keeps the saved one
             self.assertEqual(gitlab.load()["token"], "glpat-secret")
         with mock.patch.object(gitlab, "api", lambda *a, **k: (_ for _ in ()).throw(gitlab.GitLabError("jeton refusé"))):
@@ -427,12 +432,81 @@ class GitLabTests(unittest.TestCase):
         gitlab.forget()
         self.assertFalse(gitlab.status()["configured"])
 
+    def test_a_token_that_can_write_is_refused(self) -> None:
+        answers = {"/user": {"username": "taikoz"}, "/personal_access_tokens/self": {"scopes": ["api", "read_api"], "expires_at": "2026-12-01"}}
+        with mock.patch.object(gitlab, "api", lambda conf, path, *a, **k: answers[path]):
+            self.assertEqual(gitlab.safe(lambda: gitlab.save("https://gitlab.com", "glpat-strong"))[0], 502)
+            self.assertFalse(gitlab.status()["configured"])
+            answers["/personal_access_tokens/self"] = {"scopes": ["read_api"], "expires_at": "2026-12-01"}
+            self.assertEqual(gitlab.save("https://gitlab.com", "glpat-read")["expires"], "2026-12-01")
+
     def test_log_tail_strips_colors_and_sections(self) -> None:
         log = "section_start:1:build\r\x1b[0K\x1b[32;1mok\x1b[0;m\nline 2\rline 2 final\n" + "\n".join(f"l{i}" for i in range(100))
         out = gitlab.tail(log, 3)
         self.assertEqual(out, "l97\nl98\nl99")
         self.assertIn("line 2 final", gitlab.tail(log, 200))
         self.assertNotIn("\x1b", gitlab.tail(log, 200))
+
+
+class VaultTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self.p = mock.patch.object(config, "VAULT_KEY", self.tmp / "key" / "vault.key")
+        self.p.start()
+
+    def tearDown(self) -> None:
+        self.p.stop()
+
+    def test_seal_round_trip_and_tamper(self) -> None:
+        a, b = vault.seal("glpat-abc"), vault.seal("glpat-abc")
+        self.assertNotEqual(a, b)  # a fresh nonce each time
+        self.assertNotIn("glpat", a)
+        self.assertEqual(vault.unseal(a), "glpat-abc")
+        bad = a[:-4] + ("AAAA" if a[-4:] != "AAAA" else "BBBB")
+        self.assertEqual(vault.unseal(bad), "")
+        (self.tmp / "key" / "vault.key").write_bytes(b"\0" * 32)  # another key (another machine, a lost key): nothing opens
+        self.assertEqual(vault.unseal(a), "")
+
+    def test_clear_file_from_an_older_version_is_sealed(self) -> None:
+        f = self.tmp / "gitlab.json"
+        f.write_text(json.dumps({"url": "https://g", "token": "glpat-old"}))
+        self.assertEqual(vault.read(f)["token"], "glpat-old")
+        self.assertNotIn("glpat-old", f.read_text())
+        self.assertEqual(vault.read(f)["token"], "glpat-old")
+
+    def test_token_never_follows_a_redirect_elsewhere(self) -> None:
+        import http.server
+        import threading
+        seen: list = []
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                seen.append((self.server.server_port, self.path, self.headers.get("PRIVATE-TOKEN")))
+                if self.path == "/same":
+                    self.send_response(302)
+                    self.send_header("Location", "/ok")
+                elif self.path == "/away":
+                    self.send_response(302)
+                    self.send_header("Location", f"http://127.0.0.1:{other.server_port}/steal")
+                else:
+                    self.send_response(200)
+                self.end_headers()
+
+            def log_message(self, *_: object) -> None:
+                return
+        here, other = http.server.HTTPServer(("127.0.0.1", 0), H), http.server.HTTPServer(("127.0.0.1", 0), H)
+        for s in (here, other):
+            threading.Thread(target=s.serve_forever, daemon=True).start()
+        try:
+            req = lambda p: urllib.request.Request(f"http://127.0.0.1:{here.server_port}{p}", headers={"PRIVATE-TOKEN": "t"})  # noqa: E731
+            with vault.open_authed(req("/same"), 5) as r:
+                self.assertEqual(r.status, 200)
+            with self.assertRaises(urllib.error.URLError):
+                vault.open_authed(req("/away"), 5)
+            self.assertNotIn(other.server_port, [port for port, _p, _t in seen])  # the other host never got a request
+        finally:
+            here.shutdown()
+            other.shutdown()
 
 
 class GitLabDetailTests(unittest.TestCase):
@@ -968,7 +1042,8 @@ class SlackTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self.calls: list[str] = []
-        self.patches = [mock.patch.object(config, "STATE_DIR", self.tmp), mock.patch.object(slack, "api", self.fake)]
+        self.patches = [mock.patch.object(config, "STATE_DIR", self.tmp), mock.patch.object(slack, "api", self.fake),
+                        mock.patch.object(config, "VAULT_KEY", self.tmp / "vault.key")]
         for p in self.patches:
             p.start()
         slack._cache.clear()

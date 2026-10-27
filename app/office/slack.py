@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import html
 import json
-import os
 import re
 import threading
 import time
@@ -21,7 +20,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-from . import config
+from . import config, vault
 
 TIMEOUT = 8
 CACHE_S = 30
@@ -49,18 +48,15 @@ def conf_file() -> Any:
 
 
 def load() -> dict[str, Any]:
-    try:
-        data = json.loads(conf_file().read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) and data.get("token") and data.get("channel") else {}
-    except (OSError, ValueError):
-        return {}
+    data = vault.read(conf_file())
+    return data if data.get("token") and data.get("channel") else {}
 
 
 def api(token: str, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     query = f"?{urllib.parse.urlencode(params)}" if params else ""
     req = urllib.request.Request(f"https://slack.com/api/{method}{query}", headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with vault.open_authed(req, TIMEOUT) as r:
             body = json.loads(r.read(4_000_000))
     except urllib.error.HTTPError as err:
         raise SlackError("Slack demande d'attendre un peu" if err.code == 429 else f"Slack a répondu {err.code}") from err
@@ -106,13 +102,8 @@ def save(token: str, channel: str) -> dict[str, Any]:
     cid = channel if CHANNEL_ID.match(channel) else find_channel(token, channel)
     info = api(token, "conversations.info", {"channel": cid}).get("channel", {})
     api(token, "conversations.history", {"channel": cid, "limit": 1})  # the bot can read it
-    f = conf_file()
-    f.parent.mkdir(parents=True, exist_ok=True)
-    tmp = f.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"token": token, "channel": cid, "name": info.get("name", ""), "team": who.get("team", ""),
-                               "url": who.get("url", ""), "bot": who.get("user", "")}), encoding="utf-8")
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, f)
+    vault.write(conf_file(), {"token": token, "channel": cid, "name": info.get("name", ""), "team": who.get("team", ""),
+                              "url": who.get("url", ""), "bot": who.get("user", "")})
     with _lock:
         _cache.clear()
     return status()

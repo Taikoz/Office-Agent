@@ -1,6 +1,6 @@
 """Sentry, read-only: the errors of the organisation's projects (ChiefOS → 🐞 Erreurs), with a token entered in Réglages.
 
-The token stays on this machine (STATE_DIR/sentry.json, 0600): it is never sent back to the page nor put in the save;
+The token stays on this machine, sealed (vault.py) in STATE_DIR/sentry.json (0600): it is never sent back to the page nor put in the save;
 the server calls the Sentry API itself (sentry.io or a self-hosted instance) and returns only what the page shows.
 Nothing is ever written to Sentry (no resolve, no comment). Answers are cached CACHE_S.
 
@@ -30,7 +30,6 @@ The token needs: org:read, project:read, event:read (a personal token: <url>/set
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -42,7 +41,7 @@ import urllib.request
 from datetime import datetime
 from typing import Any
 
-from . import config, quips
+from . import config, quips, vault
 
 TIMEOUT = 10
 CACHE_S = 60
@@ -64,11 +63,8 @@ def conf_file() -> Any:
 
 
 def load() -> dict[str, Any]:
-    try:
-        data = json.loads(conf_file().read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) and data.get("token") and data.get("url") and data.get("org") else {}
-    except (OSError, ValueError):
-        return {}
+    data = vault.read(conf_file())
+    return data if data.get("token") and data.get("url") and data.get("org") else {}
 
 
 def normalize_url(url: str) -> str:
@@ -84,7 +80,7 @@ def api(conf: dict[str, Any], path: str, params: dict[str, Any] | list[tuple[str
     query = f"?{urllib.parse.urlencode(params, doseq=True)}" if params else ""
     req = urllib.request.Request(f"{conf['url']}/api/0{path}{query}", headers={"Authorization": f"Bearer {conf['token']}", "Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with vault.open_authed(req, TIMEOUT) as r:
             return json.loads(r.read(8_000_000))
     except urllib.error.HTTPError as err:
         raise SentryError({401: "jeton refusé (invalide ou révoqué)", 403: "accès refusé (droits org:read, project:read, event:read ?)",
@@ -116,12 +112,7 @@ def save(url: str, token: str, org: str, environments: str, grafana: str = "") -
     projects = api({**conf}, f"/organizations/{urllib.parse.quote(org)}/projects/", {"per_page": 100})
     envs = [e.strip() for e in re.split(r"[,\s]+", environments or "") if e.strip()][:6]
     grafana = normalize_url(grafana) if (grafana or "").strip() else ""
-    f = conf_file()
-    f.parent.mkdir(parents=True, exist_ok=True)
-    tmp = f.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"url": url, "token": token, "org": org, "environments": envs, "projects": len(projects), "grafana": grafana}), encoding="utf-8")
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, f)
+    vault.write(conf_file(), {"url": url, "token": token, "org": org, "environments": envs, "projects": len(projects), "grafana": grafana})
     with _lock:
         _cache.clear()
     return status()

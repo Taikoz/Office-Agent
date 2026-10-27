@@ -1,6 +1,7 @@
 """GitLab, read-only, with the user's own personal token (scope read_api) entered in ChiefOS → Réglages.
 
-The token stays on this machine (STATE_DIR/gitlab.json, 0600): it is never sent back to the page nor put in the save;
+The token stays on this machine, sealed (vault.py) in STATE_DIR/gitlab.json (0600): it is never sent back to the page nor put in the save;
+it is refused when it can write (scope api, write_repository…: read_api is enough);
 the server calls the GitLab API itself and returns only what the page shows (merge requests, failing pipelines with
 the end of the failed job's log). Answers are cached 60 s.
 """
@@ -8,7 +9,6 @@ the end of the failed job's log). Answers are cached 60 s.
 from __future__ import annotations
 
 import json
-import os
 import re
 import threading
 import time
@@ -18,6 +18,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from . import vault
 from .config import STATE_DIR
 
 CONF_FILE = STATE_DIR / "gitlab.json"
@@ -43,11 +44,8 @@ def normalize_url(url: str) -> str:
 
 
 def load() -> dict[str, Any]:
-    try:
-        data = json.loads(CONF_FILE.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) and data.get("url") and data.get("token") else {}
-    except (OSError, ValueError):
-        return {}
+    data = vault.read(CONF_FILE)
+    return data if data.get("url") and data.get("token") else {}
 
 
 def save(url: str, token: str | None) -> dict[str, Any]:
@@ -58,14 +56,27 @@ def save(url: str, token: str | None) -> dict[str, Any]:
     if not token:
         raise GitLabError("jeton manquant")
     user = api({"url": url, "token": token}, "/user")
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = CONF_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"url": url, "token": token, "user": user.get("username", "")}), encoding="utf-8")
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, CONF_FILE)
+    vault.write(CONF_FILE, {"url": url, "token": token, "user": user.get("username", ""), **token_info(url, token)})
     with _lock:
         _cache.clear()
     return status()
+
+
+READ_SCOPES = {"read_api", "read_user", "read_repository", "read_registry", "read_virtual_registry", "read_observability", "ai_features"}
+
+
+def token_info(url: str, token: str) -> dict[str, Any]:
+    """The token's own scopes and end date (GET /personal_access_tokens/self): one that can write is refused, since
+    this office only ever reads; an older GitLab that cannot tell is accepted as it is."""
+    try:
+        me = api({"url": url, "token": token}, "/personal_access_tokens/self")
+    except GitLabError:
+        return {}
+    scopes = {str(x) for x in me.get("scopes") or []}
+    extra = sorted(scopes - READ_SCOPES)
+    if extra:
+        raise GitLabError(f"jeton trop puissant ({', '.join(extra)}) : crée-en un avec read_api seulement")
+    return {"scopes": sorted(scopes), "expires": str(me.get("expires_at") or "")}
 
 
 def forget() -> dict[str, Any]:
@@ -78,14 +89,14 @@ def forget() -> dict[str, Any]:
 def status() -> dict[str, Any]:
     """What the page may know: the address and the user, never the token."""
     conf = load()
-    return {"configured": bool(conf), "url": conf.get("url", ""), "user": conf.get("user", "")}
+    return {"configured": bool(conf), "url": conf.get("url", ""), "user": conf.get("user", ""), **({"expires": conf["expires"]} if conf.get("expires") else {})}
 
 
 def api(conf: dict[str, Any], path: str, params: dict[str, Any] | None = None, raw: bool = False) -> Any:
     query = f"?{urllib.parse.urlencode(params, doseq=True)}" if params else ""
     req = urllib.request.Request(f"{conf['url']}/api/v4{path}{query}", headers={"PRIVATE-TOKEN": conf["token"], "Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with vault.open_authed(req, TIMEOUT) as r:
             body = r.read(400_000 if raw else 4_000_000)
     except urllib.error.HTTPError as err:
         raise GitLabError({401: "jeton refusé (expiré ou révoqué ?)", 403: "accès refusé (le jeton a-t-il le droit read_api ?)", 404: "introuvable"}.get(err.code, f"GitLab a répondu {err.code}")) from err
