@@ -1,46 +1,118 @@
-  /* ChiefOS → 🧩 Blueprints (blueprint.js), Unreal-Blueprint style */
+  /* ChiefOS → 🧩 Blueprints (blueprint.js): a node editor in the ChiefOS look — ink surfaces, one amber accent, the
+     blocks' categories as calm colours (BP_CATS), a dotted canvas, cards for nodes, floating controls. The ChiefOS
+     tokens come first, with fallbacks so the other looks (06-chiefos.css) keep working. */
   #chiefos .ubwin:has(.bpapp) .osapp { padding: 0; overflow: hidden; display: flex; }
-  #chiefos .bpapp { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: #1b1b1f; }
-  #chiefos .bptop { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #26262c; border-bottom: 1px solid #111; }
-  #chiefos .bptop button, #chiefos .bpapp .osacts button { padding: 4px 12px; color: #eee; background: #3a3a44; border: 0; border-radius: 6px; cursor: pointer; font-weight: 500; }
-  #chiefos .bptop button:hover { background: #4a4a56; } #chiefos .bpkind { display: flex; padding: 2px; background: #111; border-radius: 8px; }
-  #chiefos .bpkind button { background: transparent; } #chiefos .bpkind button.on { background: var(--ub-orange); }
-  #chiefos .bpname { width: 220px; font-family: "Ubuntu Mono", monospace !important; } #chiefos .bpspacer { flex: 1; }
-  #chiefos .bpbody { flex: 1; min-height: 0; display: grid; grid-template-columns: 190px 1fr 270px; }
-  #chiefos .bppal { overflow-y: auto; padding: 8px; background: #202026; border-right: 1px solid #111; scrollbar-width: thin; }
-  #chiefos .bpcat { margin-bottom: 10px; } #chiefos .bpcat small { display: block; margin: 4px 2px; color: var(--c); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; font-size: 11px; }
-  #chiefos .bpcat button { display: block; width: 100%; margin: 2px 0; padding: 5px 8px; text-align: left; color: #e8e8ee; background: #2c2c34; border: 0; border-left: 3px solid var(--c); border-radius: 4px; cursor: grab; font-size: 13px; }
-  #chiefos .bpcat button:hover { background: #383842; }
-  #chiefos .bpcanvas { position: relative; overflow: hidden; cursor: grab; touch-action: none;
-    background-color: #1e1e22; background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px), linear-gradient(#ffffff12 1px, transparent 1px), linear-gradient(90deg, #ffffff12 1px, transparent 1px);
-    background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px; }
+  #chiefos .bpapp { --bp-bg: var(--os-sunk, #0e1426); --bp-panel: var(--ub-bg, #131a2e); --bp-card: var(--ub-card, #1b2440); --bp-raise: var(--os-raise, #222c4c);
+    --bp-line: var(--ub-line, #27314f); --bp-dim: var(--ub-dim, #9aa4c2); --bp-faint: var(--os-faint, #6d7898); --bp-accent: var(--ub-orange, #f5a524);
+    position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bp-bg); color: var(--ub-text, #eef1f8); font-size: 13px; }
+
+  /* ---------- the toolbar ---------- */
+  #chiefos .bptop { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bp-panel); border-bottom: 1px solid var(--bp-line); }
+  #chiefos .bptop button, #chiefos .bpapp .osacts button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; color: var(--ub-text, #eef1f8);
+    background: transparent; border: 0; border-radius: 8px; cursor: pointer; font: 500 12.5px/1 inherit; transition: background .12s, color .12s; }
+  #chiefos .bptop button:hover, #chiefos .bpapp .osacts button:hover { background: var(--os-hover, #ffffff0d); }
+  #chiefos .bpkind, #chiefos .bpgroup { display: inline-flex; gap: 2px; padding: 2px; background: var(--bp-bg); border: 1px solid var(--bp-line); border-radius: 10px; }
+  #chiefos .bpkind button { color: var(--bp-dim); } #chiefos .bpkind button.on { color: var(--ub-text, #eef1f8); background: var(--bp-raise); box-shadow: 0 1px 2px #0006; }
+  #chiefos .bptitle { display: inline-flex; align-items: center; gap: 8px; margin: 0; } #chiefos .bptitle .muted { font-size: 12px; }
+  #chiefos .bpname { width: 230px; height: 30px; padding: 0 10px; font-family: var(--os-mono, "Ubuntu Mono", monospace) !important; font-size: 13px;
+    color: var(--ub-text, #eef1f8); background: var(--bp-bg); border: 1px solid var(--bp-line); border-radius: 8px; }
+  #chiefos .bpname:focus { outline: none; border-color: var(--bp-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bp-accent) 22%, transparent); }
+  #chiefos .bpspacer { flex: 1; }
+  #chiefos .bptop .bppub { padding: 0 16px; color: var(--os-on-accent, #1d1404); background: var(--bp-accent); font-weight: 600; }
+  #chiefos .bptop .bppub:hover { background: var(--os-accent-2, #ffb84a); }
+
+  #chiefos .bpbody { flex: 1; min-height: 0; display: grid; grid-template-columns: 228px minmax(0, 1fr) 292px; }
+
+  /* ---------- the palette ---------- */
+  #chiefos .bppal { overflow-y: auto; padding: 10px; background: var(--bp-panel); border-right: 1px solid var(--bp-line); scrollbar-width: thin; }
+  #chiefos .bpsearch { width: 100%; height: 32px; margin: 0 0 10px; padding: 0 10px; color: var(--ub-text, #eef1f8); background: var(--bp-bg); border: 1px solid var(--bp-line); border-radius: 8px; font: inherit; }
+  #chiefos .bpsearch:focus { outline: none; border-color: var(--bp-accent); }
+  #chiefos .bpcat { margin-bottom: 12px; }
+  #chiefos .bpcat small { display: flex; align-items: center; gap: 7px; margin: 0 2px 4px; color: var(--bp-dim); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 10.5px; }
+  #chiefos .bpcat small i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent); }
+  #chiefos .bpcat small em { margin-left: auto; font-style: normal; color: var(--bp-faint); font-weight: 500; }
+  #chiefos .bpcat button { display: flex; align-items: center; gap: 8px; width: 100%; margin: 1px 0; padding: 5px 6px; text-align: left; color: var(--ub-text, #eef1f8);
+    background: transparent; border: 0; border-radius: 8px; cursor: grab; font: inherit; transition: background .12s; }
+  #chiefos .bpcat button:hover { background: var(--bp-card); } #chiefos .bpcat button:active { cursor: grabbing; }
+  #chiefos .bpcat button .bpic { background: color-mix(in srgb, var(--c) 16%, transparent); }
+  #chiefos .bpic { display: inline-grid; place-items: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 7px; font-size: 13px; line-height: 1; }
+  #chiefos .bpnone { margin: 8px 2px; }
+
+  /* ---------- the canvas ---------- */
+  #chiefos .bpcanvas { position: relative; overflow: hidden; cursor: grab; touch-action: none; background-color: var(--bp-bg);
+    background-image: radial-gradient(circle at 1px 1px, #ffffff1c 1px, transparent 1.4px), radial-gradient(80% 60% at 50% 0%, #5aa9ff0d, transparent 70%);
+    background-size: 22px 22px, 100% 100%; }
   #chiefos .bpcanvas:active { cursor: grabbing; }
   #chiefos .bpworld { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   #chiefos .bpwires { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
-  #chiefos .bpwire { fill: none; stroke: var(--c, #ddd); stroke-width: 2.6; opacity: .85; pointer-events: stroke; cursor: pointer; } #chiefos .bpwire:hover, #chiefos .bpwire.sel { stroke-width: 4.5; opacity: 1; }
-  #chiefos .bpwire.temp { stroke: #fff; stroke-dasharray: 6 4; pointer-events: none; }
-  #chiefos .bpnode { position: absolute; width: 220px; background: #2a2a31ee; border: 1px solid #0a0a0c; border-radius: 10px; box-shadow: 0 6px 18px #000a; font-size: 13px; }
-  #chiefos .bpnode.sel { box-shadow: 0 0 0 2px #fbaa08, 0 6px 18px #000a; }
-  #chiefos .bphead { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 16px; color: #fff; background: linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 45%, #2a2a31)); border-radius: 9px 9px 0 0; cursor: move; user-select: none; }
-  #chiefos .bphead b { font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  #chiefos .bpin { position: absolute; left: -7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; background: #ddd; border: 2px solid #111; border-radius: 50%; }
-  #chiefos .bpsum { padding: 6px 10px; color: #c8c8d2; min-height: 18px; overflow-wrap: anywhere; }
-  #chiefos .bpouts { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 0 0 8px; }
-  #chiefos .bpout { position: relative; display: flex; align-items: center; gap: 6px; padding-right: 8px; color: #aaa; font-size: 11px; cursor: crosshair; }
-  #chiefos .bpout i { width: 12px; height: 12px; margin-right: -14px; background: var(--c); border: 2px solid #111; border-radius: 50%; } #chiefos .bpout:hover i { transform: scale(1.3); }
-  #chiefos .bpzoom { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
-  #chiefos .bpzoom button { width: 30px; height: 30px; color: #eee; background: #2c2c34; border: 1px solid #111; border-radius: 6px; cursor: pointer; }
-  #chiefos .bpmsg { position: absolute; left: 10px; bottom: 10px; color: #9be3b0; font-size: 13px; pointer-events: none; }
-  #chiefos .bpinsp { overflow-y: auto; padding: 10px 12px; background: #202026; border-left: 1px solid #111; scrollbar-width: thin; }
-  #chiefos .bpinsp h4 { margin: 8px 0 8px; } #chiefos .bpinsp label { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; font-size: 12.5px; color: #bbb; }
-  #chiefos .bpinsp input, #chiefos .bpinsp textarea, #chiefos .bpinsp select { width: 100%; font: inherit; color: #eee; background: #15151a; border: 1px solid #3a3a44; border-radius: 6px; padding: 5px 8px; }
-  #chiefos .bpinsp textarea { resize: vertical; } #chiefos .bpinsp .mono { font-family: "Ubuntu Mono", monospace; }
-  #chiefos .bptools { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; } #chiefos .bptools label { flex-direction: row; align-items: center; gap: 6px; margin: 0; } #chiefos .bptools input { width: auto; }
-  #chiefos .bpmodal { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: #000a; }
-  #chiefos .bpmbox { width: min(760px, 92%); max-height: 88%; overflow-y: auto; padding: 14px 18px; background: #2c2c2c; border: 1px solid #111; border-radius: 12px; box-shadow: 0 20px 50px #000; }
-  #chiefos .bpmbox .osacts span { flex: 1; }
-  #chiefos .bptarget { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 10px; margin: 3px 0; background: #353535; border-radius: 8px; cursor: pointer; }
-  #chiefos .bptarget small { width: 100%; padding-left: 24px; } #chiefos .bpcustom { flex: 1; min-width: 200px; }
-  #chiefos .bpissues { padding: 8px 12px; color: #ffd37a; background: #3a2f1a; border-radius: 8px; }
-  @media (max-width: 1000px) { #chiefos .bpbody { grid-template-columns: 150px 1fr; } #chiefos .bpinsp { display: none; } }
+  #chiefos .bpwire { fill: none; stroke: var(--c, #9aa4c2); stroke-width: 2.2; stroke-linecap: round; opacity: .75; pointer-events: stroke; cursor: pointer; transition: opacity .12s, stroke-width .12s; }
+  #chiefos .bpwire:hover, #chiefos .bpwire.sel { stroke-width: 3.6; opacity: 1; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c) 60%, transparent)); }
+  #chiefos .bpwire.temp { stroke: var(--bp-accent); stroke-dasharray: 6 5; opacity: 1; pointer-events: none; }
+
+  /* a node: a card, its category as a top stripe and an icon chip */
+  #chiefos .bpnode { position: absolute; width: 220px; background: var(--bp-card); border: 1px solid var(--bp-line); border-top: 3px solid var(--c); border-radius: 12px;
+    box-shadow: 0 8px 24px #0008, 0 1px 0 #ffffff08 inset; transition: box-shadow .12s, border-color .12s; }
+  #chiefos .bpnode:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--bp-line)); }
+  #chiefos .bpnode.sel { border-color: var(--bp-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bp-accent) 30%, transparent), 0 10px 28px #000a; }
+  #chiefos .bphead { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px 4px 12px; cursor: move; user-select: none; }
+  #chiefos .bphead .bpic { background: color-mix(in srgb, var(--c) 18%, transparent); }
+  #chiefos .bphead b { font-weight: 600; font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #chiefos .bpin { position: absolute; left: -7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; background: var(--bp-bg); border: 2px solid var(--bp-dim); border-radius: 50%; }
+  #chiefos .bpsum { padding: 2px 12px 8px; color: var(--bp-dim); font-size: 12px; line-height: 1.45; min-height: 18px; overflow-wrap: anywhere; }
+  #chiefos .bpouts { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 6px 0 8px; border-top: 1px solid var(--bp-line); }
+  #chiefos .bpout { position: relative; display: flex; align-items: center; gap: 6px; padding-right: 10px; color: var(--bp-faint); font-size: 11px; cursor: crosshair; }
+  #chiefos .bpout:hover { color: var(--ub-text, #eef1f8); }
+  #chiefos .bpout i { width: 12px; height: 12px; margin-right: -17px; background: var(--c); border: 2px solid var(--bp-bg); border-radius: 50%; box-shadow: 0 0 0 1px var(--c); transition: transform .12s; }
+  #chiefos .bpout:hover i { transform: scale(1.35); }
+
+  /* the floating controls: status bottom-left, zoom bottom-right */
+  #chiefos .bpbar { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+  #chiefos .bpstat, #chiefos .bpmsg { padding: 5px 10px; font-size: 12px; border-radius: 999px; background: color-mix(in srgb, var(--bp-panel) 88%, transparent); border: 1px solid var(--bp-line); backdrop-filter: blur(6px); }
+  #chiefos .bpstat { color: var(--bp-dim); } #chiefos .bpmsg { color: var(--os-ok, #3ccf8e); }
+  #chiefos .bpzoom { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 10px;
+    background: color-mix(in srgb, var(--bp-panel) 92%, transparent); border: 1px solid var(--bp-line); box-shadow: 0 6px 18px #0007; backdrop-filter: blur(6px); }
+  #chiefos .bpzoom button { width: 28px; height: 28px; padding: 0; color: var(--ub-text, #eef1f8); background: transparent; border: 0; border-radius: 7px; cursor: pointer; font-size: 15px; }
+  #chiefos .bpzoom button:hover { background: var(--os-hover, #ffffff0d); }
+  #chiefos .bpzlabel { min-width: 46px; text-align: center; color: var(--bp-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  #chiefos .bpzoom i { width: 1px; height: 18px; margin: 0 3px; background: var(--bp-line); }
+
+  /* ---------- the inspector ---------- */
+  #chiefos .bpinsp { overflow-y: auto; padding: 14px; background: var(--bp-panel); border-left: 1px solid var(--bp-line); scrollbar-width: thin; }
+  #chiefos .bpinsp h4 { margin: 14px 0 8px; font-size: 10.5px; letter-spacing: .08em; color: var(--bp-dim); } #chiefos .bpinsp h4:first-child { margin-top: 0; }
+  #chiefos .bpihead { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--c) 10%, var(--bp-card)); border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); }
+  #chiefos .bpihead .bpic { width: 32px; height: 32px; font-size: 16px; background: color-mix(in srgb, var(--c) 22%, transparent); }
+  #chiefos .bpihead span:last-child { display: flex; flex-direction: column; } #chiefos .bpihead small { color: var(--bp-dim); font-size: 11.5px; }
+  #chiefos .bpinsp label { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: 12px; font-weight: 500; color: var(--bp-dim); }
+  #chiefos .bpinsp input, #chiefos .bpinsp textarea, #chiefos .bpinsp select { width: 100%; font: 400 13px/1.45 inherit; color: var(--ub-text, #eef1f8); background: var(--bp-bg);
+    border: 1px solid var(--bp-line); border-radius: 8px; padding: 7px 10px; transition: border-color .12s, box-shadow .12s; }
+  #chiefos .bpinsp :is(input, textarea, select):focus { outline: none; border-color: var(--bp-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bp-accent) 20%, transparent); }
+  #chiefos .bpinsp textarea { resize: vertical; } #chiefos .bpinsp .mono { font-family: var(--os-mono, "Ubuntu Mono", monospace); }
+  #chiefos .bpinsp .muted { font-size: 12px; line-height: 1.5; }
+  /* the tools as chips */
+  #chiefos .bptools { display: flex; flex-wrap: wrap; gap: 6px; }
+  #chiefos .bptools label { flex-direction: row; align-items: center; gap: 0; margin: 0; padding: 4px 10px; border-radius: 999px; background: var(--bp-card); border: 1px solid var(--bp-line);
+    color: var(--bp-dim); font-size: 12px; cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
+  #chiefos .bptools label:has(input:checked) { color: var(--ub-text, #eef1f8); background: color-mix(in srgb, var(--bp-accent) 18%, transparent); border-color: color-mix(in srgb, var(--bp-accent) 55%, transparent); }
+  #chiefos .bptools label:has(input:focus-visible) { outline: 2px solid var(--bp-accent); outline-offset: 1px; }
+  #chiefos .bptools input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+
+  /* ---------- the dialogs ---------- */
+  #chiefos .bpmodal { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: #05081299; backdrop-filter: blur(3px); animation: bpfade .14s ease; }
+  #chiefos .bpmbox { width: min(760px, 92%); max-height: 88%; overflow-y: auto; padding: 18px 20px; background: var(--bp-panel); border: 1px solid var(--bp-line); border-radius: 16px; box-shadow: 0 30px 80px #000c; }
+  #chiefos .bpmbox > .osacts:first-child { position: sticky; top: -18px; z-index: 1; margin: -18px -20px 12px; padding: 14px 20px; background: var(--bp-panel); border-bottom: 1px solid var(--bp-line); }
+  #chiefos .bpmbox > .osacts:first-child b { font-size: 15px; } #chiefos .bpmbox .osacts span { flex: 1; }
+  #chiefos .bpmbox h4 { margin: 16px 0 8px; font-size: 10.5px; letter-spacing: .08em; color: var(--bp-dim); }
+  #chiefos .bpmbox pre.md { padding: 12px 14px; border-radius: 10px; background: var(--bp-bg); border: 1px solid var(--bp-line); }
+  #chiefos .bpmbox .ubok, #chiefos .bpapp .osacts .ubok { color: var(--os-on-accent, #1d1404); background: var(--bp-accent); font-weight: 600; }
+  #chiefos .bptarget { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin: 6px 0; background: var(--bp-card); border: 1px solid var(--bp-line); border-radius: 10px; cursor: pointer; transition: border-color .12s, background .12s; }
+  #chiefos .bptarget:hover { border-color: var(--os-line-2, #34406a); }
+  #chiefos .bptarget:has(input:checked) { border-color: var(--bp-accent); background: color-mix(in srgb, var(--bp-accent) 8%, var(--bp-card)); }
+  #chiefos .bptarget input[type="radio"] { accent-color: var(--bp-accent); }
+  #chiefos .bptarget small { width: 100%; padding-left: 24px; } #chiefos .bpcustom, #chiefos .bpexample { flex: 1; min-width: 200px; }
+  #chiefos .bpissues { display: grid; gap: 4px; padding: 10px 14px; color: #ffd37a; background: color-mix(in srgb, var(--os-warn, #f5b13d) 12%, transparent); border: 1px solid color-mix(in srgb, var(--os-warn, #f5b13d) 35%, transparent); border-radius: 10px; }
+  @keyframes bpfade { from { opacity: 0; } }
+
+  @media (max-width: 1100px) { #chiefos .bpbody { grid-template-columns: 180px minmax(0, 1fr); } #chiefos .bpinsp { display: none; } #chiefos .bptitle .muted { display: none; } }
+  @media (max-width: 820px) { #chiefos .bpname { width: 150px; } #chiefos .bptop { flex-wrap: wrap; } }
   #chiefos .bpcanvas, #chiefos .bppal, #chiefos .bpnode { user-select: none; -webkit-user-select: none; }
+  @media (prefers-reduced-motion: reduce) { #chiefos .bpapp *, #chiefos .bpmodal { transition: none !important; animation: none !important; } }

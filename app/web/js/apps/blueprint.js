@@ -14,8 +14,8 @@ import { OsApp } from "./base.js";
 import { osBox } from "../ui/chiefos.js";
 
 /* ---------- the blocks ---------- */
-const BP_CATS = [["start", "▶", "Départ", "#c7162b"], ["input", "📥", "Entrées", "#0e8420"], ["read", "🔎", "Contexte", "#2c7ae0"], ["act", "⚙️", "Actions", "#e95420"],
-  ["logic", "🔀", "Logique", "#77216f"], ["func", "ƒ", "Fonctions", "#19b6ee"], ["out", "🏁", "Sortie", "#f99b11"]];
+const BP_CATS = [["start", "▶", "Départ", "#ff6369"], ["input", "📥", "Entrées", "#3ccf8e"], ["read", "🔎", "Contexte", "#5aa9ff"], ["act", "⚙️", "Actions", "#f5a524"],
+  ["logic", "🔀", "Logique", "#b18cff"], ["func", "ƒ", "Fonctions", "#4fd1d9"], ["out", "🏁", "Sortie", "#ff8f6b"]];
 const F = (key, label, kind = "text", extra = {}) => ({ key, label, kind, ...extra });
 const BLOCKS = {
   start: { cat: "start", icon: "▶", label: "Départ", outs: ["out"], noIn: true, unique: true,
@@ -210,7 +210,7 @@ const NODE_W = 220;
 function nodeHtml(n) {
   const b = BLOCKS[n.type], [, , , col] = catOf(n.type);
   return `<div class="bpnode${bpSel === n.id ? " sel" : ""}" data-node="${n.id}" style="left:${n.x}px;top:${n.y}px;--c:${col}">
-    <div class="bphead" data-drag="${n.id}">${b.noIn ? "" : `<span class="bpin" data-in="${n.id}" title="Entrée"></span>`}<span>${b.icon}</span><b>${esc(b.label)}</b></div>
+    <div class="bphead" data-drag="${n.id}">${b.noIn ? "" : `<span class="bpin" data-in="${n.id}" title="Entrée"></span>`}<span class="bpic">${b.icon}</span><b>${esc(b.label)}</b></div>
     <div class="bpsum">${esc(clip(n.type === "start" && bp.kind === "hook" ? `${bp.settings.hook?.event || "?"}${bp.settings.hook?.matcher ? ` · ${bp.settings.hook.matcher}` : ""}` : b.sum(n.props || {}), 70))}</div>
     <div class="bpouts">${b.outs.map(p => `<span class="bpout" data-out="${n.id}" data-port="${p}" title="Sortie ${esc(PORT_FR[p] || p)}">${esc(PORT_FR[p])}<i></i></span>`).join("")}</div></div>`;
 }
@@ -233,6 +233,8 @@ function renderCanvas() {
   c.querySelector(".bpworld").style.transform = `translate(${bpView.x}px, ${bpView.y}px) scale(${bpView.z})`;
   c.querySelector(".bpnodes").innerHTML = bp.nodes.map(nodeHtml).join("");
   drawLinks();
+  const z = c.querySelector(".bpzlabel"); if (z) z.textContent = `${Math.round(bpView.z * 100)} %`;
+  const st = c.querySelector(".bpstat"); if (st) st.textContent = `${bp.nodes.length} bloc${bp.nodes.length > 1 ? "s" : ""} · ${bp.links.length} lien${bp.links.length > 1 ? "s" : ""}`;
 }
 const HOOK_EVENTS = [["PreToolUse", "avant un outil (peut le bloquer)"], ["PostToolUse", "après un outil"], ["UserPromptSubmit", "à chaque message de l'utilisateur"], ["Stop", "quand Claude a fini"], ["SubagentStop", "quand un sous-agent a fini"], ["SessionStart", "au début d'une session"], ["Notification", "à chaque notification"], ["PreCompact", "avant de compacter"]];
 function hookSettingsHtml() {
@@ -257,7 +259,8 @@ function inspectorHtml() {
       <p class="muted">Clique un bloc pour le régler. Relie une sortie (●) à l'entrée d'un autre bloc. Suppr efface le bloc ou le fil choisi.</p>`;
   }
   const b = BLOCKS[n.type], fns = bp.nodes.filter(f => f.type === "func").map(f => f.props.name).filter(Boolean);
-  return `<h4>${b.icon} ${esc(b.label).toUpperCase()}</h4>${b.fields.map(f => {
+  const [, , cat, col] = catOf(n.type);
+  return `<div class="bpihead" style="--c:${col}"><span class="bpic">${b.icon}</span><span><b>${esc(b.label)}</b><small>${esc(cat)}</small></span></div>${b.fields.map(f => {
     const v = n.props[f.key] ?? "";
     if (f.kind === "textarea") return `<label>${esc(f.label)}<textarea data-bp-prop="${f.key}" rows="4" placeholder="${esc(f.ph || "")}">${esc(v)}</textarea></label>`;
     if (f.kind === "select") return `<label>${esc(f.label)}<select data-bp-prop="${f.key}">${f.options.map(o => `<option${v === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
@@ -290,14 +293,27 @@ function modalHtml() {
     <label class="bptarget"><input type="radio" name="bpmode" value="write"> <b>✍️ Écrire le brouillon directement</b><small class="muted">le Markdown de l'aperçu, tel quel</small></label>
     <div class="osacts"><button data-bp="dopublish" class="ubok">🚀 Publier</button><span class="muted">${esc(bpMsg)}</span></div></div></div>`;
 }
+const KINDS = [["skill", "🧠", "Skill"], ["agent", "🤖", "Agent"], ["hook", "🪝", "Hook"]];
+function paletteHtml() {
+  const cats = BP_CATS.filter(c => c[0] !== "start").map(([id, , label, col]) => {
+    const blocks = Object.entries(BLOCKS).filter(([t, b]) => b.cat === id && (bp.kind === "hook" ? b.hook || t === "stop" : !b.hook));
+    if (!blocks.length) return "";
+    return `<div class="bpcat" style="--c:${col}"><small><i></i>${label}<em>${blocks.length}</em></small>${blocks.map(([t, b]) => `<button data-bp-add="${t}" data-bp-label="${esc(`${b.label} ${label}`.toLowerCase())}" draggable="true" title="Cliquer pour l'ajouter après le bloc choisi, ou glisser sur le canevas"><span class="bpic">${b.icon}</span>${esc(b.label)}</button>`).join("")}</div>`;
+  }).join("");
+  return `<nav class="bppal" aria-label="Blocs"><input class="bpsearch" data-bp-filter placeholder="Chercher un bloc…" aria-label="Chercher un bloc" spellcheck="false">${cats}<p class="bpnone muted" hidden>Aucun bloc ne correspond.</p></nav>`;
+}
 function blueprintAppHtml() {
   return `<div class="bpapp">
-    <div class="bptop"><span class="bpkind"><button data-bp-kind="skill" class="${bp.kind === "skill" ? "on" : ""}">🧠 Skill</button><button data-bp-kind="agent" class="${bp.kind === "agent" ? "on" : ""}">🤖 Agent</button><button data-bp-kind="hook" class="${bp.kind === "hook" ? "on" : ""}">🪝 Hook</button></span>
-      <input class="bpname" data-bp-meta="name" value="${esc(bp.name)}" spellcheck="false" aria-label="Nom">
-      <span class="bpspacer"></span><button data-bp="open">📂 Ouvrir / Nouveau</button><button data-bp="save">💾 Enregistrer</button><button data-bp="preview">👁 Aperçu</button><button data-bp="test">🧪 Tester</button><button data-bp="publish" class="ubok">🚀 Publier</button></div>
-    <div class="bpbody"><nav class="bppal">${BP_CATS.filter(c => c[0] !== "start").map(([id, ic, label, col]) => `<div class="bpcat" style="--c:${col}"><small>${ic} ${label}</small>${Object.entries(BLOCKS).filter(([t, b]) => b.cat === id && (bp.kind === "hook" ? b.hook || t === "stop" : !b.hook)).map(([t, b]) => `<button data-bp-add="${t}" draggable="true" title="Cliquer ou glisser sur le canevas">${b.icon} ${esc(b.label)}</button>`).join("")}</div>`).join("")}</nav>
+    <div class="bptop"><span class="bpkind" role="tablist" aria-label="Type">${KINDS.map(([k, ic, label]) => `<button role="tab" aria-selected="${bp.kind === k}" data-bp-kind="${k}" class="${bp.kind === k ? "on" : ""}"><span aria-hidden="true">${ic}</span>${label}</button>`).join("")}</span>
+      <label class="bptitle"><span class="muted">Nom</span><input class="bpname" data-bp-meta="name" value="${esc(bp.name)}" spellcheck="false" aria-label="Nom"></label>
+      <span class="bpspacer"></span>
+      <span class="bpgroup"><button data-bp="open" title="Ouvrir un blueprint enregistré ou en créer un">📂 Ouvrir</button><button data-bp="save" title="Enregistrer dans ce navigateur">💾 Enregistrer</button></span>
+      <span class="bpgroup"><button data-bp="preview" title="Le Markdown généré">👁 Aperçu</button><button data-bp="test" title="Essayer sans l'installer">🧪 Tester</button></span>
+      <button data-bp="publish" class="ubok bppub">🚀 Publier</button></div>
+    <div class="bpbody">${paletteHtml()}
       <div class="bpcanvas"><div class="bpworld"><svg class="bpwires"></svg><div class="bpnodes"></div></div>
-        <div class="bpzoom"><button data-bp="zin">＋</button><button data-bp="zout">－</button><button data-bp="fit" title="Recentrer">⤢</button></div><div class="bpmsg">${esc(bpMsg)}</div></div>
+        <div class="bpbar"><span class="bpstat"></span>${bpMsg ? `<span class="bpmsg">${esc(bpMsg)}</span>` : ""}</div>
+        <div class="bpzoom" role="group" aria-label="Zoom"><button data-bp="zout" title="Dézoomer">−</button><span class="bpzlabel">${Math.round(bpView.z * 100)} %</span><button data-bp="zin" title="Zoomer">+</button><i></i><button data-bp="fit" title="Tout voir">⤢</button></div></div>
       <aside class="bpinsp">${inspectorHtml()}</aside></div>${modalHtml()}</div>`;
 }
 function refreshBp(full) {
@@ -370,6 +386,13 @@ OsApp.listen("blueprint", "dragstart", ev => { const b = ev.target.closest("[dat
 OsApp.listen("blueprint", "input", ev => {
   if (!ev.target.closest(".bpapp")) return;
   const t = ev.target;
+  if (t.hasAttribute("data-bp-filter")) {
+    const q = t.value.trim().toLowerCase(), pal = t.closest(".bppal");
+    pal.querySelectorAll("[data-bp-add]").forEach(b => { b.hidden = !!q && !b.dataset.bpLabel.includes(q); });
+    pal.querySelectorAll(".bpcat").forEach(c => { c.hidden = !c.querySelector("[data-bp-add]:not([hidden])"); });
+    pal.querySelector(".bpnone").hidden = !!pal.querySelector("[data-bp-add]:not([hidden])");
+    return;
+  }
   if (t.dataset.bpMeta) { bp[t.dataset.bpMeta] = t.dataset.bpMeta === "name" ? t.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+/, "").slice(0, 64) : t.value; if (t.dataset.bpMeta === "name" && t.value !== bp.name) { const pos = t.selectionStart; t.value = bp.name; t.setSelectionRange(pos, pos); } persistBp(); }
   if (t.dataset.bpProp) { const n = nodeById(bpSel); if (n) { n.props[t.dataset.bpProp] = t.value; persistBp(); const s = osBox.querySelector(`[data-node="${n.id}"] .bpsum`); if (s) s.textContent = clip(BLOCKS[n.type].sum(n.props), 70); } }
 });
