@@ -2,12 +2,13 @@
 
 import { ART, Figure, R, SvgArt, shade } from "./base.js";
 import { personSvg } from "./people.js";
+import { BUST_BOX, PORTRAIT_BOX } from "./pixelpeople.js";
 
 // people (outlined, shaded, 9 hair styles, glasses, beards, outfits, hats), standing on their feet
 // look: sex ("f" or a man), skin, hair, shirt, style (hair 0-8), glasses (true / "square" / "round" / "sun"), and for a custom sim (the chief, chief.js):
 // outfit (tux, suit, shirt, hoodie, tshirt, polo), tie, pants, shoes, beard (stubble, short, full, mustache, goatee)
 // the visible traits of a look (the cache key of its images; a look also carries other fields)
-const LOOK_TRAITS = ["sex", "skin", "hair", "shirt", "style", "glasses", "outfit", "tie", "pants", "shoes", "beard", "beardColor", "scarf", "wand", "jetpack", "parrot", "katana", "lei"];
+const LOOK_TRAITS = ["sex", "skin", "hair", "shirt", "style", "head", "eyes", "mouth", "glasses", "outfit", "tie", "pants", "shoes", "beard", "beardColor", "scarf", "wand", "jetpack", "parrot", "katana", "lei"];
 export const lookTraits = look => Object.fromEntries(LOOK_TRAITS.map(k => [k, look[k]]));
 export const lookKey = look => LOOK_TRAITS.map(k => look[k]).join("|");
 // the person in 2D (portraits, the chief's editor, the faces of the HUD): the same drawing as in the office (svg/people.js),
@@ -19,7 +20,7 @@ class PersonArt extends Figure {
 }
 ART.person = new PersonArt();
 // the viewBox of a face (the HUD, the needs panel): the head and the top of the shoulders; of a bust (the visio): to the chest
-export const PORTRAIT_BOX = "-4.6 -31 9.2 10.5", BUST_BOX = "-7.5 -31.5 15 16.5";
+export { BUST_BOX, PORTRAIT_BOX };
 
 
 // Brume: grey tabby, green eyes; poses walk (2 frames), sit (tail sweeping, 2 = blink), sleep; she faces right

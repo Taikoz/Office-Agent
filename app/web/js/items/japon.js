@@ -215,7 +215,7 @@ new class extends Gadget {
   }]] }));
 // the koi pond: a koi per agent at work, a golden koi per mission delivered; feeding them gathers the room
 new class extends Gadget {
-  isoState(it, t) { return { n: working().length, gold: delivered(), frame: still() ? 0 : anim(t, 120) % 1000 }; }
+  isoState(it, t) { return { n: working().length, gold: delivered(), frame: still() ? 0 : anim(t, 120) % 40 }; }
 }(japon({ type: "koipond", cat: "deco", name: "Bassin aux carpes koï", price: 1400, w: 24, d: 20, rots: 1, art: "isokoipond",
   desc: "Un bassin cerclé de pierres, des nénuphars. Une carpe par vrai agent au travail, une carpe dorée par mission livrée, qui tournent en rond. Clic : les nourrir.",
   styles: [{ id: "pierre", name: "Pierre", sw: "#9a968a" }],

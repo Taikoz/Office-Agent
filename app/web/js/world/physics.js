@@ -77,10 +77,13 @@ function motionOf(it, def, t) {
 }
 
 /* ---------- doors that open (world/scene.js, rooms/lounge.js, rooms/built.js) ---------- */
-const doors = new Map();  // `${room}:${fx}` → how open (0..1), eased
+const doors = new Map();  // `${room}:${fx}` → { k: how open (0..1), eased; at: when }
 export function doorOpen(room, fx) {
-  const key = `${room}:${fx}`, want = !hub.focusMode && movingNear(room, fx, FY + 4, 20) ? 1 : 0, k = doors.get(key) ?? 0, nk = k + (want - k) * (want ? 0.18 : 0.06);
-  doors.set(key, nk < 0.005 ? 0 : nk);
+  const key = `${room}:${fx}`, want = !hub.focusMode && movingNear(room, fx, FY + 4, 20) ? 1 : 0, d = doors.get(key) || { k: 0, at: 0 }, now = performance.now();
+  // eased by the time gone, not by the frame: the same swing at 30 or 120 frames a second, or when the walls are
+  // redrawn less often (iso/engine.js); the steps of a 60 frames a second door
+  const steps = d.at ? Math.min(30, (now - d.at) / 16.7) : 1, nk = want - (want - d.k) * (1 - (want ? 0.18 : 0.06)) ** steps;
+  doors.set(key, { k: nk < 0.005 ? 0 : nk, at: now });
   return nk;
 }
 // draw(): the closed door at (x, y); its leaf (lx, ly, lw, lh, in the drawing) swings open on its left hinge by k

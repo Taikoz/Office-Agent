@@ -220,7 +220,7 @@ art("isokoipond", 24, 20, 10, ({ n = 1, gold = 0, frame = 0 }) => {
   for (const [x, y] of [[6, 6], [16, 14], [17.6, 12.8]]) g += iell(x, y, 1.45, 1.4, "#3f8a4a") + (x === 6 ? glow(x + 0.4, y, 1.8, 0.7, "#f4a0c0", 1) : "");
   const fish = [...Array(Math.min(6, n)).fill(0), ...Array(Math.min(4, gold)).fill(1)];
   fish.forEach((gd, k) => {
-    const a = frame * 0.18 + k * 1.7, r = 4 + (k % 3) * 1.6, x = 12 + Math.cos(a) * r, y = 10 + Math.sin(a) * r * 0.8, [px, py] = ipt(x, y, 1.5), dir = Math.cos(a + Math.PI / 2) * 0.6 - Math.sin(a + Math.PI / 2) * 0.6 > 0 ? 1 : -1;
+    const a = frame * Math.PI / 20 + k * 1.7, r = 4 + (k % 3) * 1.6, x = 12 + Math.cos(a) * r, y = 10 + Math.sin(a) * r * 0.8, [px, py] = ipt(x, y, 1.5), dir = Math.cos(a + Math.PI / 2) * 0.6 - Math.sin(a + Math.PI / 2) * 0.6 > 0 ? 1 : -1;
     const body = gd ? GOLD[0] : ["#f08a3a", "#f4f2ea", "#e8402a"][k % 3];
     g += `<ellipse cx="${n2(px)}" cy="${n2(py)}" rx="1.5" ry=".6" fill="${body}"/><path fill="${body}" d="M${n2(px - 1.4 * dir)} ${n2(py)}l${n2(-1 * dir)} -.6v1.2z"/>` + (!gd && k % 3 === 1 ? `<circle cx="${n2(px + 0.3 * dir)}" cy="${n2(py)}" r=".35" fill="#e8402a"/>` : "") + (gd ? `<ellipse cx="${n2(px)}" cy="${n2(py)}" rx="2.2" ry="1.1" fill="${GOLD[0]}" fill-opacity=".25"/>` : "");
   });

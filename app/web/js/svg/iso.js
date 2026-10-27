@@ -6,6 +6,7 @@
 import { ART, SvgArt, shade } from "./base.js";
 import { FOOT_LINEUP } from "./lounge.js";
 import { personSvg } from "./people.js";
+import { pixelImage } from "./pixelpeople.js";
 
 const K = 0.6;
 const n2 = v => +v.toFixed(2);
@@ -1003,9 +1004,9 @@ class IsoAvatar extends SvgArt {
   constructor() { super("isoavatar", 24, 48, { outline: 0.22, pad: 1 }); }
   box() { return [-12, -40, 24, 48]; }
   under({ seated = false }) { return seated ? "" : `<ellipse cx="0" cy="0" rx="4.4" ry="1.7" fill="#000" fill-opacity=".25"/>`; }
-  image(state) {  // a new pose not ready yet: the same person at rest meanwhile (no flicker while it loads)
-    return super.image(state) || (state.walk != null || state.blink || state.talk || state.breath ? super.image({ ...state, walk: undefined, blink: false, talk: false, breath: 0 }) : null);
-  }
+  // the pixel-art team (svg/pixelpeople.js); null while the atlas is not loaded: draw() is false and scene.js draws
+  // its small fallback figure (drawPersonPx) rather than nobody
+  image(state) { return pixelImage(state); }
   // drawn flat (svg/people.js): rot 0 faces down-left (from the front, turned left), 1 down-right (the same, mirrored),
   // 2 up-right (from behind, mirrored), 3 up-left (from behind)
   body(state) { const rot = state.rot || 0; return personSvg(state, { view: rot >= 2 ? "back" : "front", mirror: rot === 1 || rot === 2 }); }

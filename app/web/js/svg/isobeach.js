@@ -164,12 +164,12 @@ art("isopool", 40, 24, 14, ({ n = 0, gold = 0, frame = 0 }) => {
   for (let k = 0; k < 10; k++) { const x = 3 + h01(k, 1) * 32, y = 3 + h01(k, 2) * 17, s = (frame + k * 3) % 8; g += iell(x, y, 2.43, 0.6 + s * 0.12, "none", ` stroke="#ffffff" stroke-opacity="${(0.6 - s * 0.06).toFixed(2)}" stroke-width=".25"`); }
   for (let y = 6; y < 22; y += 6) for (let x = 3; x < 38; x += 1.6) g += iell(x, y, 2.44, 0.25, (Math.round(x / 1.6) % 2) ? "#e8402a" : WHITE);  // the lane ropes
   for (let k = 0; k < Math.min(3, n); k++) {  // the swimmers, each in his lane
-    const t = ((frame * 0.05 + k * 0.37) % 2), u = t < 1 ? t : 2 - t, x = 4 + u * 32, y = 3 + k * 6, [px, py] = ipt(x, y, 2.6), arm = frame % 2;
+    const t = ((frame / 20 + k * 0.37) % 2), u = t < 1 ? t : 2 - t, x = 4 + u * 32, y = 3 + k * 6, [px, py] = ipt(x, y, 2.6), arm = frame % 2;
     g += `<ellipse cx="${n2(px)}" cy="${n2(py)}" rx="2.4" ry=".9" fill="#ffffff" fill-opacity=".5"/><circle cx="${n2(px + (t < 1 ? 0.8 : -0.8))}" cy="${n2(py - 0.6)}" r=".9" fill="${["#e8402a", "#fbaa08", "#3a5ad0"][k]}"/>`
       + `<path stroke="#f1c27d" stroke-width=".5" d="M${n2(px)} ${n2(py - 0.4)}l${arm ? 1.6 : -1.6} -1.4"/>`;
   }
   for (let k = 0; k < Math.min(3, gold); k++) {  // the pink flamingos, bobbing
-    const [px, py] = ipt(30 - k * 7, 17 - (k % 2) * 3, 3 + Math.sin(frame * 0.5 + k) * 0.3);
+    const [px, py] = ipt(30 - k * 7, 17 - (k % 2) * 3, 3 + Math.sin(frame * Math.PI / 20 + k) * 0.3);
     g += `<ellipse cx="${n2(px)}" cy="${n2(py)}" rx="2.6" ry="1.2" fill="#f48ab0"/><ellipse cx="${n2(px)}" cy="${n2(py)}" rx="1.4" ry=".5" fill="#ffb8d0"/><path fill="none" stroke="#f48ab0" stroke-width=".9" stroke-linecap="round" d="M${n2(px + 2)} ${n2(py - 0.4)}q1 -2.6 -.4 -4q-.6 -.8 .4 -1.2"/><path fill="#1c1c22" d="M${n2(px + 2)} ${n2(py - 5.6)}l1 .5 -.9 .3z"/>`;
   }
   g += iline(ipt(37, 23, 2.4), ipt(37, 23, 8), "#c9ccd6", 0.5) + iline(ipt(39, 23, 2.4), ipt(39, 23, 8), "#c9ccd6", 0.5);
@@ -221,17 +221,19 @@ art("isotikibar", 30, 16, 50, ({ frame = 0, on = false }) => {
 // the DJ booth: a deck with two turntables that spin, a mixer, an equalizer whose bars follow the agents' activity (eq:
 // 0..1), a laser fan when the set is on
 art("isodjbooth", 20, 12, 40, ({ eq = 0.3, frame = 0, on = false }) => {
-  let g = ishadow(20, 12) + ibox(0, 2, 20, 10, 0, 11, T3("#1c1c22")) + ifront(0.6, 12, 18.8, 1, 9.4, "#2a2a33");
-  for (let k = 0; k < 12; k++) { const h = Math.max(0.6, (0.3 + eq * 0.7) * 7.4 * Math.abs(Math.sin(frame * 0.9 + k * 1.3))); g += ifront(1.8 + k * 1.4, 12.01, 1, 2, h, h > 5 ? "#ff3b8a" : h > 3 ? "#fbaa08" : "#3ae8a8"); }
+  // the panel at the back first (the deck stands in front of it), its sign slanted along its face
+  let g = ishadow(20, 12) + ibox(0, 0, 20, 2, 0, 24, T3("#1c1c22")) + ifront(1, 2.01, 18, 13, 10, "#0e0e12")
+    + `<text x="0" y="0" font-size="2.6" text-anchor="middle" font-family="sans-serif" font-weight="bold" fill="#ff3b8a" transform="matrix(1 .5 0 1 ${n2(ipt(10, 2.02, 19.2)[0])} ${n2(ipt(10, 2.02, 19.2)[1])})">BEACH</text>` + `<text x="0" y="0" font-size="2.6" text-anchor="middle" font-family="sans-serif" font-weight="bold" fill="#ff3b8a" transform="matrix(1 .5 0 1 ${n2(ipt(10, 2.02, 15.4)[0])} ${n2(ipt(10, 2.02, 15.4)[1])})">CLUB</text>`;
+  g += ibox(0, 2, 20, 10, 0, 11, T3("#1c1c22")) + ifront(0.6, 12, 18.8, 1, 9.4, "#2a2a33");
+  for (let k = 0; k < 12; k++) { const h = Math.max(0.6, (0.3 + eq * 0.7) * 7.4 * Math.abs(Math.sin(frame * Math.PI / 4 + k * 1.3))); g += ifront(1.8 + k * 1.4, 12.01, 1, 2, h, h > 5 ? "#ff3b8a" : h > 3 ? "#fbaa08" : "#3ae8a8"); }
   g += ibox(-0.4, 1.6, 20.8, 10.8, 11, 0.8, T3("#2a2a33"));
   for (const x of [5, 15]) {
     g += iell(x, 7, 11.82, 3.6, "#1c1c22") + iell(x, 7, 11.83, 3, "#0e0e12");
-    const a = (frame * 0.9) % (Math.PI * 2), [cx, cy] = ipt(x, 7, 11.84);
+    const a = (frame * Math.PI / 4) % (Math.PI * 2), [cx, cy] = ipt(x, 7, 11.84);
     g += `<path stroke="#3a3a44" stroke-width=".2" d="M${n2(cx)} ${n2(cy)}l${n2(Math.cos(a) * 2.6)} ${n2(Math.sin(a) * 1.3)}"/>` + iell(x, 7, 11.85, 0.8, x < 10 ? "#ff3b8a" : "#3ab8d8");
   }
   g += ibox(8.8, 4, 2.4, 6, 11.8, 0.8, T3("#3a3a44")) + [9.4, 10.2, 11].map(x => itop(x, 5, 0.3, 3, 12.62, "#c9ccd6")).join("");
-  g += ibox(0, 0, 20, 2, 0, 24, T3("#1c1c22")) + ifront(1, 2.01, 18, 14, 9, "#0e0e12") + `<text x="${n2(ipt(10, 2.02, 19)[0])}" y="${n2(ipt(10, 2.02, 19)[1])}" font-size="3.4" text-anchor="middle" font-family="sans-serif" font-weight="bold" fill="#ff3b8a" transform="skewY(26.565)" transform-origin="${n2(ipt(10, 2.02, 19)[0])} ${n2(ipt(10, 2.02, 19)[1])}">BEACH CLUB</text>`;
-  if (on) for (let k = 0; k < 5; k++) { const [lx, ly] = ipt(10, 1, 24), a = -Math.PI / 2 + (k - 2) * 0.35 + Math.sin(frame * 0.5) * 0.2; g += `<path stroke="${["#ff3b8a", "#3ae8a8", "#3ab8d8", "#fbaa08", "#b46bff"][k]}" stroke-width=".35" stroke-opacity=".8" d="M${n2(lx)} ${n2(ly)}l${n2(Math.cos(a) * 16)} ${n2(Math.sin(a) * 14)}"/>`; }
+  if (on) for (let k = 0; k < 5; k++) { const [lx, ly] = ipt(10, 1, 24), a = -Math.PI / 2 + (k - 2) * 0.35 + Math.sin(frame * Math.PI / 4) * 0.2; g += `<path stroke="${["#ff3b8a", "#3ae8a8", "#3ab8d8", "#fbaa08", "#b46bff"][k]}" stroke-width=".35" stroke-opacity=".8" d="M${n2(lx)} ${n2(ly)}l${n2(Math.cos(a) * 16)} ${n2(Math.sin(a) * 14)}"/>`; }
   return g;
 }, { mx: 6 });
 // the hammock between two palms: the net slung low, it swings (frame); a nap in it (on: someone's shape)
@@ -266,7 +268,7 @@ art("isocrabs", 16, 12, 16, ({ n = 0, frame = 0 }) => {
   let g = ishadow(16, 12) + path([[0.4, 6, 0], [4, 0.6, 0], [12, 0.4, 0], [15.6, 6, 0], [12, 11.6, 0], [4, 11.4, 0]], SAND) + iell(11, 8, 0.05, 2.4, "#3ab8d8", ' fill-opacity=".6"');
   g += `<path fill="#8a8478" d="M${n2(ipt(3, 3, 0)[0])} ${n2(ipt(3, 3, 0)[1])}q2 -7 7 -6q4 1 3 6z"/><path fill="#a8a296" d="M${n2(ipt(3.6, 3, 0)[0])} ${n2(ipt(3.6, 3, 0)[1] - 1)}q2 -5 6 -5q-3 2 -4 5z"/>`;
   if (!n) return g + `<path fill="#f4d8c8" d="M${n2(ipt(10, 9, 0.2)[0])} ${n2(ipt(10, 9, 0.2)[1])}q1 -2 2 0z"/>`;
-  for (let k = 0; k < Math.min(5, n); k++) { const [px, py] = ipt(4 + k * 2.4 + Math.sin(frame * 0.6 + k) * 1.4, 7 + (k % 2) * 2.6, 0.4); g += crab(px, py, 1, frame + k); }
+  for (let k = 0; k < Math.min(5, n); k++) { const [px, py] = ipt(4 + k * 2.4 + Math.sin(frame * Math.PI / 5 + k) * 1.4, 7 + (k % 2) * 2.6, 0.4); g += crab(px, py, 1, frame + k); }
   return g;
 });
 // the ice-cream cart: a striped awning, two wheels, the tubs of colours under glass, cones

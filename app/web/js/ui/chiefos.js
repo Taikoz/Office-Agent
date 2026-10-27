@@ -198,7 +198,7 @@ for (const type of OsApp.EVENTS) osBox.addEventListener(type, ev => {
   if (osOverview || !ev.target.closest?.(".ubwin") || ev.target.closest(".ubtabs")) return;  // the tabs belong to ChiefOS
   for (const fn of OsApp.handlers.get(osApp)?.[type] || []) fn(ev);
 });
-addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); if (osFolder) { osFolder = null; renderChiefOs(); } else closeChiefOs(); } }, true);  // an open folder closes first  // Escape belongs to a terminal that has the focus
+addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); const inner = osBox.querySelector("[data-esc]"); if (inner) inner.click(); else if (osFolder) { osFolder = null; renderChiefOs(); } else closeChiefOs(); } }, true);  // an app's own window ([data-esc]: its close button), then an open folder, close first  // Escape belongs to a terminal that has the focus
 document.getElementById("osbtn").onclick = () => chiefToDesk();
 // live apps refresh every 3 s (not while a field of theirs has the focus); forms and long pages stay still
 setInterval(() => { if (!osBox.hidden && !osOverview && curApp().live && !osBox.contains(document.activeElement?.closest("select, input, textarea"))) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);

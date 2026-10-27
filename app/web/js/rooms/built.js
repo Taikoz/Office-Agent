@@ -307,6 +307,7 @@ class TerraceRoom extends BuiltRoom {
       else if (d.bar && it.type !== "bar") out.push(...hub.spotsOf(it).map(sp => ({ ...sp, pose: { hold: "pint" } })));  // at the counter (items/bar.js)
       else if (it.type === "bar") for (const k of [0.25, 0.5, 0.75]) out.push(it.rot % 2 ? { x: x1 + 6, y: y0 + (y1 - y0) * k, face: [-1, 0], pose: { cup: true, hold: "pint" } } : { x: x0 + (x1 - x0) * k, y: y1 + 6, face: [0, -1], pose: { cup: true, hold: "pint" } });
       else if (it.type === "grill") out.push({ x: cx, y: y1 + 6, face: [0, -1], pose: { arms: "reach" } });
+      else if (d.dance) for (const [kx, ky] of [[0.25, 0.3], [0.6, 0.25], [0.4, 0.65], [0.78, 0.7]]) out.push({ x: x0 + (x1 - x0) * kx, y: y0 + (y1 - y0) * ky, face: [0, 1], lift: 1.4, pose: { dance: true } });  // on the dance floor (items/afterwork.js)
       else if (it.type === "firepit") for (const [dx, dy] of [[-1, 0], [1, 0], [0, 1]]) out.push({ x: cx + dx * ((x1 - x0) / 2 + 6), y: cy + dy * ((y1 - y0) / 2 + 6), face: [-dx, -dy], pose: { cup: true } });
     }
     const R = roomSize("terrace");
@@ -317,7 +318,7 @@ class TerraceRoom extends BuiltRoom {
   poseOf(l, t) {
     const sp = l.roomSpot || this.partySpotOf(l) || {}, p = sp.pose || {}, face = sp.face;
     return { seated: !!p.seated, back: (face?.[1] ?? 0) < 0, dir: face || null, smile: true, frame: Math.floor(t / (p.arms === "reach" ? 300 : 500)),
-      arms: p.arms || (p.seated ? "down" : Math.floor(t / 500 + hash(l.name)) % 2 ? "up" : "down"), hold: p.book ? "book" : p.hold || "" };
+      arms: p.arms || (p.seated ? "down" : Math.floor(t / (p.dance ? 260 : 500) + hash(l.name)) % 2 ? "up" : "down"), hold: p.book ? "book" : p.hold || "" };
   }
   // who is here: at the afterwork, or come for a moment (social/visits.js)
   people() { return [...loungers.values()].filter(l => l.partyRoom === "terrace" && !l.path.length).map(l => ({ l, sp: l.roomSpot || this.partySpotOf(l) })).filter(o => o.sp); }
@@ -395,7 +396,9 @@ class TerraceRoom extends BuiltRoom {
   }
   // the deck under the whole terrace: the 2D deck repeated (cached per scale)
   deckFloor() {
-    const img = ART.deck.image({}), R = roomSize("terrace");
+    const R = roomSize("terrace"), floor = hub.decor.terrace?.floor;
+    if (floor && floor !== "parquet") return roomFloorCanvas("terrace", R.h - 70, [], R.w);  // a floor painted in the buy mode (the beach's sand…); parquet: the deck
+    const img = ART.deck.image({});
     if (!img) return null;
     if (this.deck?.img === img) return this.deck.c;
     const c = document.createElement("canvas"); c.width = Math.ceil(R.w * S); c.height = Math.ceil((R.h - 70) * S);

@@ -13,7 +13,7 @@ import { sfx, toast } from "../sims/progress.js";
 import { closePie } from "../ui/pie.js";
 import { TRAITS, TRAIT_IDS, traitsOf } from "../sims/moods.js";
 
-const CHIEF_DEFAULT = { skin: "#f1c7a3", hair: "#d8d8d8", shirt: "#1c1c24", style: 4, glasses: "square", outfit: "tux", tie: "#d64545", pants: "#2f3550", shoes: "#17141c", beard: "", beardColor: "", hat: undefined };
+const CHIEF_DEFAULT = { skin: "#f1c7a3", hair: "#d8d8d8", shirt: "#1c1c24", style: 4, glasses: "square", outfit: "tux", tie: "#d64545", pants: "#2f3550", shoes: "#17141c", beard: "", beardColor: "", head: "", eyes: "", mouth: "", hat: undefined };
 let chiefStyle = new SaveSlot("office-chieflook", { look: null, traits: [], phrase: "" }).data;
 if (chiefStyle.look) Object.assign(CHIEF_LOOK, chiefStyle.look); else Object.assign(CHIEF_LOOK, { ...CHIEF_DEFAULT, glasses: CHIEF_LOOK.glasses ? "square" : "" });
 const saveChiefStyle = () => SaveSlot.get("office-chieflook").save(chiefStyle);
@@ -53,6 +53,9 @@ const CAS = {
   shoes: ["#17141c", "#5c3d27", "#f7f7f7", "#8f2b46", "#4090d7", "#fbaa08"],
   sex: [["", "Homme"], ["f", "Femme"]],
   style: [[0, "Courts"], [1, "En pétard"], [2, "Mi-longs"], [3, "Houppe"], [4, "Raie de côté"], [5, "Chauve"], [6, "Longs"], [7, "Chignon"], [8, "Crête"]],
+  head: [["", "Auto"], ["rond", "Rond"], ["carre", "Carré"], ["ovale", "Ovale"], ["coeur", "En cœur"]],
+  eyes: [["", "Auto"], ["ronds", "Ronds"], ["grands", "Grands"], ["amande", "En amande"], ["points", "Points"], ["cils", "Avec cils"], ["fatigue", "Fatigués"]],
+  mouth: [["", "Auto"], ["sourire", "Sourire"], ["grand_sourire", "Grand sourire"], ["neutre", "Neutre"], ["moue", "Moue"], ["levres", "Lèvres"]],
   beard: [["", "Rasé"], ["stubble", "3 jours"], ["short", "Courte"], ["full", "Fournie"], ["mustache", "Moustache"], ["goatee", "Bouc"]],
   outfit: [["tux", "Smoking"], ["suit", "Costume"], ["shirt", "Chemise"], ["polo", "Polo"], ["hoodie", "Sweat à capuche"], ["tshirt", "T-shirt"], ["robe", "Robe de sorcier"], ["flight", "Combinaison spatiale"], ["vampire", "Cape de vampire"], ["pirate", "Habit de capitaine"], ["kimono", "Kimono"], ["hawaii", "Chemise hawaïenne"]],
   glasses: [["", "Aucune"], ["square", "Carrées"], ["round", "Rondes"], ["sun", "Solaires"], ["patch", "Bandeau sur l'œil"]],
@@ -75,8 +78,9 @@ export function openCas() {
   casBox.hidden = false; closePie(); renderCas();
 }
 function closeCas() { casBox.hidden = true; cas = null; }
-// the views of the preview and of the tiles (viewBoxes around the drawing of svg/people.js, the feet at 0, 0)
-const VIEW = { body: "-9 -38 18 39", head: "-7.4 -36.2 14.8 15.4", tileHead: "-4.6 -33.6 9.2 9.8", tileHat: "-4.4 -37 8.8 11.2", tileBody: "-7.6 -32 15.2 33", tileTorso: "-5.6 -31.2 11.2 12.6" };
+// the views of the preview and of the tiles (viewBoxes around the pixel-art person of svg/people.js, the feet at 0, 0:
+// the head from -33 to -17, the shoulders at -16, the hips at -9)
+const VIEW = { body: "-11 -36 22 37", head: "-9.5 -34 19 19", tileHead: "-8 -32.5 16 16", tileHat: "-8.5 -35.5 17 17", tileBody: "-10 -34 20 35", tileTorso: "-9 -22 18 15" };
 const CLOSE_TABS = new Set(["face", "hair"]);
 // an outfit's own colours: shown on its tile, put on when it is chosen (then free to recolour)
 const OUTFIT_LOOK = { tux: { shirt: "#1c1c24", tie: "#d64545" }, suit: { shirt: "#2a3450", tie: "#c0303a" }, shirt: { shirt: "#e8e4dc" }, polo: { shirt: "#2f9e5a" }, hoodie: { shirt: "#8a4ad0" },
@@ -99,7 +103,9 @@ const choices = (key, list, locked = () => "") => `<div class="cchoice">${list.m
 const sec = (title, body, note = "") => `<section class="csec"><h4>${title}</h4>${body}${note ? `<p class="muted">${note}</p>` : ""}</section>`;
 function casTabHtml() {
   const L = cas.look, o = L.outfit;
-  if (cas.tab === "face") return sec("Sexe", tiles("sex", CAS.sex, VIEW.tileTorso)) + sec("Peau", swatches("skin", CAS.skin)) + (L.sex === "f" ? "" : sec("Barbe", tiles("beard", CAS.beard, VIEW.tileHead)))
+  if (cas.tab === "face") return sec("Sexe", tiles("sex", CAS.sex, VIEW.tileTorso)) + sec("Peau", swatches("skin", CAS.skin))
+    + sec("Forme du visage", tiles("head", CAS.head, VIEW.tileHead)) + sec("Yeux", tiles("eyes", CAS.eyes, VIEW.tileHead))
+    + sec("Bouche", tiles("mouth", CAS.mouth, VIEW.tileHead), "Auto : selon le sexe et l'humeur ; une bouche choisie reste neutre quand il fait la tête.") + (L.sex === "f" ? "" : sec("Barbe", tiles("beard", CAS.beard, VIEW.tileHead)))
     + (L.beard && L.sex !== "f" ? sec("Couleur de la barbe", swatches("beardColor", CAS.hair)) : "") + sec("Lunettes", tiles("glasses", CAS.glasses, VIEW.tileHead, lockedMsg("glasses")));
   if (cas.tab === "hair") return sec("Coupe", tiles("style", CAS.style, VIEW.tileHead)) + sec("Couleur", swatches("hair", CAS.hair));
   if (cas.tab === "outfit") {
@@ -155,7 +161,7 @@ casBox.addEventListener("click", ev => {
   if (a === "random") {
     const sex = rnd(CAS.sex)[0];
     cas.look = { sex, skin: rnd(CAS.skin), hair: rnd(CAS.hair), style: rnd(CAS.style)[0], outfit: rnd(CAS.outfit.filter(([v]) => !paidFor("outfit", v)))[0], shirt: rnd(CAS.shirt), tie: rnd(CAS.tie), pants: rnd(CAS.pants), shoes: rnd(CAS.shoes),
-      beard: sex ? "" : rnd(CAS.beard)[0], beardColor: "", glasses: rnd(CAS.glasses.filter(([v]) => !paidFor("glasses", v)))[0], hat: rnd(CAS.hat.filter(([v]) => !paidFor("hat", v)))[0], scarf: "", wand: "", jetpack: "", parrot: "", katana: "", lei: "" };
+      head: "", eyes: "", mouth: "", beard: sex ? "" : rnd(CAS.beard)[0], beardColor: "", glasses: rnd(CAS.glasses.filter(([v]) => !paidFor("glasses", v)))[0], hat: rnd(CAS.hat.filter(([v]) => !paidFor("hat", v)))[0], scarf: "", wand: "", jetpack: "", parrot: "", katana: "", lei: "" };
     const ids = [...TRAIT_IDS].sort(() => Math.random() - 0.5); cas.traits = ids.slice(0, 2);
     return renderCas();
   }

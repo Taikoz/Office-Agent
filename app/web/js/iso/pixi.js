@@ -21,6 +21,8 @@ function pixi() {
   if (app || failed) return app;
   try { app = new PIXI.Application({ view: world, width: cv.width, height: cv.height, backgroundAlpha: 0, antialias: false, resolution: 1, autoStart: false, sharedTicker: false }); }
   catch (e) { failed = true; console.warn("Agent Office: no WebGL, the isometric view is drawn on the canvas", e); }
+  // the textures of images no longer drawn (another state, another scale) leave the GPU after ~30 s, not 2 minutes
+  if (app?.renderer.textureGC) { app.renderer.textureGC.maxIdle = 900; app.renderer.textureGC.checkCountMax = 300; }
   return app;
 }
 
@@ -57,19 +59,22 @@ export const PX = {
   get on() { return !!app && !failed; },
   // a frame starts: the layers at the scene's size and place, the back layer cleared, the world emptied, the
   // scene's canvas cleared (it only carries what floats over the world now)
-  begin(cam = { x: 0, y: 0 }, z = 1) {
+  // (keepBack: the back layer as it is, not redrawn this frame: iso/engine.js)
+  begin(cam = { x: 0, y: 0 }, z = 1, keepBack = false) {
     if (!pixi()) return false;
     for (const c of [back, world]) {
       c.style.display = "";
       if (c.style.width !== cv.style.width || c.style.height !== cv.style.height) { c.style.width = cv.style.width; c.style.height = cv.style.height; }
       c.style.left = `${cv.offsetLeft}px`; c.style.top = `${cv.offsetTop}px`;
     }
-    if (back.width !== cv.width || back.height !== cv.height) { back.width = cv.width; back.height = cv.height; backCtx.imageSmoothingEnabled = false; }
+    if (back.width !== cv.width || back.height !== cv.height) { back.width = cv.width; back.height = cv.height; backCtx.imageSmoothingEnabled = false; keepBack = false; }
     if (app.renderer.width !== cv.width || app.renderer.height !== cv.height) app.renderer.resize(cv.width, cv.height);
-    backCtx.setTransform(1, 0, 0, 1, 0, 0); backCtx.clearRect(0, 0, back.width, back.height);
-    backCtx.setTransform(z, 0, 0, z, -cam.x * z * S, -cam.y * z * S);  // the camera
+    if (!keepBack) {
+      backCtx.setTransform(1, 0, 0, 1, 0, 0); backCtx.clearRect(0, 0, back.width, back.height);
+      backCtx.setTransform(z, 0, 0, z, -cam.x * z * S, -cam.y * z * S);  // the camera
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
-    document.body.classList.add("iso-layers");
+    if (!document.body.classList.contains("iso-layers")) document.body.classList.add("iso-layers");  // not at every frame: a style pass of the whole page each time
     app.stage.removeChildren(); nSprite = 0; nScratch = 0;
     app.stage.scale.set(z); app.stage.position.set(-cam.x * z * S, -cam.y * z * S);
     return true;
@@ -99,6 +104,14 @@ export const PX = {
     return first;
   },
   end() { if (this.on) app.renderer.render(app.stage); },
+  // the tab falls asleep (ui/onetab.js): the textures leave the GPU (uploaded again when drawn) and the pieces'
+  // canvases shrink
+  release() {
+    if (!app) return;
+    const tm = app.renderer.texture;
+    for (const t of [...tm.managedTextures]) if (t) tm.destroyTexture(t);
+    for (const k of scratch) { k.c.width = k.c.height = 0; }
+  },
   // back to the 2D view: the layers hidden
   off() { if (back.style.display === "none") return; back.style.display = world.style.display = "none"; document.body.classList.remove("iso-layers"); },
 };

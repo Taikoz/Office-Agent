@@ -51,7 +51,13 @@ const SHELVES = [["ambiance", "🎨", "Ambiance de la pièce"], ["murs", "🧱",
 const shelfOf = d => d.shelf || ({ fenetres: "fenetres", tapis: "tapis", lumiere: "lumiere", chaises: "chaises", fauteuils: "chaises", canapes: "chaises", tables: "tables", bureau: "bureaux", electronique: "ordinateurs" }[d.cat]) || "deco";
 const themeOf = c => c?.startsWith("theme:") && c !== "theme:all" ? c.slice(6) : null;
 const catCount = c => c === "theme:all" ? 0 : PAINT[c] ? DECOR_TYPES[PAINT[c].key].length : themeOf(c) ? CATALOG.filter(d => d.theme === themeOf(c)).length + SHOP.filter(i => i.theme === themeOf(c)).length + [THEME_FLOORS, THEME_WALLS, THEME_DOORS].reduce((n, l) => n + l.filter(f => f[2] === themeOf(c)).length, 0) : CATALOG.filter(d => d.cat === c).length;
-export const defOf = type => CATALOG.find(d => d.type === type);
+// by type, looked up hundreds of times a frame: an index, rebuilt when the catalog grows (items/*.js register as they load)
+const defIndex = new Map();
+let defIndexed = -1;
+export const defOf = type => {
+  if (defIndexed !== CATALOG.length) { defIndexed = CATALOG.length; defIndex.clear(); for (let i = CATALOG.length - 1; i >= 0; i--) defIndex.set(CATALOG[i].type, CATALOG[i]); }  // backwards: the first of a type wins, like find()
+  return defIndex.get(type);
+};
 const styleOf = it => { const d = defOf(it.type); return d.styles.find(s => s.id === it.style) || d.styles[0]; };
 export const itemsIn = room => (furni.items || []).filter(it => it.room === room && defOf(it.type));
 const itemByUid = uid => (furni.items || []).find(it => it.uid === +uid);
@@ -409,7 +415,7 @@ export function renderBuy() {
   if (paints) grid = `<p class="bnote">${PAINT[buy.cat].label} ${deRoom(room)} : choisis un motif, il s'essaie dans la pièce ; ses coloris et Appliquer sont dans la fiche.</p>` + paintGrid(buy.cat, room);
   else if (!q && buy.cat === "garde") {
     grid = SHOP.map(it => { const own = shop.owned.includes(it.id);
-      return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
+      return `<div class="bitem${own ? " own" : ""}"><span class="bthumb big">${it.shoes ? it.icon : it.hat ? "🧢" : "👑"}</span><b>${esc(it.name)}</b><span class="price">${own ? (itemOn(it) ? "✓ porté" : "possédé") : fmtSim(it.price)}</span>
         <button data-wear="${it.id}"${!own && wallet.funds < it.price ? " disabled" : ""}>${own ? (itemOn(it) ? "Retirer" : "Porter") : "Acheter"}</button></div>`; }).join("");
   } else {
     let defs = !q && themeOf(buy.cat) ? CATALOG.filter(d => d.theme === themeOf(buy.cat)) : q ? CATALOG.filter(d => fold(`${d.name} ${d.desc} ${catLabel(d.cat)[2]} ${d.theme ? catLabel(`theme:${d.theme}`)[2] : ""}`).includes(q)) : buy.cat === "envies" ? wishes().map(defOf).filter(Boolean) : CATALOG.filter(d => d.cat === buy.cat);

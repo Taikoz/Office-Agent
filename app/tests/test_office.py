@@ -279,14 +279,30 @@ class StaticTests(unittest.TestCase):
         files = routes.static_files()
         self.assertIn("/static/css/01-base.css", files)
         self.assertIn("/static/js/main.js", files)
-        self.assertTrue(all(p.suffix in (".css", ".js") and routes.WEB in p.parents for p in files.values()))
+        self.assertTrue(all(routes.WEB in p.parents for p in files.values()))
+        self.assertTrue(all(p.suffix in (".css", ".js") or p.parent == routes.WEB / "sprites" for p in files.values()))
         self.assertNotIn("/static/../server.py", files)
 
     def test_page_scripts_exist(self) -> None:
         page = (routes.WEB / "index.html").read_text()
         self.assertIn("__OFFICE_TOKEN__", page)
-        for src in [s.split('"')[0] for s in page.split('src="')[1:]]:
-            self.assertIn(f"/{src}", routes.static_files(), src)
+        for name in ("index.html", "sprites.html"):
+            page = (routes.WEB / name).read_text()
+            for src in [s.split('"')[0] for s in page.split('src="')[1:]]:
+                self.assertIn(f"/{src}", routes.static_files(), f"{name}: {src}")
+
+
+class SpriteTests(unittest.TestCase):
+    def test_atlas_matches_its_index(self) -> None:
+        meta = json.loads((routes.WEB / "sprites" / "atlas.json").read_text())
+        png = (routes.WEB / "sprites" / "atlas.png").read_bytes()
+        width, height = int.from_bytes(png[16:20], "big"), int.from_bytes(png[20:24], "big")
+        self.assertEqual(width, meta["w"] * meta["frames"])
+        self.assertEqual(height, meta["h"] * (1 + max(i["row"] for i in meta["items"].values())))
+        for item in meta["items"].values():
+            self.assertTrue(all(r in meta["ramps"] for r in item["ramps"]))
+            for ramp, variant in item["default"].items():
+                self.assertIn(variant, meta["ramps"][ramp]["variants"])
 
 
 if __name__ == "__main__":

@@ -4,9 +4,9 @@
 //    up by 1.2 looks uneven). In "auto" it steps down when the frames come too slowly, and keeps the lower step only
 //    if the frames really came faster (a browser held at 30 frames a second, on battery, gains nothing: back up, and
 //    no new try for 10 minutes); back up after a minute of smooth frames.
-//  - The frame rate: 30 frames a second instead of 60 when the window is not the one in use, after 2 minutes without
-//    touching anything, or in "économie" (where the panels lose their blur too: it is redone at every frame); 10 a
-//    second ("veille") when the window is behind and nobody touched it for 10 minutes: the office left open all day.
+//  - The frame rate: 30 frames a second (60 only in "haute"), 20 in "économie" (where the panels lose their blur too:
+//    it is redone at every frame); 15 when the window is not the one in use or after 2 minutes without touching
+//    anything; 4 ("veille") when the window is behind and nobody touched it for 10 minutes: the office left open all day.
 // Kept in this browser.
 
 import { hub, provide } from "../hub.js";
@@ -16,7 +16,7 @@ const BUDGET = 2_500_000;     // pixels per layer, at most
 const MIN = 0.8;              // the lowest resolution in auto (pixels per CSS pixel)
 const IDLE = 120_000;         // ms without input: a slower pace
 const NAP = 600_000;          // ms without input, the window behind: the slowest pace
-export const quality = { mode: "auto", r: 0, fps: 0, capped: false, why: "" };
+export const quality = { mode: "auto", r: 0, fps: 0, cap: 30, capped: false, why: "" };
 try { const m = localStorage.getItem("office-quality"); if (["auto", "high", "eco"].includes(m)) quality.mode = m; } catch (_) { /* storage blocked */ }
 
 const dpr = () => window.devicePixelRatio || 1;
@@ -44,9 +44,13 @@ let trial = null, lockUntil = 0;  // trial: a step down being checked { from, fp
 for (const ev of ["pointermove", "pointerdown", "keydown", "wheel"]) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
 function frameSkip(t) {
   const idle = t - lastInput > IDLE, away = !document.hasFocus(), nap = away && t - lastInput > NAP;
-  quality.capped = quality.mode === "eco" || idle || away;
-  quality.why = nap ? "veille" : quality.mode === "eco" ? "économie" : away ? "fenêtre en arrière-plan" : idle ? "inactif" : "";
-  if (quality.capped && t - lastDrawn < (nap ? 99 : 31)) return true;  // 30 frames a second, 10 in "veille"
+  const eco = quality.mode === "eco";
+  quality.capped = eco || idle || away;
+  quality.why = nap ? "veille" : eco ? "économie" : away ? "fenêtre en arrière-plan" : idle ? "inactif" : "";
+  // pixel art moving a few pixels at a time: 30 frames a second are enough (60 in "high"); fewer when nobody looks
+  const gapMin = nap ? 240 : away || idle ? (eco ? 120 : 64) : eco ? 48 : quality.mode === "high" ? 0 : 31;
+  quality.cap = gapMin ? Math.round(1000 / (gapMin + 2)) : 0;
+  if (gapMin && t - lastDrawn < gapMin) return true;  // 30 frames a second in use, 15 behind or idle, 4 in "veille"
   const gap = t - lastDrawn; lastDrawn = t;
   if (gap < 250) { winFrames++; winSum += gap; winSq += gap * gap; }  // a gap of seconds: the tab was hidden
   if (t - winStart < 2000) return false;
@@ -61,10 +65,11 @@ function frameSkip(t) {
     trial = null; bad = good = 0; return false;
   }
   if (trial) return false;
-  // frames at a steady 30 a second: the browser or the screen holds them there, fewer pixels would change nothing
-  const held = Math.abs(avg - 33.3) < 2.5 && jitter < 3;
-  if (avg > 25 && !held && t > lockUntil) { good = 0; if (++bad >= 2 && quality.r > MIN) { trial = { from: quality.r, fps: quality.fps, n: 0 }; quality.r = Math.max(MIN, quality.r * 0.85); bad = 0; lastDown = t; resize(); } }
-  else if (avg < 18) { bad = 0; if (++good >= 8 && t - lastDown > 60_000) { const r = quality.r; quality.r = r / 0.85; good = 0; resize(); if (quality.r === r) good = 0; } }
+  // frames at a steady 30 a second: our own cap, or the browser or the screen holds them there, fewer pixels would
+  // change nothing
+  const held = Math.abs(avg - 33.3) < 2.5 && jitter < 3, smooth = gapMin ? avg < gapMin + 5 && jitter < 4 : avg < 18;
+  if (avg > Math.max(25, gapMin + 6) && !held && t > lockUntil) { good = 0; if (++bad >= 2 && quality.r > MIN) { trial = { from: quality.r, fps: quality.fps, n: 0 }; quality.r = Math.max(MIN, quality.r * 0.85); bad = 0; lastDown = t; resize(); } }
+  else if (smooth) { bad = 0; if (++good >= 8 && t - lastDown > 60_000) { const r = quality.r; quality.r = r / 0.85; good = 0; resize(); if (quality.r === r) good = 0; } }
   else bad = good = 0;
   return false;
 }

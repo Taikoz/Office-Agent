@@ -138,6 +138,10 @@ tile("tilepoint", "pointe", "Dalle de pointe", 60, 32, "Un coin de sable qui ava
 tile("tilecove", "crique", "Dalle de crique", 60, 32, "Un coin d'eau qui entre dans le sable, pour l'angle intérieur d'une côte. ↻ pour la tourner.", WATERS, 4);
 tile("tilesea", "mer", "Dalle de mer", 50, 32, "De l'eau, des vagues qui roulent d'une dalle à l'autre, des reflets de soleil. On peut y poser une bouée, un flamant… ou une table (les pieds dans l'eau).", WATERS);
 tile("tileseaxl", "mer", "Grande dalle de mer", 180, 64, "Quatre dalles de mer d'un coup, pour un océan.", WATERS);
+tile("tileseaxxl", "mer", "Très grande dalle de mer", 600, 128, "Seize dalles de mer d'un coup : le large, pour une plage au bord de l'océan sans remplir la pièce d'objets.", WATERS);
+// a long shore (128 × 32): four shore tiles in one, for a long coast; ↻ to turn it
+new Item(beach({ type: "tileshorelong", cat: "tapis", shelf: "dalles", kind: "rug", tile: true, shape: "rivage", name: "Long rivage", price: 220, w: 128, d: 32, rots: 4,
+  thumb: st => tileCanvas("rivage", st.c, 128, 32, 0).toDataURL(), desc: "Quatre dalles de rivage d'un coup : 128 de côte, le sable d'un côté, l'eau de l'autre, l'écume entre les deux. ↻ pour tourner la côte.", styles: WATERS }));
 
 /* ---------- lights ---------- */
 class Torch extends Lamp { isoState(it, t) { return { frame: still() ? 0 : anim(t, 150) % 3 }; } }
@@ -187,7 +191,7 @@ new class extends ChiefDesk {
 /* ---------- the beach club ---------- */
 // the pool: a swimmer per agent at work, a flamingo per mission delivered; a dive for whoever is in the room
 new class extends Gadget {
-  isoState(it, t) { return { n: working().length, gold: delivered(), frame: still() ? 0 : anim(t, 140) % 1000 }; }
+  isoState(it, t) { return { n: working().length, gold: delivered(), frame: still() ? 0 : anim(t, 140) % 40 }; }
 }(beach({ type: "pool", cat: "deco", name: "Piscine", price: 2800, w: 40, d: 24, rots: 2, art: "isopool",
   desc: "Un bassin turquoise, ses lignes d'eau, son échelle. Un nageur fait des longueurs par vrai agent au travail, un flamant gonflable flotte par mission livrée. Clic : piquer une tête.",
   styles: [{ id: "turquoise", name: "Turquoise", sw: "#3ab8d8" }],
@@ -235,7 +239,7 @@ new class extends Gadget {
   }]] }));
 // the DJ booth: its equalizer follows the agents at work; a set makes the room dance
 new class extends Gadget {
-  isoState(it, t) { return { eq: Math.min(1, working().length / 4), on: now() < (it.setUntil || 0), frame: still() ? 0 : anim(t, 130) % 1000 }; }
+  isoState(it, t) { return { eq: Math.min(1, working().length / 4), on: now() < (it.setUntil || 0), frame: still() ? 0 : anim(t, 130) % 8 }; }  // a loop of 8 pictures, each one cached (svg/base.js)
 }(beach({ type: "djbooth", cat: "deco", name: "Platines du DJ", price: 1900, w: 20, d: 12, rots: 4, art: "isodjbooth",
   desc: "Deux platines qui tournent, une table de mixage, le panneau BEACH CLUB. Son égaliseur s'agite au rythme des vrais agents au travail. Clic : lancer un set, toute la pièce danse.",
   styles: [{ id: "noir", name: "Noir", sw: "#1c1c22" }],
@@ -267,7 +271,7 @@ new class extends Gadget {}(beach({ type: "beachparasol", cat: "deco", name: "Pa
   }]] }));
 // the crabs: one per agent whose tests are red, dancing sideways; chasing them puts a bug back where it belongs
 new class extends Gadget {
-  isoState(it, t) { return { n: now() < (it.chasedUntil || 0) ? 0 : redTests(), frame: still() ? 0 : anim(t, 220) % 1000 }; }
+  isoState(it, t) { return { n: now() < (it.chasedUntil || 0) ? 0 : redTests(), frame: still() ? 0 : anim(t, 220) % 10 }; }
 }(beach({ type: "crabs", cat: "deco", name: "Rocher aux crabes", price: 420, w: 16, d: 12, rots: 2, art: "isocrabs",
   desc: "Un rocher, une flaque, du sable. Un crabe en sort par vrai agent dont les tests sont rouges : les bugs, ça pince. Clic : chasser les crabes.",
   styles: [{ id: "rocher", name: "Rocher", sw: "#8a8478" }],

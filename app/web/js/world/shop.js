@@ -6,9 +6,10 @@ import { SaveSlot } from "../save/slot.js";
 import { crewAdd } from "../sims/crew.js";
 import { loungeSay } from "./lounge.js";
 import { today } from "./fun.js";
+import { resetPeople, shoeStyles } from "../svg/pixelpeople.js";
 
 /* shop: spend the household funds (§, earned by the missions, money.js) on decor and hats */
-export let shop = new SaveSlot("office-shop", { spent: 0, owned: [], off: [], hat: "", crown: false }).data;
+export let shop = new SaveSlot("office-shop", { spent: 0, owned: [], off: [], hat: "", shoes: "", crown: false }).data;
 export const SHOP = [
   { id: "hat:cap", name: "Casquette de l'équipe", price: 1000, desc: "Pour toute l'équipe.", hat: true },
   { id: "hat:beanie", name: "Bonnet", price: 750, desc: "Pour toute l'équipe.", hat: true },
@@ -44,6 +45,12 @@ export const SHOP = [
 ];
 const CHIEF_OFF = { outfit: "tux", hat: "", scarf: "", wand: "", jetpack: "", glasses: "", parrot: "", katana: "", lei: "" };  // taken off: back to the default
 const chiefWorn = it => { const [k, v] = Object.entries(it.chief)[0]; return hub.CHIEF_LOOK?.[k] === v || (k === "scarf" && !!hub.CHIEF_LOOK?.scarf); };
+// the shoes: one item per pair of the pack (app/sprites/src/shoes/<nom>.piskel, built by build_sprites.py), after the crown;
+// a new pair drawn in Piskel shows up here by itself (its name from the file, its price below or 600)
+const SHOES = { bottes: { name: "Bottes pour l'équipe", price: 600, desc: "Toute l'équipe en bottes de cuir.", icon: "👢" } };
+SHOP.splice(SHOP.findIndex(i => i.id === "crown") + 1, 0, ...shoeStyles().filter(n => n !== "baskets").map(n => ({
+  id: `shoes:${n}`, name: `${n[0].toUpperCase()}${n.slice(1).replace(/_/g, " ")} pour l'équipe`, price: 600,
+  desc: "Toute l'équipe chaussée de neuf.", icon: "👟", ...SHOES[n], shoes: true })));
 const earnedXp = () => hub.game ? Object.values(hub.game.xp || {}).reduce((n, g) => n + (g.xp || 0), 0) : null;
 const has = id => shop.owned.includes(id) && !shop.off.includes(id);
 export function shopAction(act, id) {
@@ -52,18 +59,20 @@ export function shopAction(act, id) {
     if (shop.owned.includes(id) || !hub.spend(it.price, it.name)) return;
     shop.owned.push(id); hub.sfx("achievement"); hub.toast("BOUTIQUE", `${it.name} acheté`, `−${hub.fmtSim(it.price)}`);
     if (it.hat) shop.hat = id.slice(4);
+    if (it.shoes) { shop.shoes = id.slice(6); resetPeople(); }
     if (id === "crown") shop.crown = true;
     if (it.chief) hub.wearChief(it.chief);
   } else if (act === "toggle") {
     if (it.chief) { const [k] = Object.keys(it.chief); hub.wearChief(chiefWorn(it) ? { [k]: CHIEF_OFF[k] } : it.chief); }
     else if (it.hat) shop.hat = shop.hat === id.slice(4) ? "" : id.slice(4);
+    else if (it.shoes) { shop.shoes = shop.shoes === id.slice(6) ? "" : id.slice(6); resetPeople(); }
     else if (id === "crown") shop.crown = !shop.crown;
     else shop.off = shop.off.includes(id) ? shop.off.filter(x => x !== id) : [...shop.off, id];
     if (id === "jukebox" && !has("jukebox")) jukebox.playing = false;
   }
   SaveSlot.get("office-shop").save(shop); renderShop();
 }
-export function itemOn(it) { return it.chief ? chiefWorn(it) : it.hat ? shop.hat === it.id.slice(4) : it.id === "crown" ? shop.crown : has(it.id); }
+export function itemOn(it) { return it.chief ? chiefWorn(it) : it.hat ? shop.hat === it.id.slice(4) : it.shoes ? shop.shoes === it.id.slice(6) : it.id === "crown" ? shop.crown : has(it.id); }
 export function renderShop() {
   const bal = hub.wallet.funds;
   document.getElementById("p-game").innerHTML = `<div class="emp">Argent du foyer : <b>${hub.fmtSim(bal)}</b> <span class="muted">(chaque mission livrée rapporte un salaire, d'autant plus gros qu'elle est complexe)</span></div>`

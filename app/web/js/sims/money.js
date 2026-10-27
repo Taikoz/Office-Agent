@@ -123,12 +123,15 @@ export function drawCashFx(t) {
 
 /* ---------- the funds by your sim (bottom-left) and the statement ---------- */
 const fundsBtn = document.getElementById("live-funds"), ledger = document.getElementById("ledger");
+let fundsShown = "";
 function renderFunds() {
+  if (document.hidden) return;
   const diff = wallet.funds - shownFunds;
   shownFunds = Math.abs(diff) < 1 ? wallet.funds : shownFunds + diff * 0.12;  // counts up, like the Sims
-  fundsBtn.querySelector("b").textContent = fmtSim(shownFunds);
   const fl = fundsBtn.querySelector(".flash"), on = fundsFlash && performance.now() - fundsFlash.at < 2500;
-  fl.textContent = on ? fundsFlash.txt : ""; fl.className = `flash${on ? fundsFlash.up ? " up" : " dn" : ""}`;
+  const txt = fmtSim(shownFunds), flash = on ? fundsFlash.txt : "", cls = `flash${on ? fundsFlash.up ? " up" : " dn" : ""}`, sig = `${txt}|${flash}|${cls}`;
+  if (sig === fundsShown) return;  // the DOM touched only when it changes: no style nor layout 16 times a second for nothing
+  fundsShown = sig; fundsBtn.querySelector("b").textContent = txt; fl.textContent = flash; fl.className = cls;
 }
 setInterval(renderFunds, 60);
 function renderLedger() {

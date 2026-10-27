@@ -9,7 +9,7 @@
   #live { position: fixed; z-index: 12; left: 14px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; }
   #live > * { pointer-events: auto; }
   #live .household { display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; background: var(--glass-2); border: 1px solid var(--line); border-radius: 999px;
-    box-shadow: 0 8px 22px #0009; backdrop-filter: blur(8px); }
+    box-shadow: 0 8px 22px #0009; }
   #live .portrait, #live .team button { position: relative; flex: none; padding: 0; overflow: hidden; cursor: pointer; border-radius: 50%;
     background: radial-gradient(circle at 50% 35%, #4a4757, #1c1b23 72%); border: 2px solid var(--m, var(--line)); transition: transform .12s, border-color .2s; }
   #live .portrait { width: 46px; height: 46px; border-width: 3px; }
@@ -34,7 +34,7 @@
   #live .curlbl { padding: 1px 10px; font-size: 15px; color: var(--muted); background: var(--glass); border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
   /* bottom-center: day, hour, sun and moon */
   #clock { position: fixed; z-index: 11; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 8px;
-    background: var(--glass-2); border: 2px solid var(--line); border-radius: 999px; box-shadow: 0 10px 26px #000b; backdrop-filter: blur(8px); }
+    background: var(--glass-2); border: 2px solid var(--line); border-radius: 999px; box-shadow: 0 10px 26px #000b; }
   #clock-dial { width: 76px; height: 40px; flex: none; }
   #clock .time { display: flex; flex-direction: column; line-height: 1; }
   #clock .time b { font-weight: normal; font-size: 32px; color: var(--text); letter-spacing: 1px; } #clock .time span { color: var(--muted); font-size: 16px; }
@@ -58,7 +58,7 @@
   @keyframes cashflash { 0% { opacity: 0; transform: translateY(-20%); } 10% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-160%); } }
   @media (prefers-reduced-motion: reduce) { #live-funds .flash.up, #live-funds .flash.dn { animation: none; opacity: 1; } }
   #ledger { position: fixed; z-index: 14; left: 14px; bottom: 132px; width: min(400px, calc(100vw - 28px)); max-height: calc(100vh - 220px); overflow-y: auto; padding: 10px 14px;
-    background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid #4f8a5c; border-radius: var(--r); box-shadow: 0 14px 34px #000b; backdrop-filter: blur(8px); scrollbar-width: thin; }
+    background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid #4f8a5c; border-radius: var(--r); box-shadow: 0 14px 34px #000b; scrollbar-width: thin; }
   #ledger[hidden] { display: none; }
   #ledger .lhead { display: flex; align-items: center; justify-content: space-between; } #ledger .lhead b { font-weight: normal; font-size: 28px; color: #9dffb5; }
   #ledger .x { color: var(--muted); background: transparent; border: 2px solid var(--line); cursor: pointer; padding: 0 8px; }
@@ -84,7 +84,7 @@
     background: radial-gradient(circle at 35% 30%, #4a4757, #22212a 70%); border: 3px solid var(--line); box-shadow: 0 8px 22px #000b, inset 0 2px 0 #ffffff1a; cursor: pointer; transition: transform .12s, border-color .2s; }
   #mixbtn:hover, #mixbtn.on { border-color: var(--accent); } #mixbtn:hover { transform: translateY(-2px); } #mixbtn.off { opacity: .75; }
   #mix { position: fixed; right: 16px; bottom: 96px; z-index: 14; width: 270px; padding: 10px 14px 12px; background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid var(--accent);
-    border-radius: var(--r); box-shadow: 0 14px 40px #000c; backdrop-filter: blur(8px); }
+    border-radius: var(--r); box-shadow: 0 14px 40px #000c; }
   #mix[hidden] { display: none; }
   #mix .mixhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; } #mix .mixhead b { font-weight: normal; font-size: 20px; letter-spacing: 2px; color: var(--accent); }
   #mix .sw { position: relative; width: 44px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: #55525f; cursor: pointer; transition: background .2s; }
@@ -98,7 +98,7 @@
   /* the buy mode (world/build.js): families on the left, their categories as tabs, a grid of cards on pedestals, the
      selected object's card on the right; a slim bar while an object is being placed */
   #buy { position: fixed; z-index: 18; left: 12px; right: 12px; bottom: 12px; height: min(400px, 52vh); display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
-    background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--r); box-shadow: 0 -10px 34px #000b; backdrop-filter: blur(8px); }
+    background: var(--glass-2); border: 2px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--r); box-shadow: 0 -10px 34px #000b; }
   #buy[hidden] { display: none; }
   #buy.slim { height: auto; padding: 8px 12px; }
   #buy button, #buy select { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
@@ -274,7 +274,7 @@
   #buy .lockmsg { display: block; margin-top: 4px; color: #fbaa08; font-size: 14px; }
   /* the tutorial (ui/tutorial.js): a card above the clock, the button it is about glowing */
   #tuto { position: fixed; z-index: 30; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(460px, calc(100% - 32px)); padding: 12px 16px;
-    background: var(--glass-2); border: 1px solid var(--accent); border-radius: 14px; box-shadow: 0 14px 34px #000b; backdrop-filter: blur(10px); }
+    background: var(--glass-2); border: 1px solid var(--accent); border-radius: 14px; box-shadow: 0 14px 34px #000b; }
   #tuto[hidden] { display: none; }
   #tuto .n { float: right; color: var(--muted); font-size: 14px; } #tuto b { font-weight: normal; font-size: 21px; color: var(--accent); }
   #tuto p { margin: 6px 0 10px; font-size: 16px; line-height: 1.3; }
@@ -294,7 +294,7 @@
   .netsend { display: flex; gap: 8px; } .netsend input { flex: 1; min-width: 0; }
   /* visiting another chief's office (rooms/visit.js) */
   #visitbar { position: fixed; z-index: 13; left: 50%; top: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 14px;
-    background: var(--glass-2); border: 1px solid #3bc4ff; border-radius: 999px; box-shadow: 0 8px 24px #000a; backdrop-filter: blur(8px); }
+    background: var(--glass-2); border: 1px solid #3bc4ff; border-radius: 999px; box-shadow: 0 8px 24px #000a; }
   #visitbar[hidden] { display: none; } #visitbar b { font-weight: normal; color: #3bc4ff; margin-right: 6px; }
   #visitbar button { font: inherit; font-size: 15px; padding: 1px 12px; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
   #visitbar button.on { border-color: #3bc4ff; color: #3bc4ff; } #visitbar button.home { color: #1c1c24; background: var(--accent); border-color: var(--accent); }
@@ -479,7 +479,7 @@
   @media (prefers-reduced-motion: reduce) { #phonebtn.ringing, #phone, #phone .scr.enter > *, #phone .ring .av.big, #phone .ring .yes, .pbanner { animation: none; } }
   /* visiting another office: the card of a dev, an object, the team (rooms/visit.js) */
   #visitcard { position: fixed; z-index: 13; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); max-height: 46vh; overflow: auto;
-    padding: 10px 14px; background: var(--glass-2); border: 1px solid #3bc4ff; border-radius: 14px; box-shadow: 0 10px 28px #000a; backdrop-filter: blur(8px); }
+    padding: 10px 14px; background: var(--glass-2); border: 1px solid #3bc4ff; border-radius: 14px; box-shadow: 0 10px 28px #000a; }
   #visitcard[hidden] { display: none; }
   #visitcard .x { position: absolute; right: 8px; top: 6px; background: transparent; border: 0; color: var(--text); font-size: 15px; cursor: pointer; }
   #visitcard .vchead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding-right: 22px; margin-bottom: 6px; }

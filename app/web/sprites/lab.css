@@ -1,0 +1,30 @@
+:root {
+  --bg: #040c26; --panel: #081746; --panel-2: #0c2470; --line: #1a3f9e; --text: #f7f7f7; --muted: #b9c0d4; --accent: #fbaa08;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 20px/1.25 "VT323", ui-monospace, monospace; }
+button { font: inherit; color: var(--text); background: transparent; border: 2px solid var(--line); padding: 0 8px; cursor: pointer; }
+button:hover, button.on { border-color: var(--accent); background: var(--panel-2); }
+header { display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: var(--panel); border-bottom: 2px solid var(--line); }
+h1 { font-size: 28px; margin: 0; letter-spacing: 1px; }
+h1 span { color: var(--accent); }
+header a { color: var(--muted); margin-left: auto; }
+main { display: flex; gap: 24px; padding: 16px; flex-wrap: wrap; }
+.stage { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: none; max-width: 100%; }
+#hero { image-rendering: pixelated; border: 2px solid var(--line); background: #e2d6be; }
+#hero.dark { background: #2b3a63; }
+#hero.check { background: repeating-conic-gradient(#d6d6d6 0 25%, #f2f2f2 0 50%) 0 0 / 24px 24px; }
+#strip { image-rendering: pixelated; border: 2px solid var(--line); background: #e2d6be; max-width: 100%; }
+.row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.hint { color: var(--muted); font-size: 16px; text-align: center; margin: 0; max-width: 420px; }
+code { color: var(--accent); }
+.wardrobe { flex: 1; min-width: 280px; display: grid; gap: 12px; align-content: start; }
+.cat { background: var(--panel); border: 2px solid var(--line); padding: 8px 10px; }
+.cat h2 { font-size: 20px; margin: 0 0 6px; color: var(--accent); font-weight: normal; letter-spacing: 1px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: flex; flex-direction: column; align-items: center; padding: 2px 4px; min-width: 64px; }
+.chip canvas { width: 40px; height: 56px; image-rendering: pixelated; }
+.swatches { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.swatches button { width: 26px; height: 26px; padding: 0; }
+.swatches button.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 600px) { main { padding: 16px; } .wardrobe { min-width: 0; } }

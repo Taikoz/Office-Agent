@@ -708,7 +708,7 @@ export const tileF = (shape, a, b, rot = 0) => (TILE_F[shape] || TILE_F.sable)(.
 export const TILE_SAND = "#e8d4a0";
 const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 const mixHex = (a, b, k) => { const A = hexRgb(a), B = hexRgb(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, "0")).join(""); };
-// a tile painted once per scale, shape, colour and turn: the sand (wet near the water), the water from the shallows to
+// a tile painted once per scale, shape, colour and turn (a long one: its shore as steep as a square one's): the sand (wet near the water), the water from the shallows to
 // the deep; color: the sand's for a sand tile, the water's otherwise
 export function tileCanvas(shape, color, w, d, rot = 0) {
   const key = `tile|${S}|${shape}|${color}|${w}|${d}|${rot % 4}`;
@@ -716,7 +716,7 @@ export function tileCanvas(shape, color, w, d, rot = 0) {
   const p = decorPainter(w, d), { rect, ellipse } = p, sand = shape === "sable" ? color : TILE_SAND, water = shape === "sable" ? "#1a8ab8" : color;
   const st = 0.5;
   for (let y = 0; y < d; y += st) for (let x = 0; x < w; x += st) {
-    const fu = tileF(shape, (x + st / 2) / w, (y + st / 2) / d, rot) * w, n = decorRnd(x * 13.1 + y * 7.7);
+    const fu = tileF(shape, (x + st / 2) / w, (y + st / 2) / d, rot) * Math.min(w, d), n = decorRnd(x * 13.1 + y * 7.7);
     let col;
     if (fu > 2.2) col = shade(sand, 0.95 + n * 0.1);
     else if (fu > 0) col = shade(sand, 0.8 + n * 0.05);  // the wet sand
@@ -725,7 +725,7 @@ export function tileCanvas(shape, color, w, d, rot = 0) {
   }
   if (shape !== "mer") for (let i = 0; i < 6; i++) {  // the sand's ripples, a shell
     const x = decorRnd(i * 17 + 2) * (w - 6) + 3, y = decorRnd(i * 23 + 5) * (d - 4) + 2;
-    if (tileF(shape, x / w, y / d, rot) * w < 4) continue;
+    if (tileF(shape, x / w, y / d, rot) * Math.min(w, d) < 4) continue;
     if (i === 0) { ellipse(x, y, 1.2, 0.9, "#f4e2d8"); rect(x - 0.15, y - 0.8, 0.3, 1.4, "rgba(200, 140, 120, 0.5)"); }
     else rect(x, y, 4 + decorRnd(i) * 4, 0.4, "rgba(150, 110, 50, 0.16)");
   }
@@ -738,7 +738,7 @@ export function drawTileAnim(it, shape, w, d, t) {
   if (shape === "sable" || hub.focusMode) return;
   const X0 = it.x, Y0 = it.y, rot = it.rot || 0, step = 1.6;
   for (let y = 0; y < d; y += step) for (let x = 0; x < w; x += step) {
-    const fu = tileF(shape, (x + step / 2) / w, (y + step / 2) / d, rot) * w;
+    const fu = tileF(shape, (x + step / 2) / w, (y + step / 2) / d, rot) * Math.min(w, d);
     if (fu >= -0.4) continue;
     const X = X0 + x, Y = Y0 + y, ph = ((Y * 0.7 + Math.sin(X * 0.21) * 2.4 - t / 260) % 9 + 9) % 9;
     if (ph < 1.2) { ctx.fillStyle = `rgba(255, 255, 255, ${(0.5 * (1 - ph / 1.2)).toFixed(2)})`; ctx.fillRect(X * S, Y * S, step * S, 0.6 * S); }
@@ -748,7 +748,7 @@ export function drawTileAnim(it, shape, w, d, t) {
   if (shape === "mer") return;
   const band = 1.4 + Math.sin(t / 700) * 1.1;  // the swash: the foam climbs the sand and draws back
   for (let y = 0; y < d; y += 1) for (let x = 0; x < w; x += 1) {
-    const fu = tileF(shape, (x + 0.5) / w, (y + 0.5) / d, rot) * w - band + 1.4;
+    const fu = tileF(shape, (x + 0.5) / w, (y + 0.5) / d, rot) * Math.min(w, d) - band + 1.4;
     if (fu >= 0 || fu < -2.6) continue;
     ctx.fillStyle = fu > -1 ? "rgba(255, 255, 255, 0.62)" : "rgba(255, 255, 255, 0.24)";
     ctx.fillRect((X0 + x) * S, (Y0 + y) * S, S, S);

@@ -15,6 +15,11 @@ import { shade } from "../svg/base.js";
 import { PX } from "./pixi.js";
 
 let isoNow = null;  // the view while a room is drawn in isometric view (anchored() moves the 2D drawings then)
+// The back layer (the shell, what hangs on the walls, the rugs, the shadows and the lights on them) changes slowly but
+// costs half of a frame: redrawn about 15 times a second, at once when the room, the camera or the screen changes, or
+// in the buy mode. In between it stays as it is and the clickable regions it made are kept (by call, in order).
+const BACK_EVERY = 62;
+const backPass = { key: "", at: -1e9, keep: false, n: 0, regions: [] };
 
 // the projection: a 2D floor unit is 0.6 screen unit along each axis (x goes down-right, y down-left); heights 1:1
 export const IK = 0.6;
@@ -33,7 +38,11 @@ class IsoView {
     FX1 = sz.w; FY1 = sz.h; OX = 30 + (FY1 - FY) * IK; OY = 52;
     this.room = room; this.cam = this.cams.get(room) || this.cams.set(room, this.center()).get(room); this.clampCam();
     this.regions = []; isoNow = this;
-    const layered = PX.begin(this.cam, this.z);
+    const t = performance.now(), key = `${room}|${this.cam.x}|${this.cam.y}|${this.z}|${cv.width}|${cv.height}|${hub.decor?.[room]?.wall}|${hub.decor?.[room]?.floor}`;
+    backPass.keep = PX.on && key === backPass.key && t - backPass.at < BACK_EVERY && !hub.buy?.on;
+    if (!backPass.keep) { backPass.key = key; backPass.at = t; }
+    backPass.n = 0;
+    const layered = PX.begin(this.cam, this.z, backPass.keep);
     ctx.setTransform(this.z, 0, 0, this.z, -this.cam.x * this.z * S, -this.cam.y * this.z * S);
     return layered;
   }
@@ -56,7 +65,13 @@ class IsoView {
   screen(fn) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); try { return fn(); } finally { ctx.restore(); } }
   off() { PX.off(); }
   // what is painted behind the world: the floor, the walls, the sky (the back layer, iso/pixi.js)
-  back(fn) { return PX.back(fn); }
+  back(fn) {
+    const i = backPass.n++;
+    if (backPass.keep && PX.on) { this.regions.push(...(backPass.regions[i] || [])); return; }  // drawn on an earlier frame
+    const n = this.regions.length, out = PX.back(fn);
+    backPass.regions[i] = this.regions.slice(n);
+    return out;
+  }
   /* ---------- points ---------- */
   // a point of the 2D scene: on the floor, or above the wall's foot standing against the wall (a pan on the stove)
   pt(x, y) { return y >= FY ? P(x, y) : P(x, FY + 3, (FY + 3 - y) * 0.8); }

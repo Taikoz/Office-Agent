@@ -28,13 +28,13 @@
   .menuwrap { position: relative; flex: none; }
   header .tools { position: absolute; top: calc(100% + 8px); right: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 90px); overflow-y: auto;
     display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; background: var(--glass-2); border: 2px solid var(--line); border-radius: var(--r);
-    box-shadow: 0 14px 34px #000b; backdrop-filter: blur(8px); transform-origin: top right; animation: menuin .16s ease-out; }
+    box-shadow: 0 14px 34px #000b; transform-origin: top right; animation: menuin .16s ease-out; }
   header .tools[hidden] { display: none; }
   header .tools h5 { grid-column: 1 / -1; margin: 6px 2px 0; font-weight: normal; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); } header .tools h5:first-child { margin-top: 0; }
   header .tools button { text-align: left; padding: 6px 12px; border-radius: var(--r-sm); background: var(--panel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @keyframes menuin { from { opacity: 0; transform: translateY(-6px) scale(.97); } }
   @media (prefers-reduced-motion: reduce) { header .tools { animation: none; } }
-  #menubtn, #sidebtn, #qbadge { flex: none; padding: 4px 16px; border-radius: 999px; background: var(--glass); box-shadow: 0 6px 18px #0007; backdrop-filter: blur(6px); }
+  #menubtn, #sidebtn, #qbadge { flex: none; padding: 4px 16px; border-radius: 999px; background: var(--glass); box-shadow: 0 6px 18px #0007; }
   #menubtn .chev { display: inline-block; transition: transform .15s; } #menubtn.on .chev { transform: rotate(180deg); }
   #sidecount { color: var(--accent); }
   #tabs { scrollbar-width: none; } #tabs::-webkit-scrollbar { display: none; }
@@ -62,7 +62,7 @@
   /* side column: agents on a mission, daily quests, status */
   /* missions: a panel that folds away on the right */
   #side { position: fixed; z-index: 9; top: 66px; right: 12px; bottom: 96px; width: var(--side); overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
-    background: var(--glass); border: 2px solid var(--line); border-radius: var(--r); box-shadow: 0 14px 34px #000a; backdrop-filter: blur(6px); scrollbar-width: thin;
+    background: var(--glass); border: 2px solid var(--line); border-radius: var(--r); box-shadow: 0 14px 34px #000a; scrollbar-width: thin;
     transition: transform .2s ease-out, opacity .2s; }
   body.side-off #side { transform: translateX(calc(100% + 24px)); opacity: 0; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
@@ -158,3 +158,8 @@
   header { justify-content: flex-end; }
   header h1 { display: none; }
   header #tabs { flex: 0 1 auto; justify-content: flex-end; }
+  /* the office open in another tab: this one sleeps (js/ui/onetab.js) */
+  #onetab { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0b0a10e6; cursor: pointer; }
+  #onetab div { display: flex; flex-direction: column; gap: 8px; max-width: 520px; padding: 18px 22px; text-align: center; border: 2px solid var(--line); border-radius: var(--r); background: var(--panel); }
+  #onetab b { color: var(--accent); font-size: 24px; }
+  #onetab span { color: var(--muted); }

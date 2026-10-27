@@ -31,6 +31,12 @@ export const artHook = { emit: null };
 export class SvgArt {
   static images = new Map();  // `${name}|${state}@${scale}` → Image
   static last = new Map();    // `${name}|${state}` → the image of the previous scale, shown while the new one loads
+  // Images kept in each map, the least recently used going first: the states of the team (pose, frame, blink, what
+  // they hold…) never end, a cache without a limit fills the memory in a day. Each one becomes an ImageBitmap once
+  // loaded: an <img> of an SVG keeps a whole SVG document alive in the browser (its own page, frame and DOM), a bitmap
+  // only its pixels.
+  static MAX = 800;
+  static scale = 0;
 
   // outline: the radius of the dark contour (false: none); pad: margin around the box (room for the contour)
   constructor(name, w, h, { outline = 0.4, pad = 1 } = {}) {
@@ -54,13 +60,25 @@ export class SvgArt {
   /* ---------- canvas ---------- */
   image(state = {}) {
     const id = `${this.name}|${this.stateKey(state)}`, key = `${id}@${S}`, imgs = SvgArt.images;
+    if (SvgArt.scale !== S) { SvgArt.scale = S; imgs.clear(); }  // another scale: the old images go (last shows them meanwhile)
     let img = imgs.get(key);
-    if (!img) {
-      if (imgs.size > 3000) { let k = 0; for (const old of imgs.keys()) { imgs.delete(old); if (++k >= 300) break; } }  // the oldest go (a clock's seconds), not the whole cache
-      img = new Image(); img.src = svgUrl(this.markup(state)); imgs.set(key, img);
+    if (img) { imgs.delete(key); imgs.set(key, img); }  // the most recently used last: the cache forgets the unused ones
+    else {
+      if (imgs.size >= SvgArt.MAX) { let k = 0; for (const old of imgs.keys()) { imgs.delete(old); if (++k >= SvgArt.MAX / 10) break; } }  // the least recently used go (a clock's seconds), not the whole cache
+      img = new Image(); img.decoding = "async";
+      const el = img;
+      if (window.createImageBitmap) el.onload = () => createImageBitmap(el).then(bm => {  // the SVG document let go
+        if (imgs.get(key) === el) imgs.set(key, bm);
+        if (SvgArt.last.get(id) === el) SvgArt.last.set(id, bm);
+      }, () => { /* kept as an <img> */ });
+      img.src = svgUrl(this.markup(state)); imgs.set(key, img);
     }
-    if (img.complete && img.naturalWidth) { SvgArt.last.set(id, img); return img; }
-    return SvgArt.last.get(id) || null;
+    const last = SvgArt.last;
+    if (img instanceof ImageBitmap || (img.complete && img.naturalWidth)) {
+      if (last.get(id) !== img) { last.delete(id); last.set(id, img); if (last.size > SvgArt.MAX) last.delete(last.keys().next().value); }
+      return img;
+    }
+    return last.get(id) || null;
   }
   // draws the piece at x, y (its box is placed relative to that point); flip: mirrored left-right around the box center.
   // false while the image is not ready yet

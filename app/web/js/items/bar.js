@@ -29,12 +29,12 @@ const SPIRITS = ["un petit rhum ambré 🥃", "un whisky tourbé 🥃", "un fond
 // the items of the same room
 const roomItems = (it, types) => hub.itemsIn(it.room).filter(i => [].concat(types).includes(i.type));
 // a drink sold: counted on the cash register of the room, if there is one (the till of the day)
-function sold(it, n = 1) {
+export function sold(it, n = 1) {
   const day = new Date().toDateString();
   for (const r of roomItems(it, "register")) { if (r.day !== day) Object.assign(r, { day, sales: 0, cashed: 0 }); r.sales += n; }
 }
 // everyone here gets a drink: their mood, a toast, the till; nobody: he keeps it for the afterwork
-function round(it, what, icon) {
+export function round(it, what, icon) {
   const people = hub.peopleIn(it.room).filter(n => n !== CHIEF_NAME);
   if (!people.length) return say(CHIEF_NAME, `Personne pour trinquer… ${icon} je garde ça pour l'afterwork.`), false;
   for (const n of people) { crewAdd(n, { social: 10, moral: 3, ennui: -5 }); addMoodlet(n, "round", icon, `${what} offert(e) par le chef`, 5, 90); }

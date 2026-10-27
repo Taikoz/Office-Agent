@@ -9,15 +9,16 @@ import { plan } from "./planning.js";
 import { glBusy, glDraftUrl, glMsg, glStatus } from "../ui/gitlab.js";
 import { quality, setQuality } from "../ui/quality.js";
 import { slackClick, supportSettingsHtml } from "./support.js";
+import { sentryClick, sentrySettingsHtml } from "./errors.js";
 import { renderChiefOs } from "../ui/chiefos.js";
 
 const skinNow = () => SaveSlot.get("office-osskin")?.data.skin || "auto";
-const Q = [["auto", "Auto", "s'adapte à ta machine"], ["high", "Haute", "tous les pixels de l'écran"], ["eco", "Économie", "30 images/s, moins de pixels, sans flou"]];
+const Q = [["auto", "Auto", "30 images/s, la résolution s'adapte à ta machine"], ["high", "Haute", "60 images/s, tous les pixels de l'écran"], ["eco", "Économie", "20 images/s, moins de pixels, sans flou"]];
 function perfHtml() {
   const res = Math.round((document.getElementById("c").width / document.getElementById("c").getBoundingClientRect().width) * 100);
   return `<h4>PERFORMANCES</h4>
     <div class="osrow"><b>Qualité</b><span class="qbtns">${Q.map(([id, label, hint]) => `<button data-q="${id}" class="${quality.mode === id ? "on" : ""}" title="${hint}">${label}</button>`).join("")}</span><span class="muted">${Q.find(q => q[0] === quality.mode)[2]}</span></div>
-    <div class="osrow"><b>Maintenant</b><span class="muted">${quality.fps || "—"} images/s · résolution ${res} %${quality.capped ? ` · 30 images/s (${quality.why})` : ""}</span><span></span></div>`;
+    <div class="osrow"><b>Maintenant</b><span class="muted">${quality.fps || "—"} images/s · résolution ${res} %${quality.capped ? ` · ${quality.cap} images/s max (${quality.why})` : ""}</span><span></span></div>`;
 }
 
 function settingsAppHtml() {
@@ -31,6 +32,7 @@ function settingsAppHtml() {
     <div class="osacts"><button data-gl="save" class="ubok"${glBusy ? " disabled" : ""}>${glBusy ? "Vérification…" : "Enregistrer et tester"}</button><span class="muted">${esc(glMsg)}</span></div>
     <p class="muted">Droit <b>read_api</b> suffisant (lecture seule). Le jeton reste sur cette machine (<code>~/.claude/agent-office/gitlab.json</code>, lisible par toi seul) : la page ne le revoit jamais et il n'est pas dans la sauvegarde. Le serveur interroge GitLab lui-même.</p>
     ${supportSettingsHtml()}
+    ${sentrySettingsHtml()}
     ${perfHtml()}
     <h4>APPARENCE DE CHIEFOS</h4>
     <div class="osrow"><b>Style</b><span class="qbtns">${[["auto", "Auto", "celui du bureau du chef : HOLO au poste de commandement holographique, Grimoire au bureau du directeur, Crypte à l'orgue du maître des lieux, Galion à la barre du capitaine, Zen à l'estrade du sensei, Tropical au poste du maître-nageur, Ubuntu sinon"], ...OS_SKINS]
@@ -47,6 +49,7 @@ class SettingsApp extends OsApp {
   render() { return settingsAppHtml(); }
   click(b) {
     if (b.dataset.sl) { slackClick(b); return true; }  // Slack · Support (apps/support.js)
+    if (b.dataset.se) { sentryClick(b); return true; }  // Sentry · Erreurs (apps/errors.js)
     if (b.dataset.skin) { setOsSkin(b.dataset.skin); return true; }
     if (!b.dataset.q) return false; setQuality(b.dataset.q); renderChiefOs(); return true;
   }

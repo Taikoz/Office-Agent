@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, slack, team, terminal
+from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
 from .billing import billing
-from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, discover_agents
+from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, agent_files, discover_agents, frontmatter
 from .detail import agent_detail
 from .launcher import agents, home_dir, launch
 from .live import GAME, sessions
@@ -27,11 +27,13 @@ PIPELINES = Pipelines()
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 LAST_VIEW = 0.0  # last /api/state poll by an open page; office.py reopens the page when stale
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8"}
+SPRITE_TYPES = {".png": "image/png", ".json": "application/json"}  # only the built sprite atlas, under web/sprites/
 
 
 def static_files() -> dict[str, Path]:
     """Map each servable URL (/static/…) to its file under web/; nothing else is ever read from disk."""
-    return {f"/static/{f.relative_to(WEB).as_posix()}": f for f in WEB.rglob("*") if f.suffix in TYPES}
+    return {f"/static/{f.relative_to(WEB).as_posix()}": f for f in WEB.rglob("*")
+            if f.suffix in TYPES or (f.suffix in SPRITE_TYPES and f.parent == WEB / "sprites")}
 
 
 def build_stamp() -> float:
@@ -119,6 +121,27 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 else:
                     target = parse_qs(urlparse(self.path).query).get("url", [""])[0]
                     self.reply(200, "application/json", json.dumps(framecheck.check(target), ensure_ascii=False).encode())
+            elif self.path.startswith("/api/sentry/"):  # Sentry, read-only, the token kept server-side (sentry.py); only this page
+                if not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
+                    self.reply(403, "application/json", b'{"error": "interdit"}')
+                else:
+                    def sentry_check() -> dict[str, Any]:
+                        try:
+                            deploys = deliveries.prod_deploys()  # what followed the recent deploys to prod
+                        except gitlab.GitLabError:
+                            deploys = None
+                        return sentry.check(deploys)
+                    def sentry_dashboard() -> dict[str, Any]:
+                        try:
+                            services = deliveries.sentry_services()  # Sentry project → service (the DSNs of the deployment repo)
+                        except gitlab.GitLabError:
+                            services = {}
+                        return sentry.dashboard(services)
+                    issue = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+                    fn = {"status": sentry.status, "check": sentry_check, "dashboard": sentry_dashboard,
+                          "analysis": lambda: sentry.analysis_status(issue)}.get(urlparse(self.path).path.rsplit("/", 1)[-1])
+                    code, body = sentry.safe(fn) if fn else (404, {"error": "inconnu"})
+                    self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
             elif self.path.startswith("/api/slack/"):  # a Slack channel, read-only, the token kept server-side (slack.py); only this page
                 if not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
                     self.reply(403, "application/json", b'{"error": "interdit"}')
@@ -178,10 +201,12 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 # an uploaded SVG could carry script: never let it run on this origin (it would read the token)
                 self.reply(200, team.LOGO_TYPES[logo.suffix[1:]], logo.read_bytes(),
                            {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox", "X-Content-Type-Options": "nosniff"})
+            elif urlparse(self.path).path in ("/sprites", "/sprites/"):  # the sprite lab (sprites/README.md)
+                self.reply(200, "text/html; charset=utf-8", (WEB / "sprites.html").read_bytes())
             elif urlparse(self.path).path == "/sw.js":  # service worker: served from the root so it may show notifications for the page
                 self.reply(200, TYPES[".js"], (WEB / "sw.js").read_bytes())
             elif (static := static_files().get(urlparse(self.path).path)) is not None:
-                self.reply(200, TYPES[static.suffix], static.read_bytes())
+                self.reply(200, {**TYPES, **SPRITE_TYPES}[static.suffix], static.read_bytes())
             else:
                 self.reply(404, "text/plain", b"not found")
 
@@ -190,13 +215,13 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/sentry/config", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else net.LAYOUT_MAX + 1000 if self.path == "/api/net" else 400_000 if self.path in ("/api/claudefile", "/api/term/input") else 400_000 if self.path == "/api/blueprint/publish" else 500_000 if self.path == "/api/team" else 16_000
+                limit = savegame.SAVE_MAX + 10_000 if self.path == "/api/save" else net.LAYOUT_MAX + 1000 if self.path == "/api/net" else 400_000 if self.path in ("/api/claudefile", "/api/term/input") else 400_000 if self.path == "/api/blueprint/publish" else 500_000 if self.path == "/api/team" else 60_000 if self.path == "/api/sentry/ticket" else 16_000
                 data = json.loads(self.rfile.read(min(size, limit)))
                 if self.path in tools:
                     code, body = 200, {}
@@ -228,6 +253,26 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     return
                 if self.path == "/api/slack/config":
                     code, body = slack.safe(slack.forget if data.get("forget") else lambda: slack.save(str(data.get("token", "")), str(data.get("channel", ""))))
+                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/sentry/analyze":  # one Haiku call (quota of quips.py), on the user's click
+                    def run_analyze() -> dict[str, Any]:
+                        try:
+                            services = deliveries.sentry_services()
+                        except gitlab.GitLabError:
+                            services = {}
+                        agents = {name: frontmatter(md).get("description", "") for name, md in agent_files().items()}
+                        # in the background; Grafana (the user's Chrome) only when the page's box is ticked
+                        return sentry.analyze_async(str(data.get("id", "")), services, agents, force=bool(data.get("force")), use_grafana=data.get("grafana") is True)
+                    code, body = sentry.safe(run_analyze)
+                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/sentry/ticket":  # creates a YouTrack Bug: only after the user confirmed it in the page
+                    code, body = sentry.safe(lambda: sentry.create_ticket(str(data.get("id", "")), data if isinstance(data, dict) else {}, tickets.yt))
+                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/sentry/config":
+                    code, body = sentry.safe(sentry.forget if data.get("forget") else lambda: sentry.save(str(data.get("url", "")), str(data.get("token", "")), str(data.get("org", "")), str(data.get("environments", "")), str(data.get("grafana", ""))))
                     self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/gitlab/config":

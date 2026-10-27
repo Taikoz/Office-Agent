@@ -47,6 +47,7 @@ RISKS = [  # (kind, label, pattern on a changed file's path)
     ("config", "Config / build", re.compile(r"(^|/)(\.env[^/]*|settings[^/]*\.py|config[^/]*\.(py|ya?ml|json|toml)|Dockerfile[^/]*|docker-compose[^/]*\.ya?ml|\.gitlab-ci\.yml)$|^(helm|charts?)/", re.I)),
 ]
 ENV_RE = re.compile(r"""os\.environ(?:\.get)?\(\s*["'](\w+)|os\.environ\[\s*["'](\w+)|getenv\(\s*["'](\w+)|import\.meta\.env\.(\w+)|process\.env\.(\w+)""")
+DSN_RE = re.compile(r"https?://[0-9a-f]+@[\w.\-:]+/(\d+)")  # a Sentry DSN in the values: its project id (ChiefOS → Erreurs)
 SKIP_KEYS = re.compile(r"(^|\.)(image|tag|chartVersion|replicaCount|resources|autoscaling)(\.|$)")
 
 
@@ -428,9 +429,35 @@ def _fetch(conf: dict[str, Any]) -> dict[str, Any]:
             "envs": [{"name": e, "kind": env_kind(e)} for e in envs],
             "services": [{"service": s["apps"][0], "apps": s["apps"], "project": s["project"]["path"], "projectUrl": s["project"]["url"],
                           "envs": {env: {k: v for k, v in e.items() if k != "text"} for env, e in s["envs"].items()},
-                          "diffs": s.get("diffs", {}), "configGaps": config_gaps(s["envs"])}
+                          "diffs": s.get("diffs", {}), "configGaps": config_gaps(s["envs"]),
+                          "sentry": sorted({m for e in s["envs"].values() for m in DSN_RE.findall(e.get("text", ""))}, key=int)}
                          for s in sorted(services, key=lambda s: s["apps"][0])],
             "items": items}
+
+
+def prod_deploys() -> list[dict[str, Any]] | None:
+    """The last deploy to prod of each service (its tag, the date of its prod values file, its Sentry projects), for
+    ChiefOS → Erreurs; None when GitLab or the deployment repo is not set."""
+    conf = gitlab.load()
+    if not conf or not CFG["deploy_repo"]:
+        return None
+    data = gitlab.cached("deliveries", lambda: _fetch(conf))
+    prd = [e["name"] for e in data["envs"] if e["kind"] == "prd"]
+    out = []
+    for s in data["services"]:
+        env = next((e for e in prd if e in s["envs"]), None)
+        if env and s.get("sentry"):
+            out.append({"service": s["service"], "tag": s["envs"][env]["tag"], "since": s["envs"][env].get("since"), "sentry": s["sentry"]})
+    return out
+
+
+def sentry_services() -> dict[str, str]:
+    """{Sentry project id: service} from the DSNs of the deployment repo's values (empty when it is not set)."""
+    conf = gitlab.load()
+    if not conf or not CFG["deploy_repo"]:
+        return {}
+    data = gitlab.cached("deliveries", lambda: _fetch(conf))
+    return {pid: s["service"] for s in data["services"] for pid in s.get("sentry") or []}
 
 
 def version_key(tag: str) -> tuple[Any, ...]:

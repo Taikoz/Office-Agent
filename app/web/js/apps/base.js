@@ -7,14 +7,14 @@ import { hub } from "../hub.js";
 export class OsApp {
   static all = new Map();  // id → app
   // order of the Activités grid (an app not listed comes last)
-  static ORDER = ["questions", "alerts", "notifs", "support", "messages", "gitlab", "mr", "pipes", "deliveries", "tickets", "planning", "schedule", "report", "week", "debriefs", "dashboard", "costs",
+  static ORDER = ["questions", "alerts", "notifs", "support", "messages", "gitlab", "mr", "pipes", "deliveries", "errors", "tickets", "planning", "schedule", "report", "week", "debriefs", "dashboard", "costs",
     "skills", "blueprint", "lessons", "ideas", "process", "skillmap", "mmx", "team", "money", "network", "terminal", "browser", "meteo", "settings"];
   // spaces: the apps grouped in folders, like an iPhone (chiefos.js): one folder icon in the dock or Activités opens the
   // folder, its apps then show in tabs in the window; an app outside every folder stands alone. The user moves apps
   // between folders, makes new ones and renames them (saved by chiefos.js, which calls setSpaces); these are the defaults
   static DEFAULT_SPACES = [
     ["inbox", "Boîte de réception", ["questions", "alerts", "notifs", "support", "messages"]],
-    ["code", "Code & CI", ["gitlab", "mr", "pipes", "deliveries"]],
+    ["code", "Code & CI", ["gitlab", "mr", "pipes", "deliveries", "errors"]],
     ["work", "Travail", ["tickets", "planning", "schedule"]],
     ["reports", "Bilans", ["report", "week", "debriefs", "dashboard", "costs"]],
     ["workshop", "Atelier", ["skills", "blueprint", "lessons", "ideas", "process", "skillmap", "mmx"]],

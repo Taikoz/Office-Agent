@@ -138,6 +138,9 @@ export function drawCabinet(t, hover) {
 // a walker's step: the legs follow the ground covered (a step every STRIDE units, not a fixed beat: no sliding at any
 // speed), state: any object of the walker, kept from frame to frame. Its phase goes to drawPerson (opts.step).
 const STRIDE = 6.5;
+// a person's step (sprites/tools/make_pack.py STRIDE_PX): a foot goes 2 × 2.7 px back on screen along the walk
+// (1.6 px per unit) while the body covers that much ground (the iso view shows a unit as 0.67): no sliding
+const PERSON_STRIDE = 2 * 2.7 / 1.6 / 0.67;
 export function stepOf(state, x, y) {
   const d = Math.hypot(x - (state._sx ?? x), y - (state._sy ?? y));
   state._sx = x; state._sy = y;
@@ -161,8 +164,8 @@ export function devHold(e, still, t) {
 export function drawPerson(x, y, look, opts = {}) {
   let walk;
   if (opts.step != null) {  // the walk cycle: 8 poses over two steps; the body up when the legs pass, down on each step
-    walk = Math.floor(opts.step * 4) % 8; opts = { ...opts, frame: Math.floor(opts.step) };
-    y -= Math.abs(Math.cos(opts.step * Math.PI)) * 0.7;
+    // (the sprites bob by themselves, feet on the ground); their legs keep pace with the ground covered
+    walk = Math.floor(opts.step * 4 * STRIDE / PERSON_STRIDE) % 8; opts = { ...opts, frame: Math.floor(opts.step) };
   }
   const now = performance.now(), b = beat(look);
   const life = { walk, breath: walk == null && Math.floor((now + b) / 1500) % 2 ? 1 : 0, blink: (now + b * 1.7) % 4300 < 130, talk: !!opts.talk && Math.floor(now / 110) % 2 === 0 };
@@ -182,12 +185,7 @@ export function drawPerson(x, y, look, opts = {}) {
       for (let i = 0; i < 3; i++) { const k = ((performance.now() / 1400) + i / 3) % 1; ctx.globalAlpha = 0.4 * Math.sin(Math.PI * k); ctx.fillStyle = "#f4f4fa"; ctx.beginPath(); ctx.arc((cx + Math.sin(k * 6 + i * 2) * 0.8) * S, (cy - 1 - k * 6) * S, (0.5 + k * 0.9) * S, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
     }
-    if (o.arms === "baton") {  // the baton in the raised hand
-      const [hx, hy] = handPoint({ seated: o.seated, arms: "baton", frame: o.frame }, rot >= 2, rot === 1 || rot === 2), hp = { x: x + hx, y: y + hy };
-      raw.drawn = true; ctx.strokeStyle = "#f4f2ea"; ctx.lineWidth = Math.max(1, S * 0.6); ctx.beginPath();
-      ctx.moveTo(hp.x * S, hp.y * S); ctx.lineTo((hp.x + 4) * S, (hp.y - 5) * S); ctx.stroke();
-    }
-    return;
+    return;  // (the baton is a prop of the sprite: svg/pixelpeople.js)
   }
   if (!ART.person.draw(x, y, { look: lookTraits(look), ...o, arms: o.arms === "reach" ? "type" : o.arms })) return drawPersonPx(x, y, look, opts);  // svg/figures.js
   if (hold === "cup" || hold === "sip") { px(x + 4, y - 13, 2.5, 3, "#f4f2ea"); px(x + 4, y - 13, 2.5, 0.8, "#6d4a2e"); }  // what is in hand, flat

@@ -1,0 +1,107 @@
+{
+ "cup": {
+  "grip": [
+   6,
+   4
+  ],
+  "anchor": "hand"
+ },
+ "mic": {
+  "grip": [
+   2,
+   6
+  ],
+  "anchor": "hand"
+ },
+ "papers": {
+  "grip": [
+   4,
+   5
+  ],
+  "anchor": "mid"
+ },
+ "ticket": {
+  "grip": [
+   3,
+   3
+  ],
+  "anchor": "hand"
+ },
+ "plate": {
+  "grip": [
+   6,
+   3
+  ],
+  "anchor": "mid"
+ },
+ "tray": {
+  "grip": [
+   9,
+   5
+  ],
+  "anchor": "mid"
+ },
+ "bag": {
+  "grip": [
+   4,
+   1
+  ],
+  "anchor": "hand"
+ },
+ "can": {
+  "grip": [
+   2,
+   4
+  ],
+  "anchor": "hand"
+ },
+ "pint": {
+  "grip": [
+   3,
+   4
+  ],
+  "anchor": "hand"
+ },
+ "cocktail": {
+  "grip": [
+   3,
+   6
+  ],
+  "anchor": "hand"
+ },
+ "paddle": {
+  "grip": [
+   3,
+   7
+  ],
+  "anchor": "hand"
+ },
+ "pot": {
+  "grip": [
+   6,
+   9
+  ],
+  "anchor": "hand"
+ },
+ "book": {
+  "grip": [
+   6,
+   4
+  ],
+  "anchor": "mid"
+ },
+ "baton": {
+  "grip": [
+   2,
+   6
+  ],
+  "anchor": "hand"
+ },
+ "wand": {
+  "grip": [
+   2,
+   6
+  ],
+  "anchor": "hand"
+ }
+}
