@@ -12,7 +12,7 @@ import { focusMode } from "../ui/ux.js";
 import { clockNow } from "../sims/days.js";
 
 const seasonNow = (d = clockNow()) => ["hiver", "hiver", "printemps", "printemps", "printemps", "été", "été", "été", "automne", "automne", "automne", "hiver"][d.getMonth()];
-export let meteo = new SaveSlot("office-meteo", { on: false, city: "Paris", lat: 48.8566, lon: 2.3522, code: null, temp: null, at: 0 }).data;
+export let meteo = new SaveSlot("office-meteo", { on: false, city: "Paris", country: "", lat: 48.8566, lon: 2.3522, code: null, temp: null, fc: null, at: 0 }).data;
 const saveMeteo = () => SaveSlot.get("office-meteo").save(meteo);
 // Open-Meteo weather codes → the sky of the windows (art.js drawSky)
 export function codeWeather(c) {
@@ -24,18 +24,33 @@ export function codeWeather(c) {
   return c >= 1 ? "sun" : "clear";
 }
 export const WEATHER_FR = { clear: "☀️ dégagé", sun: "🌤️ éclaircies", cloud: "☁️ nuageux", rain: "🌧️ pluie", storm: "⛈️ orage", snow: "❄️ neige" };
+// the forecast of ChiefOS → Météo, in the same call: now, the next 24 hours, the next 7 days (meteo.fc)
+const FC = "&current=weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,is_day,precipitation"
+  + "&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max"
+  + "&timezone=auto&forecast_days=7";
+function forecast(r) {
+  const c = r.current || {}, h = r.hourly || {}, d = r.daily || {}, now = c.time || "";
+  const start = Math.max(0, (h.time || []).findIndex(t => t >= now.slice(0, 13)));
+  return {
+    now: { code: c.weather_code, temp: c.temperature_2m, feels: c.apparent_temperature, humidity: c.relative_humidity_2m, wind: c.wind_speed_10m, windDir: c.wind_direction_10m, day: c.is_day !== 0, rain: c.precipitation },
+    hours: (h.time || []).slice(start, start + 24).map((t, i) => ({ t, temp: h.temperature_2m[start + i], code: h.weather_code[start + i], pop: h.precipitation_probability?.[start + i] ?? null, day: h.is_day?.[start + i] !== 0 })),
+    days: (d.time || []).map((t, i) => ({ t, code: d.weather_code[i], max: d.temperature_2m_max[i], min: d.temperature_2m_min[i], pop: d.precipitation_probability_max?.[i] ?? null,
+      uv: d.uv_index_max?.[i] ?? null, sunrise: d.sunrise?.[i] || "", sunset: d.sunset?.[i] || "" })),
+  };
+}
 async function fetchMeteo(force = false) {
   if (!meteo.on || DEMO || (!force && Date.now() - meteo.at < 15 * 60000)) return;
   try {
-    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${meteo.lat}&longitude=${meteo.lon}&current=weather_code,temperature_2m`)).json();
-    meteo.code = r.current?.weather_code ?? null; meteo.temp = r.current?.temperature_2m ?? null; meteo.at = Date.now(); saveMeteo();
-  } catch (_) { /* offline: the tests' weather stays */ }
+    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${meteo.lat}&longitude=${meteo.lon}${FC}`)).json();
+    meteo.code = r.current?.weather_code ?? null; meteo.temp = r.current?.temperature_2m ?? null; meteo.fc = forecast(r); meteo.at = Date.now(); meteo.error = ""; saveMeteo();
+  } catch (_) { meteo.error = "Open-Meteo injoignable : les fenêtres gardent la météo des tests."; }  // offline
 }
+export const refreshMeteo = () => fetchMeteo(true);
 export async function setCity(name) {
   try {
     const r = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=fr`)).json();
     const g = r.results?.[0]; if (!g) return toast("MÉTÉO", "Ville introuvable", name);
-    Object.assign(meteo, { city: g.name, lat: g.latitude, lon: g.longitude, at: 0 }); saveMeteo(); await fetchMeteo(true);
+    Object.assign(meteo, { city: g.name, country: g.country || "", lat: g.latitude, lon: g.longitude, at: 0, fc: null }); saveMeteo(); await fetchMeteo(true);
     toast("MÉTÉO", `Météo de ${g.name}`, meteo.code != null ? `${WEATHER_FR[codeWeather(meteo.code)]} · ${Math.round(meteo.temp)} °C` : "");
   } catch (_) { toast("MÉTÉO", "Service injoignable", "Réessaie plus tard."); }
 }
