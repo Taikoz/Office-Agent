@@ -19,6 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 DEFAULT_PORT = 8766
+OFF = 'réseau désactivé : mettre "network": {"enabled": true} dans ~/.claude/agent-office.json puis relancer le serveur'
 MAX_PEERS = 8           # chiefs at once (the host included)
 PEER_TTL = 20.0         # seconds without news: gone
 CHAT_KEEP = 80          # messages kept
@@ -374,6 +375,9 @@ def save_conf(**kw: Any) -> None:
 def start(port: int = DEFAULT_PORT, new_code: bool = False) -> dict[str, Any]:
     """Opens the office on the internal network: the LAN server on this machine's private address, with the join code
     kept from last time (a new one when asked, or the first time)."""
+    from . import config  # read at call time (the tests move it)
+    if not config.network_enabled():
+        raise ValueError(OFF)
     if STATE["server"] is not None:
         if not new_code:
             return status()
@@ -399,8 +403,9 @@ def start(port: int = DEFAULT_PORT, new_code: bool = False) -> dict[str, Any]:
 
 def autostart() -> None:
     """At the server's start: opens the office to the network when it was asked to (ChiefOS → Réseau)."""
+    from . import config
     c = load_conf()
-    if c.get("auto"):
+    if c.get("auto") and config.network_enabled():
         try:
             start(c["port"])
         except (ValueError, OSError):
@@ -454,6 +459,9 @@ def listen() -> None:
 
 
 def discover() -> dict[str, Any]:
+    from . import config
+    if not config.network_enabled():
+        return {"offices": [], "off": OFF}  # no UDP listener on the network either
     if not LISTEN["on"]:
         LISTEN["on"] = True
         threading.Thread(target=listen, name="office-net-listen", daemon=True).start()

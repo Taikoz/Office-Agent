@@ -75,7 +75,10 @@ async function brGo(input, tab = brTab(), push = true) {
   if (isYouTubeSite(url)) { tab.state = "youtube"; return brRefresh(tab); }  // the site refuses frames: our own YouTube page
   tab.state = "loading"; brRefresh(tab);
   let check = { embeddable: true };
-  if (!DEMO && !url.startsWith(location.origin)) {
+  // never the office itself in a frame that may run scripts on its origin (it would hold the page's token)
+  const self = (() => { try { const u = new URL(url); return u.port === location.port && /^(127\.0\.0\.1|localhost|\[::1\])$/.test(u.hostname); } catch (_) { return false; } })();
+  if (self) check = { embeddable: false, reason: "le bureau lui-même : ouvre-le dans un vrai onglet" };
+  else if (!DEMO) {
     try { check = await (await fetch(`/api/framecheck?url=${encodeURIComponent(url)}`, { headers: { "X-Office-Token": TOKEN } })).json(); } catch (_) { check = { embeddable: null }; }
   }
   if (tab.url !== url) return;  // navigated elsewhere meanwhile

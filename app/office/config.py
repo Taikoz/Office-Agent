@@ -53,6 +53,7 @@ DEFAULTS: dict[str, Any] = {
     "deploy_ref": None,              # its branch (default branch otherwise)
     "deploy_projects": {},           # {"<app>": "<GitLab project path>"} when the image path does not tell the project
     "deliveries_days": 14,           # how far back merged MRs are followed
+    "network": {"enabled": False},   # ChiefOS → Réseau (the office on the internal network): off unless set to true here
 }
 
 COLOR_NAMES = {  # Claude Code agent frontmatter colors
@@ -102,6 +103,22 @@ def excluded(text: str) -> bool:
 PROJECTS = HOME_CLAUDE / "projects"
 CLEAR_MARK = STATE_DIR / "clear"
 QUESTIONS = STATE_DIR / "questions"
+def lock_down(folder: Path) -> None:
+    """The folder 0700 and everything in it 0600 / 0700: nothing of the state readable by another account."""
+    try:
+        folder.chmod(0o700)
+        for f in folder.rglob("*"):
+            if not f.is_symlink():
+                f.chmod(0o700 if f.is_dir() else 0o600)
+    except OSError:
+        pass
+
+
+def network_enabled() -> bool:
+    net = CFG.get("network")
+    return isinstance(net, dict) and net.get("enabled") is True
+
+
 def load_token() -> str:
     """Secret of the page's POSTs (answers, launches, saves…), kept in STATE_DIR (0600) so a restarted server accepts the
     tabs already open: a fresh token per run made every save of an open tab fail with 403 after a restart."""

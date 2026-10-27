@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # -I keeps the script dir off sys.path
-from office.config import CFG  # noqa: E402
+os.umask(0o077)  # every file and folder this server writes (tokens, caches of the transcripts, save) is the user's alone
+from office.config import CFG, STATE_DIR, lock_down  # noqa: E402
 from office import net, schedules  # noqa: E402
 from office.routes import make_handler  # noqa: E402
 from office.tickets import TicketStates  # noqa: E402
@@ -22,6 +24,7 @@ def main() -> int:
     parser.add_argument("--window", type=int, default=CFG["window_minutes"], help="Minutes d'activité affichées")
     parser.add_argument("--no-youtrack", action="store_true", help="Ne pas lire l'état des tickets dans YouTrack")
     args = parser.parse_args()
+    lock_down(STATE_DIR)  # what older versions left group- or world-readable
     handler = make_handler(args.window * 60, TicketStates(not args.no_youtrack))
     schedules.start()  # scheduled agents (ChiefOS → Planification)
     net.autostart()    # the office opened to the internal network, when asked (ChiefOS → Réseau)

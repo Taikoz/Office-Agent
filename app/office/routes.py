@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
 from .billing import billing
-from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, agent_files, discover_agents, frontmatter
+from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, agent_files, discover_agents, frontmatter, network_enabled
 from .detail import agent_detail
 from .launcher import agents, home_dir, launch
 from .live import GAME, sessions
@@ -28,6 +28,21 @@ DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 LAST_VIEW = 0.0  # last /api/state poll by an open page; office.py reopens the page when stale
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8"}
 SPRITE_TYPES = {".png": "image/png", ".json": "application/json"}  # only the built sprite atlas, under web/sprites/
+PUBLIC_API = ("/api/viewer",)  # bin/office.py's probe (idle time, version); every other /api/ read needs the page's token
+# on every response: no MIME sniffing, no referrer sent out, nothing of this origin loaded or framed by another site
+BASE_HEADERS = {"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Cross-Origin-Resource-Policy": "same-origin",
+                "X-Frame-Options": "SAMEORIGIN"}
+
+
+def page_csp(nonce: str) -> str:
+    """The office page's Content-Security-Policy: only its own scripts (the two inline ones carry the nonce), so markup
+    slipped into a title, a log or a message never runs; Pixi compiles its shaders with new Function ('unsafe-eval')."""
+    connect = "'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com" + (" http:" if network_enabled() else "")
+    return "; ".join([
+        "default-src 'self'", f"script-src 'self' 'nonce-{nonce}' 'unsafe-eval'", "worker-src 'self' blob:",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src 'self' data: https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https:", "media-src 'self' blob: mediastream:", f"connect-src {connect}",
+        "frame-src https: http:", "object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'self'"])
 
 
 def static_files() -> dict[str, Path]:
@@ -95,8 +110,11 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                 return
             if self.tool_get():
                 return
+            if self.path.startswith("/api/") and not self.path.startswith(PUBLIC_API) and not self.token_ok():
+                self.reply(403, "application/json", b'{"error": "interdit"}')
+                return
             if self.path.startswith("/api/viewer"):
-                self.reply(200, "application/json", json.dumps({"idle": time.time() - LAST_VIEW, "version": VERSION, "root": str(WEB.parent)}).encode())
+                self.reply(200, "application/json", json.dumps({"idle": time.time() - LAST_VIEW, "version": VERSION}).encode())
             elif self.path.startswith("/api/state"):
                 LAST_VIEW = time.time()
                 data = sessions(window)
@@ -194,15 +212,17 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             elif self.path in ("/", "/index.html") or self.path.startswith("/?"):
                 cfg = json.dumps(office_config(window, tickets), ensure_ascii=False).replace("</", "<\\/")
                 saved = json.dumps(savegame.load(), ensure_ascii=False).replace("</", "<\\/")
-                page = (WEB / "index.html").read_bytes().replace(b"__OFFICE_TOKEN__", TOKEN.encode()).replace(b"__OFFICE_CFG__", cfg.encode()) \
-                    .replace(b"__OFFICE_SAVE__", saved.encode())
-                self.reply(200, "text/html; charset=utf-8", page)
+                nonce = secrets.token_urlsafe(16)
+                page = (WEB / "index.html").read_bytes().replace(b"__OFFICE_NONCE__", nonce.encode()).replace(b"__OFFICE_TOKEN__", TOKEN.encode()) \
+                    .replace(b"__OFFICE_CFG__", cfg.encode()).replace(b"__OFFICE_SAVE__", saved.encode())
+                self.reply(200, "text/html; charset=utf-8", page, {"Content-Security-Policy": page_csp(nonce)})
             elif urlparse(self.path).path == "/logo" and (logo := team.logo_path()) is not None:
                 # an uploaded SVG could carry script: never let it run on this origin (it would read the token)
                 self.reply(200, team.LOGO_TYPES[logo.suffix[1:]], logo.read_bytes(),
                            {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox", "X-Content-Type-Options": "nosniff"})
             elif urlparse(self.path).path in ("/sprites", "/sprites/"):  # the sprite lab (sprites/README.md)
-                self.reply(200, "text/html; charset=utf-8", (WEB / "sprites.html").read_bytes())
+                self.reply(200, "text/html; charset=utf-8", (WEB / "sprites.html").read_bytes(),
+                           {"Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"})
             elif urlparse(self.path).path == "/sw.js":  # service worker: served from the root so it may show notifications for the page
                 self.reply(200, TYPES[".js"], (WEB / "sw.js").read_bytes())
             elif (static := static_files().get(urlparse(self.path).path)) is not None:
@@ -360,7 +380,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             self.send_response(code)
             self.send_header("Content-Type", kind)
             self.send_header("Cache-Control", "no-store")
-            for key, value in (headers or {}).items():
+            for key, value in {**BASE_HEADERS, **(headers or {})}.items():
                 self.send_header(key, value)
             self.end_headers()
             self.wfile.write(body)

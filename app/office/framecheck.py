@@ -4,7 +4,9 @@ the page is returned. Token-protected (routes.py), so another website cannot mak
 
 from __future__ import annotations
 
+import ipaddress
 import re
+import socket
 import time
 import urllib.error
 import urllib.parse
@@ -27,16 +29,39 @@ def verdict(headers: Any) -> tuple[bool, str]:
     return True, ""
 
 
+def public_host(host: str) -> bool:
+    """True when every address the name resolves to is on the internet: this server never probes this machine, the
+    internal network nor the cloud metadata address (169.254.169.254) for a page."""
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except (OSError, UnicodeError):
+        return False
+    return bool(infos) and all(ipaddress.ip_address(i[4][0].split("%")[0]).is_global for i in infos)
+
+
+class _PublicRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> Any:
+        target = urllib.parse.urlparse(newurl)
+        if target.scheme not in ("http", "https") or not public_host(target.hostname or ""):
+            raise urllib.error.URLError("redirection vers une adresse interne refusée")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_opener = urllib.request.build_opener(_PublicRedirects)
+
+
 def check(url: str) -> dict[str, Any]:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return {"embeddable": False, "reason": "adresse invalide"}
+    if not public_host(parsed.hostname or ""):  # not fetched: the frame tries it, the page offers a real tab
+        return {"embeddable": None, "reason": "adresse locale ou interne : non vérifiée", "final": url}
     hit = _cache.get(url)
     if hit and time.time() - hit[0] < 600:
         return hit[1]
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AgentOffice", "Accept": "text/html"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with _opener.open(req, timeout=TIMEOUT) as r:
             ok, why = verdict(r.headers)
             out = {"embeddable": ok, "reason": why, "final": r.geturl()}
     except urllib.error.HTTPError as err:

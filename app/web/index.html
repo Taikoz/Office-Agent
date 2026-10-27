@@ -215,8 +215,20 @@
   </div>
   <div class="stand"></div><div class="foot"></div>
 </div>
-<script>const DEMO = new URLSearchParams(location.search).has("demo"), TOKEN = "__OFFICE_TOKEN__", OFFICE_CFG = __OFFICE_CFG__;</script>
-<script>
+<script nonce="__OFFICE_NONCE__">const DEMO = new URLSearchParams(location.search).has("demo"), TOKEN = "__OFFICE_TOKEN__", OFFICE_CFG = __OFFICE_CFG__;
+// every read of this server's /api/ carries the page's token (routes.py refuses the others); never sent to another site
+(function () {
+  const send = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const url = new URL(typeof input === "string" ? input : input.url, location.href);
+    if (url.origin !== location.origin || !url.pathname.startsWith("/api/")) return send(input, init);
+    const headers = new Headers(init.headers || (typeof input === "string" ? undefined : input.headers));
+    if (!headers.has("X-Office-Token")) headers.set("X-Office-Token", TOKEN);
+    return send(input, { ...init, headers });
+  };
+})();
+</script>
+<script nonce="__OFFICE_NONCE__">
 // progress saved in ~/.claude/agent-office/save.json (office/savegame.py): restored before the game reads its storage, when newer
 (function () {
   const saved = __OFFICE_SAVE__;

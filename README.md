@@ -258,6 +258,7 @@ Sans configuration, tout marche avec les valeurs par défaut. Pour personnaliser
 | `deploy_ref` | Branche lue | branche par défaut |
 | `deploy_projects` | `{"<app>": "<projet GitLab>"}` quand le chemin de l'image ne dit pas quel projet la construit | `{}` |
 | `deliveries_days` | Jours de MR mergées suivis (1 à 60) | `14` |
+| `network` | `{"enabled": true}` autorise ChiefOS → Réseau (bureau ouvert sur le réseau interne, découverte des autres bureaux) ; sinon le serveur refuse de l'ouvrir et n'écoute rien sur le réseau | `{"enabled": false}` |
 | `to_verify_regex` | Commande qui compte comme « ticket passé en To Verify » | `yt.py command … to verify` |
 
 
@@ -304,6 +305,11 @@ python3 -I ~/.claude/agent-office/office.py stop     # arrête le serveur
 - **Pas de lancement en arrière-plan** : un agent lancé depuis le bureau s'ouvre dans un terminal interactif, et tu valides toi-même chaque permission, comme d'habitude.
 - **Coûts estimés** : ce sont des équivalents API, à titre indicatif.
 - **Terminal et fichiers** : le terminal intégré, l'éditeur de skills et la planification passent par des routes protégées par le jeton, n'acceptent que des dossiers de ton dossier personnel, et l'éditeur ne touche qu'aux fichiers `skills/<nom>/SKILL.md`, `agents/<nom>.md` et `commands/<nom>.md` des `.claude` connus. Le serveur vérifie aussi l'en-tête `Host` (protection contre le DNS rebinding).
+- **Toutes les lectures protégées** : chaque route `/api/` (transcripts, MR, mémoire, recherche…) exige le jeton de la page, sauf `/api/viewer` (version et inactivité, pour le plugin).
+- **Page cloisonnée** : Content-Security-Policy stricte (seuls les scripts du bureau s'exécutent, jamais un titre de MR, un log ou un message), aucune page tierce ne peut l'afficher dans un cadre ni charger ses réponses ; le navigateur intégré n'affiche jamais le bureau lui-même dans un cadre.
+- **Fichiers privés** : `~/.claude/agent-office/` en 0700, tout ce qu'il contient en 0600 (y compris ce qu'avait laissé une version précédente).
+- **Pas de sonde du réseau interne** : la vérification des cadres du navigateur ne contacte que des adresses publiques (jamais cette machine, le réseau interne ni 169.254.169.254, redirections comprises).
+- **Grafana** : la session qui pilote Chrome ne reçoit que le service, l'environnement, la version et l'heure de l'erreur, jamais son message ni sa route, que n'importe qui peut écrire. Restreins aussi l'extension Claude in Chrome à ton Grafana (autorisations par site).
 
 ### Windows et macOS
 

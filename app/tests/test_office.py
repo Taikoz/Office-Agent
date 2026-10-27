@@ -469,6 +469,10 @@ class FrameCheckTests(unittest.TestCase):
         self.assertEqual(framecheck.verdict(h(Content_Security_Policy="default-src 'self'; frame-ancestors 'self'"))[0], False)
         self.assertEqual(framecheck.verdict(h(Content_Security_Policy="frame-ancestors *"))[0], True)
         self.assertEqual(framecheck.check("file:///etc/passwd")["embeddable"], False)
+        for inside in ("http://127.0.0.1:8765/api/state", "http://localhost/", "http://169.254.169.254/latest/meta-data/", "http://10.0.0.1/", "http://[::1]/"):
+            with mock.patch.object(framecheck.urllib.request, "urlopen", side_effect=AssertionError("fetched")), \
+                 mock.patch.object(framecheck._opener, "open", side_effect=AssertionError("fetched")):
+                self.assertIsNone(framecheck.check(inside)["embeddable"], inside)  # never fetched by the server
 
 
 class BlueprintTests(unittest.TestCase):
@@ -599,9 +603,29 @@ class HostCheckTests(unittest.TestCase):
             self.assertEqual(c.getresponse().status, 403)
             c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
             c.request("GET", "/api/viewer")
-            self.assertEqual(c.getresponse().status, 200)
+            r = c.getresponse()
+            self.assertEqual(r.status, 200)
+            self.assertNotIn("root", json.loads(r.read()))  # no path of this machine to an unauthenticated reader
+            for path in ("/api/state", "/api/agent?s=x&a=y", "/api/gitlab/mrs", "/api/mmx", "/api/search?q=token", "/api/answers"):
+                c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                c.request("GET", path)  # every read of the transcripts, MRs, memory needs the page's token
+                r = c.getresponse()
+                self.assertEqual(r.status, 403, path)
+                self.assertEqual((r.getheader("X-Content-Type-Options"), r.getheader("Cross-Origin-Resource-Policy"), r.getheader("X-Frame-Options")),
+                                 ("nosniff", "same-origin", "SAMEORIGIN"))
         finally:
             srv.shutdown()
+
+    def test_page_csp_has_a_fresh_nonce(self) -> None:
+        a, b = routes.page_csp("n1"), routes.page_csp("n2")
+        self.assertIn("script-src 'self' 'nonce-n1' 'unsafe-eval'", a)
+        self.assertNotIn("'unsafe-inline'", a.split("script-src")[1].split(";")[0])
+        for part in ("object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'self'"):
+            self.assertIn(part, a)
+        self.assertNotEqual(a, b)
+        html = (config.WEB / "index.html").read_text()
+        self.assertEqual(html.count("<script nonce=\"__OFFICE_NONCE__\">"), html.count("<script>") + html.count("<script nonce="))
+        self.assertNotIn("http:", a.split("connect-src")[1].split(";")[0])  # the internal network is off by default: no plain-http connection
 
 
 class PlatformTests(unittest.TestCase):
