@@ -1,0 +1,337 @@
+  /* ChiefOS, the default look (#chiefos.aos, chiefos.js): the design system of Agent Office's desktop.
+     Ink-blue surfaces, one amber accent (the office's own --accent), status colours that mean the same in every app.
+     The themes (HOLO, Grimoire, Crypte, Galion, Zen, Tropical: 06-chiefos.css) keep their own look: everything here is
+     under .aos. The colour tokens keep the --ub-* names the apps already read, so an app styled with them follows. */
+
+  /* ---------- tokens ---------- */
+  #chiefos.aos {
+    /* surfaces, from the deepest to the highest */
+    --os-wall: #0b1020; --os-sunk: #0e1426; --ub-bg: #131a2e; --ub-head: #172036; --ub-card: #1b2440; --os-raise: #222c4c; --os-hover: #ffffff0d; --os-press: #ffffff17;
+    --ub-line: #27314f; --os-line-2: #34406a;
+    /* text */
+    --ub-text: #eef1f8; --ub-dim: #9aa4c2; --os-faint: #6d7898;
+    /* the accent: amber, with its dark ink for text on it */
+    --ub-orange: #f5a524; --os-accent-2: #ffb84a; --os-on-accent: #1d1404; --os-accent-soft: color-mix(in srgb, var(--ub-orange) 14%, transparent);
+    /* status */
+    --os-ok: #3ccf8e; --os-warn: #f5b13d; --os-bad: #ff6369; --os-info: #5aa9ff; --os-off: #8b93ad;
+    --cv-ok: var(--os-ok); --cv-warn: var(--os-warn); --cv-bad: var(--os-bad); --cv-run: var(--os-info); --cv-off: var(--os-off);
+    /* type */
+    --os-font: "Inter", "Ubuntu", system-ui, sans-serif; --os-mono: "JetBrains Mono", "Ubuntu Mono", ui-monospace, monospace;
+    --fs-xs: 11.5px; --fs-sm: 12.5px; --fs-md: 14px; --fs-lg: 16px; --fs-xl: 20px; --fs-2xl: 28px;
+    /* space, radius, shadow, motion */
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+    --r-xs: 6px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-full: 999px;
+    --sh-1: 0 1px 2px #0005; --sh-2: 0 6px 20px #0007; --sh-3: 0 28px 80px #000b, 0 0 0 1px #ffffff0f;
+    --ease: cubic-bezier(.2, .8, .2, 1); --t-fast: .12s; --t-med: .2s;
+    --ctl-h: 32px;
+    font: 400 var(--fs-md)/1.5 var(--os-font); letter-spacing: -.005em; color: var(--ub-text);
+    -webkit-font-smoothing: antialiased;
+    border-radius: var(--r-lg); box-shadow: var(--sh-3);
+    /* the wallpaper: deep ink, a warm glow in a corner, the faint pixel grid of the office */
+    background:
+      radial-gradient(60% 70% at 100% 100%, #f5a52430, transparent 60%),
+      radial-gradient(50% 60% at 0% 0%, #3e6df522, transparent 60%),
+      repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, #ffffff05 0 1px, transparent 1px 24px),
+      var(--os-wall);
+    animation: aosin var(--t-med) var(--ease);
+  }
+  @keyframes aosin { from { opacity: 0; transform: translateY(6px) scale(.99); } }
+  #chiefos.aos ::selection { background: color-mix(in srgb, var(--ub-orange) 40%, transparent); }
+  #chiefos.aos :focus-visible { outline: 2px solid var(--ub-orange); outline-offset: 2px; }
+  #chiefos.aos * { scrollbar-width: thin; scrollbar-color: var(--os-line-2) transparent; }
+
+  /* ---------- top bar: Activités · the clock · Quitter ---------- */
+  #chiefos.aos .ubtop { height: 38px; padding: 0 var(--sp-2); gap: var(--sp-3); background: #070b16cc; border-bottom: 1px solid #ffffff0d; font-size: var(--fs-sm); font-weight: 500; }
+  #chiefos.aos .ubact { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; color: var(--ub-text); border-radius: var(--r-full); transition: background var(--t-fast); }
+  #chiefos.aos .ubact::before { content: ""; width: 12px; height: 12px; background:
+      radial-gradient(circle, currentColor 1.6px, transparent 2px) 0 0 / 6px 6px; opacity: .9; }
+  #chiefos.aos .ubact:hover { background: var(--os-hover); } #chiefos.aos .ubact.on { background: var(--os-accent-soft); color: var(--os-accent-2); }
+  #chiefos.aos .ubtitle { visibility: hidden; }  /* the window says where you are */
+  #chiefos.aos .ubclock { color: var(--ub-dim); font-variant-numeric: tabular-nums; }
+  #chiefos.aos .ubsys button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; color: var(--ub-dim); border-radius: var(--r-full); font-size: var(--fs-sm); transition: background var(--t-fast), color var(--t-fast); }
+  #chiefos.aos .ubsys button:hover { color: var(--ub-text); background: color-mix(in srgb, var(--os-bad) 22%, transparent); }
+  #chiefos:not(.aos) .ublabel { display: none; }  /* the themes keep their icon-only dock */
+
+  /* ---------- the dock: a sidebar of labelled folders and apps ---------- */
+  #chiefos.aos .ubdesk { gap: var(--sp-3); padding: var(--sp-3); }
+  #chiefos.aos .ubdock { align-items: stretch; gap: 2px; width: 196px; padding: var(--sp-2); background: #0a0f1ecc; border: 1px solid #ffffff0d; border-radius: var(--r-md); backdrop-filter: blur(10px); }
+  #chiefos.aos .ubdock button { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 8px 0 5px; color: var(--ub-dim);
+    font-size: var(--fs-md); font-weight: 500; text-align: left; border-radius: var(--r-sm); transition: background var(--t-fast), color var(--t-fast); }
+  #chiefos.aos .ubdock button .ic { width: 30px; height: 30px; margin: 0; font-size: 16px; border-radius: 8px; }
+  #chiefos.aos .ubdock .ublabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chiefos.aos .ubdock button:hover { color: var(--ub-text); background: var(--os-hover); }
+  #chiefos.aos .ubdock button.on { color: var(--ub-text); background: var(--os-press); }
+  #chiefos.aos .ubdock button.on::before { left: -8px; top: 9px; width: 3px; height: 22px; margin: 0; border-radius: 0 3px 3px 0; background: var(--ub-orange); }
+  #chiefos.aos .ubdock button.running { opacity: 1; font-style: italic; }
+  #chiefos.aos .ubdock .osbadge { position: static; }
+  #chiefos.aos .ubdock .ubshow { grid-template-columns: 30px 1fr; letter-spacing: normal; font-size: var(--fs-sm); color: var(--ub-dim); border-top: 1px solid var(--ub-line); border-radius: 0 0 var(--r-sm) var(--r-sm); padding-top: 2px; }
+  #chiefos.aos .ubdock .ubshow { font-size: 0; }  /* the ⋮⋮⋮ glyph gives way to a drawn grid */
+  #chiefos.aos .ubdock .ubshow::after { content: ""; grid-column: 1; grid-row: 1; justify-self: center; width: 14px; height: 14px; background: radial-gradient(circle, currentColor 1.8px, transparent 2.2px) 0 0 / 7px 7px; }
+  #chiefos.aos .ubdock .ubshow .ublabel { grid-column: 2; grid-row: 1; font-size: var(--fs-sm); }
+  #chiefos.aos .ubrun { width: auto; margin: 6px 8px; background: var(--ub-line); }
+
+  /* icons: one tinted tile, the emoji on it */
+  #chiefos.aos .ubdock button .ic, #chiefos.aos .ubgrid .ic, #chiefos.aos .ubappic {
+    background: linear-gradient(155deg, color-mix(in srgb, var(--tint) 92%, #fff 8%), color-mix(in srgb, var(--tint) 78%, #000 22%));
+    box-shadow: inset 0 1px 0 #ffffff38, inset 0 -1px 0 #0003, var(--sh-1); }
+
+  /* the badge: a count that needs you */
+  #chiefos.aos .osbadge { min-width: 20px; padding: 0 6px; font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; color: #fff; background: var(--os-bad); border-radius: var(--r-full); box-shadow: none; font-variant-numeric: tabular-nums; }
+
+  /* ---------- the window ---------- */
+  #chiefos.aos .ubwin { background: var(--ub-bg); border-radius: var(--r-md); box-shadow: var(--sh-2), 0 0 0 1px #ffffff12; }
+  #chiefos.aos .ubwin.enter { animation: aoswin var(--t-med) var(--ease); }
+  @keyframes aoswin { from { opacity: 0; transform: translateY(4px); } }
+  #chiefos.aos .ubhead { height: 48px; padding: 0 var(--sp-2) 0 var(--sp-3); gap: var(--sp-3); background: var(--ub-head); border-bottom: 1px solid var(--ub-line); }
+  #chiefos.aos .ubhead b { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-lg); font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #chiefos.aos .ubcrumb { color: var(--ub-dim); font-weight: 500; } #chiefos.aos .ubcrumb::after { content: "›"; margin-left: 8px; color: var(--os-faint); }
+  #chiefos.aos .ubappic { width: 28px; height: 28px; font-size: 15px; border-radius: 8px; }
+  #chiefos.aos .ubctl { gap: 4px; }
+  #chiefos.aos .ubctl button { width: 32px; height: 32px; color: var(--ub-dim); background: transparent; border-radius: var(--r-sm); font-size: 15px; line-height: 32px; transition: background var(--t-fast), color var(--t-fast); }
+  #chiefos.aos .ubctl button:hover { color: var(--ub-text); background: var(--os-press); }
+  #chiefos.aos .ubctl .x:hover { color: #fff; background: var(--os-bad); }
+
+  /* the folder's apps, as tabs under the title */
+  #chiefos.aos .ubtabs { gap: var(--sp-1); padding: 0 var(--sp-3); background: var(--ub-head); border-bottom: 1px solid var(--ub-line); }
+  #chiefos.aos .ubtabs button { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; color: var(--ub-dim); font-size: var(--fs-sm); font-weight: 500; border: 0; border-radius: 0;
+    box-shadow: inset 0 -2px 0 transparent; transition: color var(--t-fast), box-shadow var(--t-fast); }
+  #chiefos.aos .ubtabs button:hover { color: var(--ub-text); background: transparent; box-shadow: inset 0 -2px 0 var(--os-line-2); }
+  #chiefos.aos .ubtabs button.on { color: var(--ub-text); background: transparent; font-weight: 600; box-shadow: inset 0 -2px 0 var(--ub-orange); }
+  #chiefos.aos .ubtabs .osbadge { margin-left: 2px; vertical-align: 0; }
+
+  /* ---------- the app's page: type and the shared components ---------- */
+  #chiefos.aos .osapp { padding: var(--sp-5) var(--sp-5) var(--sp-6); }
+  #chiefos.aos .osapp p { max-width: 90ch; }  /* the page uses the whole window; a paragraph stays readable */
+  #chiefos.aos .osapp h4 { margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .07em; color: var(--ub-dim); }
+  #chiefos.aos .osapp > h4:first-child { margin-top: 0; }
+  #chiefos.aos .osapp p { margin: var(--sp-2) 0; line-height: 1.55; }
+  #chiefos.aos .muted { color: var(--ub-dim); }
+  #chiefos.aos .osapp details > summary { cursor: pointer; padding: 6px 0; color: var(--ub-dim); font-weight: 500; }
+  #chiefos.aos .osapp details > summary:hover { color: var(--ub-text); }
+  #chiefos.aos a { color: var(--os-accent-2); text-underline-offset: 2px; } #chiefos.aos a:hover { color: #ffd08a; }
+  #chiefos.aos code { padding: 1px 6px; font: 500 .92em var(--os-mono); color: var(--ub-text); background: var(--os-sunk); border: 1px solid var(--ub-line); border-radius: var(--r-xs); }
+  #chiefos.aos pre.md, #chiefos.aos pre.glcode, #chiefos.aos .gldiff { font-family: var(--os-mono); font-size: 12.5px; color: var(--ub-text); background: var(--os-sunk); border: 1px solid var(--ub-line); border-radius: var(--r-sm); }
+
+  /* rows: one item per line, its name · what it is · its actions */
+  #chiefos.aos .osrow { grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) fit-content(45%); gap: var(--sp-4); min-height: 48px; padding: 10px var(--sp-4); margin: 0 0 6px; background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-sm) !important;
+    transition: border-color var(--t-fast), background var(--t-fast); }
+  #chiefos.aos .osrow:hover { border-color: var(--os-line-2); }
+  #chiefos.aos .osrow b { font-weight: 600; }
+  #chiefos.aos .osrow > span:last-child:not(:first-child) { justify-self: end; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  #chiefos.aos .osrow small { color: var(--ub-dim); }
+
+  /* buttons: secondary by default; primary (amber) for the one action of a screen; danger for what removes */
+  #chiefos.aos .osrow button, #chiefos.aos .osacts button, #chiefos.aos .dlbtn, #chiefos.aos .glbtn, #chiefos.aos .cvacts button, #chiefos.aos .qbtns button, #chiefos.aos .cvbar button, #chiefos.aos .glbar button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--ctl-h); padding: 0 14px; color: var(--ub-text); font: 500 var(--fs-sm)/1 var(--os-font);
+    background: var(--os-raise); border: 1px solid var(--os-line-2); border-radius: var(--r-sm); cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast), color var(--t-fast); }
+  #chiefos.aos .osrow button:hover:not([disabled]), #chiefos.aos .osacts button:hover:not([disabled]), #chiefos.aos .dlbtn:hover:not(:disabled), #chiefos.aos .glbtn:hover,
+  #chiefos.aos .cvacts button:hover, #chiefos.aos .qbtns button:hover, #chiefos.aos .cvbar button:hover, #chiefos.aos .glbar button:hover { background: color-mix(in srgb, var(--os-raise) 80%, #fff 8%); border-color: #4a5784; color: var(--ub-text); }
+  #chiefos.aos .osrow button:active:not([disabled]), #chiefos.aos .osacts button:active:not([disabled]), #chiefos.aos .dlbtn:active, #chiefos.aos .cvacts button:active { transform: translateY(1px); }
+  /* primary */
+  #chiefos.aos .ubok, #chiefos.aos .osrow button[data-recruit], #chiefos.aos .osrow button[data-os-q], #chiefos.aos [data-plan="go"], #chiefos.aos [data-copy-debrief], #chiefos.aos [data-week="copy"], #chiefos.aos .primary {
+    color: var(--os-on-accent) !important; background: var(--ub-orange) !important; border-color: var(--ub-orange) !important; font-weight: 600 !important; }
+  #chiefos.aos .ubok:hover:not([disabled]), #chiefos.aos .osrow button[data-recruit]:hover, #chiefos.aos .osrow button[data-os-q]:hover, #chiefos.aos [data-plan="go"]:hover, #chiefos.aos [data-copy-debrief]:hover,
+  #chiefos.aos [data-week="copy"]:hover, #chiefos.aos .primary:hover { background: var(--os-accent-2) !important; border-color: var(--os-accent-2) !important; }
+  /* danger: removes or forgets something */
+  #chiefos.aos [data-gl="forget"], #chiefos.aos [data-se="forget"], #chiefos.aos [data-sl="forget"], #chiefos.aos [data-nf="clear"], #chiefos.aos [data-bp="del"], #chiefos.aos .danger {
+    color: var(--os-bad) !important; background: color-mix(in srgb, var(--os-bad) 10%, transparent) !important; border-color: color-mix(in srgb, var(--os-bad) 45%, transparent) !important; }
+  #chiefos.aos [data-gl="forget"]:hover, #chiefos.aos [data-se="forget"]:hover, #chiefos.aos [data-sl="forget"]:hover, #chiefos.aos [data-nf="clear"]:hover, #chiefos.aos [data-bp="del"]:hover, #chiefos.aos .danger:hover,
+  #chiefos.aos .dlbtn.erconfirm { color: #fff !important; background: var(--os-bad) !important; border-color: var(--os-bad) !important; }
+  #chiefos.aos button[disabled], #chiefos.aos .dlbtn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  /* a choice among a few (Simple / Avancé, the quality, the theme): one segmented control */
+  #chiefos.aos .osrow .qbtns { overflow: visible; justify-self: start; max-width: 100%; }
+  #chiefos.aos .qbtns { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--os-sunk); border: 1px solid var(--ub-line); border-radius: calc(var(--r-sm) + 3px); }
+  #chiefos.aos .qbtns button { min-height: 28px; padding: 0 12px; color: var(--ub-dim); background: transparent; border-color: transparent; }
+  #chiefos.aos .qbtns button:hover { background: var(--os-hover); border-color: transparent; }
+  #chiefos.aos .qbtns button.on { color: var(--ub-text); background: var(--os-raise); border-color: var(--os-line-2); box-shadow: var(--sh-1); }
+
+  /* fields */
+  #chiefos.aos select, #chiefos.aos input:not([type=checkbox]):not([type=radio]):not([type=range]):not(.ubfname), #chiefos.aos textarea {
+    min-height: var(--ctl-h); padding: 0 10px; color: var(--ub-text); font: 400 var(--fs-md) var(--os-font); background: var(--os-sunk); border: 1px solid var(--os-line-2); border-radius: var(--r-sm);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast); }
+  #chiefos.aos textarea { padding: 8px 10px; line-height: 1.5; }
+  #chiefos.aos select:hover, #chiefos.aos input:not([type=checkbox]):not(.ubfname):hover, #chiefos.aos textarea:hover { border-color: #4a5784; }
+  #chiefos.aos select:focus, #chiefos.aos input:not([type=checkbox]):not(.ubfname):focus, #chiefos.aos textarea:focus { outline: none; border-color: var(--ub-orange); box-shadow: 0 0 0 3px var(--os-accent-soft); }
+  #chiefos.aos input::placeholder, #chiefos.aos textarea::placeholder { color: var(--os-faint); }
+  #chiefos.aos input[type=checkbox], #chiefos.aos input[type=radio] { width: 16px; height: 16px; accent-color: var(--ub-orange); }
+
+  /* statuses */
+  #chiefos.aos .s-blocked { color: var(--os-bad); font-weight: 500; }
+
+  /* counters: the number first, what it counts under it */
+  #chiefos.aos .rstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+  #chiefos.aos .rstats div { flex: 1 1 140px; padding: var(--sp-3) var(--sp-4); font-size: var(--fs-sm); background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-md); }
+  #chiefos.aos .rstats b { margin: 0 0 2px; font-size: var(--fs-2xl); font-weight: 600; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+  /* plain lists (the report): one line each, on a card */
+  #chiefos.aos .osapp ul:not([class]) { margin: 0 0 6px; padding: 4px 0; list-style: none; background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-sm); }
+  #chiefos.aos .osapp ul:not([class]) > li { padding: 8px var(--sp-4); border-top: 1px solid var(--ub-line); } #chiefos.aos .osapp ul:not([class]) > li:first-child { border-top: 0; }
+
+  /* list + detail (Skills, Leçons, MMX…) */
+  #chiefos.aos .oslist { gap: 2px; padding: var(--sp-1); background: var(--os-sunk); border: 1px solid var(--ub-line); border-radius: var(--r-md); }
+  #chiefos.aos .oslist button { padding: 8px 10px; border-radius: var(--r-sm); transition: background var(--t-fast); }
+  #chiefos.aos .oslist button:hover { background: var(--os-hover); }
+  #chiefos.aos .oslist button.on { color: var(--ub-text); background: var(--os-accent-soft); box-shadow: inset 3px 0 0 var(--ub-orange); }
+  #chiefos.aos .pbar { background: var(--os-sunk); }
+  #chiefos.aos .weekbars { background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-md); }
+  #chiefos.aos .weekbars i { background: var(--os-line-2); }
+
+  /* empty states: say it is fine, or what to do */
+  #chiefos.aos .osempty, #chiefos.aos .dlempty, #chiefos.aos .glempty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--sp-6) var(--sp-4); text-align: center; color: var(--ub-dim);
+    background: transparent; border: 1px dashed var(--os-line-2); border-radius: var(--r-md); }
+  #chiefos.aos .osemptyic { font-size: 34px; line-height: 1; margin-bottom: 4px; }
+  #chiefos.aos .dlempty b { color: var(--ub-text); font-size: var(--fs-lg); font-weight: 600; }
+  /* an error: what went wrong, why, how to fix it */
+  #chiefos.aos .oserror { display: flex; flex-direction: column; gap: 4px; padding: var(--sp-4); background: color-mix(in srgb, var(--os-bad) 8%, var(--ub-card)); border: 1px solid color-mix(in srgb, var(--os-bad) 40%, transparent);
+    border-left: 3px solid var(--os-bad); border-radius: var(--r-md); }
+  #chiefos.aos .oserror b { color: var(--os-bad); font-weight: 600; } #chiefos.aos .oserror small { color: var(--ub-dim); }
+  #chiefos.aos .osempty b { color: var(--ub-text); font-size: var(--fs-lg); font-weight: 600; }
+  #chiefos.aos .osempty .osacts { justify-content: center; margin-top: var(--sp-2); }
+
+  /* loading: a quiet spinner before the text */
+  #chiefos.aos .osloading { display: flex; align-items: center; gap: 10px; }
+  #chiefos.aos .dlempty.osloading { flex-direction: row; justify-content: center; }
+  #chiefos.aos .osloading::before { content: ""; flex: none; width: 14px; height: 14px; border: 2px solid var(--os-line-2); border-top-color: var(--ub-orange); border-radius: 50%; animation: aosspin .8s linear infinite; }
+  @keyframes aosspin { to { transform: rotate(360deg); } }
+
+  /* ---------- Activités: search, folders, apps ---------- */
+  #chiefos.aos .ubover { gap: var(--sp-5); padding: var(--sp-6) var(--sp-5); }
+  #chiefos.aos .ubover.enter { animation: aosfade var(--t-med) var(--ease); }
+  @keyframes aosfade { from { opacity: 0; transform: scale(.985); } }
+  #chiefos.aos .ubsearch { width: min(440px, 92%); min-height: 42px !important; padding: 0 18px !important; font-size: var(--fs-md) !important; text-align: left; background: #0a0f1ee6 !important;
+    border: 1px solid var(--os-line-2) !important; border-radius: var(--r-full) !important; box-shadow: var(--sh-2); }
+  #chiefos.aos .ubgrid { grid-template-columns: repeat(auto-fill, 116px); gap: var(--sp-4) var(--sp-2); max-width: 1000px; }
+  #chiefos.aos .ubgrid button { gap: 10px; padding: 14px 6px 10px; border-radius: var(--r-md); transition: background var(--t-fast), transform var(--t-fast); }
+  #chiefos.aos .ubgrid button:hover { background: var(--os-hover); transform: translateY(-2px); }
+  #chiefos.aos .ubgrid .ic { width: 60px; height: 60px; font-size: 30px; border-radius: 16px; }
+  #chiefos.aos .ubgrid small { font-size: var(--fs-sm); font-weight: 500; line-height: 1.3; text-shadow: none; }
+  #chiefos.aos .ubgrid .osbadge { position: absolute; right: 22px; top: 8px; }
+  #chiefos.aos .ubhint { max-width: 640px; text-align: center; font-size: var(--fs-sm); color: var(--ub-dim); text-shadow: none; }
+  #chiefos.aos .ubhint button { padding: 0; color: var(--os-accent-2); background: none; border: 0; text-decoration: underline; cursor: pointer; }
+  #chiefos.aos .ubfolderbg { background: #050812b3; backdrop-filter: blur(10px); }
+  #chiefos.aos .ubfolder { padding: var(--sp-5); border-radius: 24px; background: #151d35f2; box-shadow: var(--sh-3); }
+  #chiefos.aos input.ubfname { font-size: var(--fs-xl); font-weight: 600; text-shadow: none; }
+  #chiefos.aos input.ubfname:hover, #chiefos.aos input.ubfname:focus { background: var(--os-hover); }
+
+  /* the right-click menu */
+  #chiefos.aos .ubmenu { min-width: 210px; padding: 6px; background: #1a2340f5; border: 1px solid var(--os-line-2); border-radius: var(--r-md); box-shadow: var(--sh-2); backdrop-filter: blur(12px); }
+  #chiefos.aos .ubmenu.fresh { animation: aosmenu var(--t-fast) var(--ease); transform-origin: top left; }
+  @keyframes aosmenu { from { opacity: 0; transform: scale(.96); } }
+  #chiefos.aos .ubmtitle { padding: 6px 10px 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--ub-dim); border-bottom-color: var(--ub-line); }
+  #chiefos.aos .ubmenu button { height: 32px; padding: 0 10px; font-size: var(--fs-md); border-radius: var(--r-xs); }
+  #chiefos.aos .ubmenu button:hover, #chiefos.aos .ubmenu button:focus-visible { background: var(--os-accent-soft); color: var(--os-accent-2); outline: none; }
+  #chiefos.aos .ubmenu button[data-menu="unfold"] { color: var(--os-bad); }
+
+  /* ---------- the apps, on the same system ---------- */
+  /* counters that open their detail: ☀️ Aujourd'hui, 🧭 Vue d'ensemble */
+  #chiefos.aos .tdcards, #chiefos.aos .cvtiles { gap: var(--sp-3); margin-bottom: var(--sp-5); }
+  #chiefos.aos .tdcard, #chiefos.aos .cvtile { --c: var(--os-off); position: relative; gap: 4px; padding: var(--sp-4); background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-md);
+    border-top: 1px solid var(--ub-line); overflow: hidden; transition: border-color var(--t-fast), transform var(--t-fast), background var(--t-fast); filter: none !important; }
+  #chiefos.aos .tdcard::before, #chiefos.aos .cvtile::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--c); }
+  #chiefos.aos .tdcard:hover, #chiefos.aos .cvtile:hover { border-color: color-mix(in srgb, var(--c) 55%, var(--ub-line)); background: color-mix(in srgb, var(--c) 6%, var(--ub-card)); transform: translateY(-2px); }
+  #chiefos.aos .tdcard b, #chiefos.aos .cvtile b { font-size: 32px; font-weight: 600; line-height: 1.05; letter-spacing: -.02em; color: var(--c); font-variant-numeric: tabular-nums; }
+  #chiefos.aos .tdcard span, #chiefos.aos .cvtile span { color: var(--ub-text); font-weight: 600; opacity: 1; }
+  #chiefos.aos .tdcard small, #chiefos.aos .cvtile small { color: var(--ub-dim); font-size: var(--fs-sm); }
+  #chiefos.aos .tdcard.bad, #chiefos.aos .cvtile.bad { --c: var(--os-bad); } #chiefos.aos .tdcard.warn, #chiefos.aos .cvtile.warn { --c: var(--os-warn); }
+  #chiefos.aos .tdcard.ok, #chiefos.aos .cvtile.ok { --c: var(--os-ok); } #chiefos.aos .tdcard.run { --c: var(--os-info); }
+  #chiefos.aos .tdhello { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--sp-4); }
+  #chiefos.aos .tdhello b { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.01em; }
+  #chiefos.aos .tdcard[disabled] { opacity: 1; cursor: default; transform: none; }
+  /* one line that says all is well, or that there is nothing (yet) */
+  #chiefos.aos .osfine, #chiefos.aos .osnone { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 12px var(--sp-4); border-radius: var(--r-sm); }
+  #chiefos.aos .osfine { color: var(--ub-text); background: color-mix(in srgb, var(--os-ok) 9%, transparent); border: 1px solid color-mix(in srgb, var(--os-ok) 28%, transparent); }
+  #chiefos.aos .osnone { color: var(--ub-dim); border: 1px dashed var(--ub-line); }
+  /* 🧭 the things to do */
+  #chiefos.aos .cvbar { margin-bottom: var(--sp-4); }
+  #chiefos.aos .cvtodo { gap: var(--sp-3); padding: 10px var(--sp-3) 10px var(--sp-3); background: var(--ub-card); border: 1px solid var(--ub-line); border-left: 3px solid var(--c); border-radius: var(--r-sm); transition: border-color var(--t-fast); }
+  #chiefos.aos .cvtodo:hover { border-color: var(--os-line-2); border-left-color: var(--c); }
+  #chiefos.aos .cvic { display: grid; place-items: center; width: 34px; height: 34px; font-size: 17px; background: color-mix(in srgb, var(--c) 14%, transparent); border-radius: var(--r-sm); }
+  #chiefos.aos .cvtt b, #chiefos.aos .cvmrt b { font-weight: 600; }
+  #chiefos.aos .cvtt small, #chiefos.aos .cvmrt small { font-size: var(--fs-sm); }
+  #chiefos.aos .cvacts .cvmain { color: #fff; background: var(--c); border-color: var(--c); font-weight: 600; }
+  #chiefos.aos .cvtodo.warn .cvacts .cvmain, #chiefos.aos .cvtodo.ok .cvacts .cvmain { color: #10130c; }
+  #chiefos.aos .cvacts .cvmain:hover { background: color-mix(in srgb, var(--c) 85%, #fff); border-color: transparent; color: inherit; }
+  #chiefos.aos .cvclear { display: flex; align-items: center; gap: 10px; padding: var(--sp-4); color: var(--ub-text); background: color-mix(in srgb, var(--os-ok) 10%, var(--ub-card)); border: 1px solid color-mix(in srgb, var(--os-ok) 35%, transparent); border-radius: var(--r-md); }
+  #chiefos.aos .cvcols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); } #chiefos.aos .cvcols > section { min-width: 0; }
+  #chiefos.aos .cvcols h4 { margin-top: var(--sp-2); }
+  #chiefos.aos .cvmr { min-width: 0; padding: var(--sp-3); background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-sm); filter: none !important; transition: border-color var(--t-fast), background var(--t-fast); }
+  #chiefos.aos .cvmr:hover { border-color: var(--os-line-2); background: color-mix(in srgb, var(--ub-card) 80%, var(--os-raise)); }
+  #chiefos.aos .cvchip { padding: 2px 8px; font-size: var(--fs-xs); font-weight: 500; line-height: 16px; }
+  /* 🦊 GitLab */
+  #chiefos.aos .glapp { --gl-line: var(--ub-line); }
+  #chiefos.aos .gltabs { gap: 0; margin: var(--sp-2) 0 var(--sp-4); }
+  #chiefos.aos .gltabs button { height: 40px; padding: 0 14px; font-size: var(--fs-sm); border: 0; box-shadow: inset 0 -2px 0 transparent; transition: color var(--t-fast), box-shadow var(--t-fast); }
+  #chiefos.aos .gltabs button:hover { box-shadow: inset 0 -2px 0 var(--os-line-2); }
+  #chiefos.aos .gltabs button.on { font-weight: 600; box-shadow: inset 0 -2px 0 var(--ub-orange); }
+  #chiefos.aos .glcount { padding: 0 7px; font-size: var(--fs-xs); background: var(--os-raise); }
+  #chiefos.aos .gllist, #chiefos.aos .glwidget, #chiefos.aos .glthread, #chiefos.aos .glfile { border-radius: var(--r-md); }
+  #chiefos.aos .gllist .glempty { border: 0; border-radius: 0; }
+  #chiefos.aos .glbar { gap: var(--sp-3); margin-bottom: var(--sp-3); } #chiefos.aos .glbar b { font-size: var(--fs-lg); font-weight: 600; }
+  #chiefos.aos .glmr { padding: var(--sp-3) var(--sp-4); background: var(--ub-card); transition: background var(--t-fast); }
+  #chiefos.aos .glmr:hover { background: color-mix(in srgb, var(--ub-card) 70%, var(--os-raise)); }
+  #chiefos.aos .glmain b { font-weight: 600; }
+  #chiefos.aos .glwhead, #chiefos.aos .glth, #chiefos.aos .glfh { background: var(--ub-head); }
+  #chiefos.aos .gldesc { background: var(--ub-card); border: 1px solid var(--ub-line); border-radius: var(--r-md); }
+  #chiefos.aos .glstages { background: var(--os-sunk); border: 1px solid var(--ub-line); border-radius: var(--r-md); }
+  #chiefos.aos .gljob { background: var(--ub-card); border-color: var(--os-line-2); }
+  #chiefos.aos .gllabel.scoped { background: var(--ub-card); }
+  #chiefos.aos .gltag { background: var(--os-raise); }
+  #chiefos.aos .glcheck, #chiefos.aos .glnote { border-color: var(--ub-line); }
+  /* 🚚 Livraisons, 🐞 Erreurs: their own tables, on the tokens */
+  #chiefos.aos .dl, #chiefos.aos .ermodal { --dl-ok: var(--os-ok); --dl-warn: var(--os-warn); --dl-fail: var(--os-bad); }
+  #chiefos.aos .dl { font-size: var(--fs-md); }
+  #chiefos.aos .dlkpi, #chiefos.aos .dlgrid, #chiefos.aos .dldet, #chiefos.aos .erproject { border-radius: var(--r-md); }
+  #chiefos.aos .dlkpi b { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+  #chiefos.aos .dlseg { padding: 3px; background: var(--os-sunk); border-radius: calc(var(--r-sm) + 3px); }
+  #chiefos.aos .dlseg button { min-height: 28px; border-radius: var(--r-xs); }
+  #chiefos.aos .dlseg button.on { background: var(--os-raise); box-shadow: var(--sh-1), inset 0 0 0 1px var(--os-line-2); }
+  #chiefos.aos .erenv { background: var(--os-sunk); border-radius: var(--r-sm); }
+  #chiefos.aos .ermodal { background: #050812b3; animation: aosfade var(--t-fast) var(--ease); }
+  #chiefos.aos .erpanel { padding: var(--sp-5); background: var(--ub-bg); border-color: var(--os-line-2); border-radius: var(--r-lg); box-shadow: var(--sh-3); }
+  #chiefos.aos .erform textarea { background: var(--os-sunk); border-color: var(--os-line-2); }
+
+  /* ⚙️ Réglages: its sections in a side list (settings.js) */
+  #chiefos.aos .setwrap { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
+  #chiefos.aos .setnav { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; }
+  #chiefos.aos .setnav button { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; color: var(--ub-dim); font: 500 var(--fs-md) var(--os-font); text-align: left;
+    background: transparent; border: 0; border-radius: var(--r-sm); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+  #chiefos.aos .setnav button:hover { color: var(--ub-text); background: var(--os-hover); }
+  #chiefos.aos .setnav button.on { color: var(--ub-text); background: var(--os-accent-soft); box-shadow: inset 3px 0 0 var(--ub-orange); }
+  #chiefos.aos .setnav .osbadge { margin-left: auto; }
+  #chiefos.aos .setpane > h4:first-child { margin-top: 0; }
+  #chiefos.aos .setpane .sethead { margin: 0 0 var(--sp-4); } #chiefos.aos .setpane .sethead b { display: block; font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.01em; }
+  #chiefos:not(.aos) .setnav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; } #chiefos:not(.aos) .sethead { display: none; }
+
+  /* ---------- Agrandir: the whole page (every look), the office's controls hidden meanwhile ---------- */
+  #chiefos.max { inset: 0 !important; border-radius: 0 !important; }
+  body.osmax > header, body.osmax #buybtn, body.osmax #simsbtn, body.osmax #mixbtn, body.osmax #phonebanners { visibility: hidden; }
+
+  /* ---------- motion and sizes ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    #chiefos.aos, #chiefos.aos *, #chiefos.aos *::before, #chiefos.aos *::after { animation: none !important; transition: none !important; }
+  }
+  @media (max-width: 1100px) {
+    #chiefos.aos .cvcols { grid-template-columns: minmax(0, 1fr); }
+    #chiefos.aos .ubdock { width: 58px; } #chiefos.aos .ubdock .ublabel { display: none; }
+    #chiefos.aos .ubdock button { grid-template-columns: 30px; justify-content: center; padding: 0; position: relative; }
+    #chiefos.aos .ubdock .osbadge { position: absolute; right: 1px; top: 1px; min-width: 16px; line-height: 16px; padding: 0 4px; font-size: 10px; }
+    #chiefos.aos .ubdock .ubshow { grid-template-columns: 30px; }
+    #chiefos.aos .setwrap { grid-template-columns: 1fr; } #chiefos.aos .setnav { position: static; flex-direction: row; flex-wrap: wrap; }
+  }
+  @media (max-width: 760px) {
+    #chiefos.aos .osapp { padding: var(--sp-4); }
+    #chiefos.aos .ubdesk { padding: var(--sp-2); gap: var(--sp-2); }
+    #chiefos.aos .osrow > span:last-child:not(:first-child) { justify-self: start; justify-content: flex-start; }
+  }
+
+  /* the advanced apps (Atelier, Bilan, Planification…): their greys on the tokens */
+  #chiefos.aos .seside, #chiefos.aos .mxside, #chiefos.aos .schedform, #chiefos.aos .dashchart { background: var(--os-sunk); border-color: var(--ub-line); }
+  #chiefos.aos .sekinds button, #chiefos.aos .sefoot button, #chiefos.aos .mxside button, #chiefos.aos .prtabs > button, #chiefos.aos .prtools button, #chiefos.aos .prchip {
+    color: var(--ub-text); background: var(--os-raise); border-radius: var(--r-xs); }
+  #chiefos.aos .prtabs > button { border-radius: var(--r-full); } #chiefos.aos .prtabs > button.on { color: var(--os-on-accent); background: var(--ub-orange); }
+  #chiefos.aos .selist button:hover { background: var(--os-hover); } #chiefos.aos .selist button.on { background: var(--os-accent-soft); box-shadow: inset 3px 0 var(--ub-orange); }
+  #chiefos.aos .setext { color: var(--ub-text); background: var(--os-sunk); border-color: var(--ub-line); font-family: var(--os-mono); }
+  #chiefos.aos .dashrate { background: var(--os-sunk); }
+  #chiefos.aos .prline, #chiefos.aos .prtable td { border-color: var(--ub-line); } #chiefos.aos .prtable th { color: var(--ub-dim); border-color: var(--os-line-2); }

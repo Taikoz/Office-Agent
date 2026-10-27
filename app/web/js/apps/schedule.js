@@ -25,7 +25,7 @@ async function schedAct(body) {
   renderChiefOs();
 }
 function scheduleAppHtml() {
-  if (!sched) { loadSched(); return `<p class="muted">Chargement…</p>`; }
+  if (!sched) { loadSched(); return `<p class="muted osloading" role="status">Chargement…</p>`; }
   const e = schedEdit, agentsList = sched.agents || [];
   const form = e ? `<div class="schedform"><h4>${e.id ? "MODIFIER" : "NOUVELLE"} PLANIFICATION</h4>
       <div class="osrow"><b>Nom</b><span><input data-sf="name" value="${esc(e.name || "")}" placeholder="Nettoyage du board"></span><span></span></div>

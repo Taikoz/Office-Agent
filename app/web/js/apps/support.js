@@ -42,9 +42,9 @@ const when = t => { const d = new Date(t * 1000), today = new Date().toDateStrin
 
 function html() {
   if (demo()) return `<p class="muted">Pas de Slack en mode démo.</p>`;
-  if (!st) { loadStatus().then(() => { loadMessages(); renderChiefOs(); }); return `<p class="muted">Chargement…</p>`; }
-  if (!st.configured) return `<div class="osrow"><b>🆘 Support</b><span class="muted">Relie un channel Slack (ton channel de support) pour voir ses messages ici.</span><button data-os-app="settings">Réglages</button></div>`;
-  if (!data && !err) { loadMessages(); return `<p class="muted">Chargement de #${esc(st.channel)}…</p>`; }
+  if (!st) { loadStatus().then(() => { loadMessages(); renderChiefOs(); }); return `<p class="muted osloading" role="status">Chargement…</p>`; }
+  if (!st.configured) return `<div class="osempty"><span class="osemptyic" aria-hidden="true">🆘</span><b>Aucun channel de support relié</b><span>Relie ton channel Slack de support pour voir ses messages ici.</span><div class="osacts"><button class="primary" data-os-app="settings" data-os-section="links">Relier Slack</button></div></div>`;
+  if (!data && !err) { loadMessages(); return `<p class="muted osloading" role="status">Chargement de #${esc(st.channel)}…</p>`; }
   const list = (data?.messages || []).map(m => `<div class="supmsg${m.t > seen ? " new" : ""}"><span class="av${m.bot ? " bot" : ""}">${m.bot ? "🤖" : esc(m.name.slice(0, 1).toUpperCase())}</span>
       <div><div class="who"><b>${esc(m.name)}</b><small>${when(m.t)}</small>${m.link ? `<a href="${esc(m.link)}" target="_blank" rel="noopener noreferrer" title="Ouvrir dans Slack">↗</a>` : ""}</div>
       <div class="txt">${rich(m.text) || '<span class="muted">(pièce jointe)</span>'}</div>

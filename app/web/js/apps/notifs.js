@@ -44,6 +44,16 @@ function notifsAppHtml() {
     ${list.slice(0, 200).map(n => `<div class="osrow nfrow"><b><small class="muted">${esc(n.k)}</small><br>${esc(n.title)}</b><span class="muted">${esc(n.body)}</span><span class="muted">${new Date(n.t).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></div>`).join("") || `<p class="muted">Rien ici.</p>`}`;
 }
 
+// « À traiter » (inbox.js): the work notifications not seen yet (agents, MR, alerts: not the game's), the newest
+// first, then they count as seen
+export function unseenNotifsHtml(limit = 8) {
+  const work = NOTIF_CATS.find(c => c[0] === "agents")[2];
+  const list = notifBook.list.filter(n => n.t > (notifBook.seen || 0) && work.test(n.k)).slice(0, limit);
+  notifBook.seen = Date.now(); saveNotifs();
+  return list.map(n => `<div class="osrow nfrow"><b><small class="muted">${esc(n.k)}</small><br>${esc(n.title)}</b><span class="muted">${esc(n.body)}</span><span class="muted">${new Date(n.t).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></div>`).join("");
+}
+export { unreadNotifs };
+
 class NotifsApp extends OsApp {
   constructor() { super("notifs", "🔔", "Notifications", "#c64600"); }
   render() { return notifsAppHtml(); }

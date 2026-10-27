@@ -9,7 +9,7 @@ import { renderChiefOs } from "../ui/chiefos.js";
 
 const mx = { q: "", mod: "", p: 0, sel: null, msg: "", busy: false };
 function mmxAppHtml() {
-  if (!mmx) return `<p class="muted">Lecture de MMX…</p>`;
+  if (!mmx) return `<p class="muted osloading" role="status">Lecture de MMX…</p>`;
   if (mmx.disabled) return `<div class="osrow"><b>🧠 MMX</b><span class="muted">Mémoire MMX non configurée (clé « mmx » de ~/.claude/agent-office.json).</span></div>`;
   const q = mx.q.toLowerCase(), all = mmx.modules.flatMap(m => m.entries.map(e => ({ ...e, mod: m.id, modLabel: m.label })));
   const list = all.filter(e => (!mx.mod || e.mod === mx.mod) && (!mx.p || e.p >= mx.p) && (!q || `${e.id} ${e.d} ${(e.tags || []).join(" ")}`.toLowerCase().includes(q)))

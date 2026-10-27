@@ -24,8 +24,8 @@ function costsAppHtml() {
   const row = (t, isTicket) => `<div class="osrow"><b>${isTicket ? ticketLink(t.key) : esc(t.key)}${isTicket && pit(t) ? ' <span class="pit">🕳️ gouffre</span>' : ""}</b><span>${money(t.cost)} · ${t.runs} run(s) · ${durH(t.seconds)} · ${t.done} livré(s)${t.blocked ? ` · <span class="s-blocked">${t.blocked} bloqué(s)</span>` : ""}</span><span class="muted">${esc(Object.entries(t.types).map(([k, n]) => `${specialty(k)} ×${n}`).join(", "))}</span></div>`;
   return `<div class="rstats"><div>30 jours<b>${money(c.total.cost)}</b></div><div>runs<b>${c.total.runs}</b></div><div>temps agents<b>${durH(c.total.seconds)}</b></div><div>coût médian / ticket<b>${money(median)}</b></div></div>
     <p class="muted">Coût estimé au tarif API (équivalent, même sur abonnement). 🕳️ = plus du double de la médiane, ou bloqué deux fois : à découper ?</p>
-    <h4>PAR TICKET</h4>${c.tickets.slice(0, 25).map(t => row(t, true)).join("") || `<p class="muted">—</p>`}
-    <h4>PAR PROJET</h4>${c.projects.map(p => row(p, false)).join("") || `<p class="muted">—</p>`}`;
+    <h4>PAR TICKET</h4>${c.tickets.slice(0, 25).map(t => row(t, true)).join("") || `<p class="osnone">Aucune dépense estimée sur la période.</p>`}
+    <h4>PAR PROJET</h4>${c.projects.map(p => row(p, false)).join("") || `<p class="osnone">Aucune dépense estimée sur la période.</p>`}`;
 }
 
 class CostsApp extends OsApp {

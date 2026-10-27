@@ -62,3 +62,28 @@
   #chiefos .gldiff { max-height: 420px; overflow: auto; font: 13px/1.45 "Ubuntu Mono", monospace; background: #1e1e1e; }
   #chiefos .gldiff div { padding: 0 12px; white-space: pre; } #chiefos .gldiff .add { background: #1d3a2a; color: #b4e5c4; } #chiefos .gldiff .del { background: #3f1f1c; color: #f4b9b0; } #chiefos .gldiff .hunk { color: #8fb5e8; background: #232b38; }
   @media (max-width: 900px) { #chiefos .glgrid { grid-template-columns: 1fr; } #chiefos .glmr { grid-template-columns: auto 1fr; } #chiefos .glmeta { grid-column: 2; } }
+  /* 🧭 Vue d'ensemble (apps/codehome.js): the state in colours — red needs you now, orange soon, green is fine */
+  #chiefos { --cv-bad: #e5484d; --cv-warn: #f5a524; --cv-ok: #30a46c; --cv-run: #3e8ed0; --cv-off: #8b8d98; }
+  #chiefos .cvbar { display: flex; justify-content: space-between; align-items: center; margin: 0 0 10px; }
+  #chiefos .cvtiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  #chiefos .cvtile { --c: var(--cv-off); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px 16px; border: 0; border-top: 4px solid var(--c); border-radius: 12px;
+    background: var(--ub-card); color: var(--ub-text); text-align: left; cursor: pointer; transition: transform .12s, filter .12s; }
+  #chiefos .cvtile:hover { transform: translateY(-2px); filter: brightness(1.12); }
+  #chiefos .cvtile b { font-size: 34px; line-height: 1; color: var(--c); } #chiefos .cvtile span { font-weight: 600; } #chiefos .cvtile small { color: var(--ub-dim); }
+  #chiefos .cvtile.bad { --c: var(--cv-bad); } #chiefos .cvtile.warn { --c: var(--cv-warn); } #chiefos .cvtile.ok { --c: var(--cv-ok); }
+  #chiefos .cvtodos { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+  #chiefos .cvtodo { --c: var(--cv-off); display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-left: 4px solid var(--c); border-radius: 10px; background: var(--ub-card); }
+  #chiefos .cvtodo.bad { --c: var(--cv-bad); } #chiefos .cvtodo.warn { --c: var(--cv-warn); } #chiefos .cvtodo.ok { --c: var(--cv-ok); } #chiefos .cvtodo.info { --c: var(--cv-run); }
+  #chiefos .cvic { font-size: 20px; text-align: center; }
+  #chiefos .cvtt, #chiefos .cvmrt { display: flex; flex-direction: column; min-width: 0; } #chiefos .cvtt b, #chiefos .cvmrt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chiefos .cvtt small, #chiefos .cvmrt small { color: var(--ub-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chiefos .cvacts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  #chiefos .cvacts .cvmain { background: var(--c); border-color: var(--c); color: #fff; font-weight: 600; }
+  #chiefos .cvclear { padding: 18px; border-radius: 12px; background: color-mix(in srgb, var(--cv-ok) 18%, var(--ub-card)); color: var(--ub-text); font-weight: 600; }
+  #chiefos .cvcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; } #chiefos .cvcols > section, #chiefos .cvmr { min-width: 0; }
+  #chiefos .cvmr { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%; margin: 0 0 6px; padding: 10px 12px; border: 0; border-radius: 10px; background: var(--ub-card); color: var(--ub-text); text-align: left; cursor: pointer; }
+  #chiefos .cvmr:hover { filter: brightness(1.15); }
+  #chiefos .cvchips { display: flex; flex-wrap: wrap; gap: 4px; }
+  #chiefos .cvchip { --c: var(--cv-off); padding: 1px 8px; border-radius: 999px; font-size: 12px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); }
+  #chiefos .cvchip.ok { --c: var(--cv-ok); } #chiefos .cvchip.bad { --c: var(--cv-bad); } #chiefos .cvchip.warn { --c: var(--cv-warn); } #chiefos .cvchip.run { --c: var(--cv-run); }
+  @media (max-width: 900px) { #chiefos .cvtiles { grid-template-columns: 1fr 1fr; } #chiefos .cvcols { grid-template-columns: 1fr; } #chiefos .cvtodo { grid-template-columns: 28px 1fr; } #chiefos .cvacts { grid-column: 1 / -1; justify-content: flex-start; } }

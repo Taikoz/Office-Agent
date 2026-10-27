@@ -72,7 +72,7 @@ function itemHtml(it) {
 }
 
 function ideasHtml() {
-  if (!ideas) { load(); return `<p class="muted">Lecture des transcripts des 14 derniers jours…</p>`; }
+  if (!ideas) { load(); return `<p class="muted osloading" role="status">Lecture des transcripts des 14 derniers jours…</p>`; }
   if (ideas.error) return `<p class="muted">Serveur injoignable (ou ancienne version : redémarre Agent Office).</p>`;
   const groups = [["task", "request"], ["error"], ["corrections"]].map(k => ideas.items.filter(i => k.includes(i.kind)));
   const engine = ideas.engine === "none" ? "ni clé API ni commande claude" : ideas.engine === "api" ? "ta clé API" : "ton compte Claude Code";

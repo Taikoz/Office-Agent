@@ -60,7 +60,7 @@ function activeHtml(x) {
 }
 
 function lessonsHtml() {
-  if (!book) { load(); return `<p class="muted">Lecture des leçons…</p>`; }
+  if (!book) { load(); return `<p class="muted osloading" role="status">Lecture des leçons…</p>`; }
   if (book.error) return `<p class="muted">Serveur injoignable (ou ancienne version : redémarre Agent Office).</p>`;
   const by = s => book.lessons.filter(x => x.status === s), pending = by("pending"), active = by("active"), old = book.lessons.filter(x => ["archived", "rejected"].includes(x.status));
   const working = active.filter(x => x.effect === "ok").length;

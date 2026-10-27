@@ -70,13 +70,15 @@ function alertsAppHtml() {
     return `<div class="osrow"><b>${a.icon} ${esc(a.title)}</b><span>${esc(a.body)}</span><span class="osacts">${act}${agent ? `<button data-alert-screen="${esc(agent.id)}">🖥️ Écran</button>` : ""}</span></div>`;
   }).join("");
 }
-OsApp.listen("alerts", "click", ev => {
+OsApp.listen(["alerts", "inbox", "today"], "click", ev => {  // also in « À traiter » and « Aujourd'hui », which show them
   const b = ev.target.closest("[data-alert-relaunch], [data-alert-review], [data-alert-screen]"); if (!b) return;
   closeChiefOs();
   if (b.dataset.alertRelaunch) relaunch(b.dataset.alertRelaunch);
   else if (b.dataset.alertScreen) openPc(b.dataset.alertScreen);
   else { const i = DESKS.findIndex(hub.freeDesk); openPanel(`launch:${Math.max(0, i)}:${b.dataset.alertReview}:feature-builder`); }
 });
+
+export { alertsAppHtml, smartAlerts };
 
 class AlertsApp extends OsApp {
   constructor() { super("alerts", "🚨", "Alertes", "#c7162b", { live: true }); }

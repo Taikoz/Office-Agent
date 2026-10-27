@@ -17,7 +17,7 @@ const chiefDesk = () => furni.items.find(i => i.room === "office" && hub.defOf(i
 // parchment pages, wax seals), CRYPTE (a haunted manor: black velvet, gothic arches, candle wax, blood red) GALION (a
 // pirate ship: deck wood, brass, rope, a treasure map) ZEN (a Japanese house: rice paper, ink, red seals) or TROPIC (a
 // beach club: a sunset, sand, turquoise, palms); auto: the one of the chief's desk (its def's osSkin), Ubuntu otherwise
-export const OS_SKINS = [["ubuntu", "Ubuntu", "le bureau classique"], ["holo", "HOLO", "futuriste : verre, néon, hexagones"], ["grimoire", "Grimoire", "un livre de sorts : cuir, dorures, parchemin"],
+export const OS_SKINS = [["ubuntu", "ChiefOS", "le bureau d'Agent Office : sobre, lisible, encre et ambre"], ["holo", "HOLO", "futuriste : verre, néon, hexagones"], ["grimoire", "Grimoire", "un livre de sorts : cuir, dorures, parchemin"],
   ["crypte", "Crypte", "un manoir hanté : velours noir, ogives, cire de bougie, rouge sang"], ["galion", "Galion", "un navire pirate : bois de pont, laiton, cordage, carte au trésor"],
   ["zen", "Zen", "une maison japonaise : papier de riz, encre, sceaux rouges, bambou"],
   ["tropic", "Tropical", "un beach club : coucher de soleil, sable, turquoise, palmiers"]];
@@ -44,15 +44,26 @@ function chiefToDesk() {
 
 /* ---------- ChiefOS ---------- */
 export const osBox = document.getElementById("chiefos");
-export let osApp = "questions";  // the app shown (js/apps/*.js, OsApp)
+export let osApp = "today";  // the app shown (js/apps/*.js, OsApp): « Aujourd'hui » first
+// the simple mode (OsApp.SIMPLE) unless Réglages → Mode avancé; and how often each app is opened, to keep what serves
+const modeBook = new SaveSlot("office-osmode", { advanced: false }).data;
+OsApp.advanced = modeBook.advanced === true;
+export function setOsAdvanced(on) { modeBook.advanced = OsApp.advanced = !!on; SaveSlot.get("office-osmode").save(modeBook); renderChiefOs(); }
+export const usageBook = new SaveSlot("office-osusage", { since: Date.now(), apps: {} }).data;
+function countOpen(id) {
+  if (DEMO || !OsApp.get(id)) return;
+  const u = usageBook.apps[id] ||= { n: 0, last: 0 }; u.n++; u.last = Date.now();
+  SaveSlot.get("office-osusage").save(usageBook);
+}
+export function resetUsage() { usageBook.since = Date.now(); usageBook.apps = {}; SaveSlot.get("office-osusage").save(usageBook); renderChiefOs(); }
 const curApp = () => OsApp.get(osApp) || OsApp.list()[0];
 export function openChiefOs(app) {
-  if (app) setOsApp(app); osOverview = false;
+  if (app) setOsApp(app); else if (osBox.hidden) countOpen(osApp); osOverview = false;
   if (osBox.hidden && osSkin() !== "ubuntu" && !hub.focusMode) { bootUntil = performance.now() + 1400; setTimeout(renderChiefOs, 1450); }  // the boot sequence
-  osBox.hidden = false; renderChiefOs();
+  osBox.hidden = false; document.body.classList.toggle("osmax", osBox.classList.contains("max")); renderChiefOs();
 }
-export function closeChiefOs() { osBox.hidden = true; if (chief.at === "chiefos") chief.at = "free"; }
-export function setOsApp(id) { osApp = id; osOverview = false; osFilter = ""; osFolder = null; const sp = OsApp.spaceOf(id); if (sp) spaceLast[sp.id] = id; OsApp.get(id)?.open(); }
+export function closeChiefOs() { osBox.hidden = true; document.body.classList.remove("osmax"); if (chief.at === "chiefos") chief.at = "free"; }
+export function setOsApp(id) { if (id !== osApp) countOpen(id); osApp = id; osOverview = false; osFilter = ""; osFolder = null; const sp = OsApp.spaceOf(id); if (sp) spaceLast[sp.id] = id; OsApp.get(id)?.open(); }
 // a space opens on the app last used in it (its first one otherwise); an app id opens that app
 const spaceLast = {};
 function openEntry(id) {
@@ -70,14 +81,22 @@ const folderBook = new SaveSlot("office-folders", { folders: OsApp.DEFAULT_SPACE
   for (const def of OsApp.DEFAULT_SPACES) for (const id of def.apps) {
     if (known.has(id) || placed.has(id)) continue;
     const home = folderBook.folders.find(f => f.id === def.id);
-    if (home) home.apps.push(id);
+    if (home) home.apps.splice(Math.min(def.apps.indexOf(id), home.apps.length), 0, id);  // at its default place
+  }
+  // the default folders' old names, when the user kept them
+  for (const [id, old] of [["inbox", "Boîte de réception"], ["work", "Travail"], ["reports", "Bilans"]]) {
+    const f = folderBook.folders.find(x => x.id === id && x.label === old); if (f) f.label = OsApp.DEFAULT_SPACES.find(d => d.id === id).label;
   }
   folderBook.known = [...new Set([...known, ...OsApp.DEFAULT_SPACES.flatMap(d => d.apps)])];
   if (!DEMO) SaveSlot.get("office-folders").save(folderBook);
 }
 OsApp.setSpaces(folderBook.folders);
 let osFolder = null, folderOpened = 0;  // the folder open on screen (its id), and since when (its zoom-in plays once)
-function openFolder(id) { osFolder = id; folderOpened = performance.now(); renderChiefOs(); }
+function openFolder(id) {
+  const apps = OsApp.space(id) ? OsApp.appsOf(OsApp.space(id)) : [];
+  if (apps.length === 1) { setOsApp(apps[0].id); return renderChiefOs(); }  // one app in it (the simple mode): no folder to open
+  osFolder = id; folderOpened = performance.now(); renderChiefOs();
+}
 function saveFolders(list = OsApp.SPACES) {
   folderBook.folders = list.filter(s => s.apps.length).map(({ id, label, apps }) => ({ id, label, apps: [...apps] }));
   OsApp.setSpaces(folderBook.folders); SaveSlot.get("office-folders").save(folderBook);
@@ -92,10 +111,14 @@ function makeFolder(target, dropped) {
   saveFolders([...outOfFolders(target, dropped), { id, label: "Dossier", apps: [target, dropped] }]); openFolder(id);
 }
 const unfold = id => { saveFolders(OsApp.SPACES.filter(s => s.id !== id)); renderChiefOs(); };
-// the icon of a folder: its first apps in a 3 × 3 grid; an app: its emoji
+// the icon of a folder: its own (OsApp.SPACE_LOOK) in the default look, its first apps in a 3 × 3 grid in the themes;
+// an app: its emoji
 const FOLDER_TINT = "#7a7a7a";
+const plain = () => osSkin() === "ubuntu";
+const tintOf = id => { const sp = OsApp.space(id); return sp ? plain() ? sp.tint : FOLDER_TINT : entry(id)?.tint; };
 function iconOf(id, cls = "ic") {
   const sp = OsApp.space(id);
+  if (sp && plain()) return `<span class="${cls}">${sp.icon}</span>`;
   return sp ? `<span class="${cls} fold">${OsApp.appsOf(sp).slice(0, 9).map(a => `<i style="--tint:${a.tint}">${a.icon}</i>`).join("")}</span>` : `<span class="${cls}">${OsApp.get(id)?.icon || ""}</span>`;
 }
 // Ubuntu look (GNOME, Yaru): top bar with Activités and the clock, the dock on the left, the app in a window;
@@ -103,14 +126,16 @@ function iconOf(id, cls = "ic") {
 export let osOverview = false, osFilter = "";
 // a dock entry: a space (OsApp.SPACES) or a single app; a space's badge adds up its apps'
 const entry = id => OsApp.space(id) || OsApp.get(id);
-const entryShown = id => { const sp = OsApp.space(id); return sp ? OsApp.appsOf(sp).length > 0 : !!OsApp.get(id) && !OsApp.get(id).hidden; };
+const entryShown = id => { const sp = OsApp.space(id); return sp ? OsApp.appsOf(sp).length > 0 : OsApp.shown(OsApp.get(id)); };
 function osBadge(id) { const sp = OsApp.space(id), n = sp ? OsApp.appsOf(sp).reduce((t, a) => t + (+a.badge() || 0), 0) : OsApp.get(id)?.badge(); return n ? `<b class="osbadge">${n}</b>` : ""; }
 /* ---------- the dock: the spaces (and any app pinned alone), ordered by the user (right click, drag and drop, Réglages) ---------- */
-const DOCK_DEFAULT = [...OsApp.DEFAULT_SPACES.map(s => s.id), "settings"];
+const DOCK_DEFAULT = ["today", ...OsApp.DEFAULT_SPACES.map(s => s.id), "settings"];
 // version 2: the dock holds spaces; an older dock (apps) becomes the spaces of its apps, the old default the new one
 const OLD_DEFAULT = ["questions", "notifs", "terminal", "gitlab", "browser", "blueprint", "dashboard", "planning", "settings"];
-let dockBook = new SaveSlot("office-dock", { apps: DOCK_DEFAULT }, { version: 2, migrations: {
-  2: old => ({ apps: String(old?.apps) === String(OLD_DEFAULT) ? DOCK_DEFAULT : [...new Set((old?.apps || []).map(id => OsApp.spaceOf(id)?.id || id))] }) } }).data;
+// version 3: « Aujourd'hui » first
+let dockBook = new SaveSlot("office-dock", { apps: DOCK_DEFAULT }, { version: 3, migrations: {
+  2: old => ({ apps: String(old?.apps) === String(OLD_DEFAULT) ? DOCK_DEFAULT : [...new Set((old?.apps || []).map(id => OsApp.spaceOf(id)?.id || id))] }),
+  3: old => ({ apps: [...new Set(["today", ...(old?.apps || [])])] }) } }).data;
 const dockApps = () => dockBook.apps.filter(entryShown);
 // the dock icon lit for the app shown: the app itself when pinned alone, its space otherwise
 const dockOf = id => dockApps().includes(id) ? id : dockApps().includes(OsApp.spaceOf(id)?.id) ? OsApp.spaceOf(id).id : null;
@@ -122,37 +147,41 @@ let osMenu = null;  // the open context menu: { id, x, y, from }
 function dockIcon(id, extra = "") {
   const { label: l, tint } = entry(id), sp = OsApp.space(id);
   const tip = sp ? `${l} : ${OsApp.appsOf(sp).map(a => a.label).join(", ")}` : l;
-  return `<button data-os-open="${id}" data-dock="${id}" draggable="true" class="${(osFolder ? osFolder === id : dockOf(osApp) === id && !osOverview) ? "on" : ""}${extra}" title="${esc(tip)}" style="--tint:${sp ? FOLDER_TINT : tint}">${iconOf(id)}${osBadge(id)}</button>`;
+  const on = osFolder ? osFolder === id : dockOf(osApp) === id && !osOverview;
+  return `<button data-os-open="${id}" data-dock="${id}" draggable="true" class="${on ? "on" : ""}${extra}" title="${esc(tip)}" aria-label="${esc(l)}"${on ? ' aria-current="page"' : ""} style="--tint:${tintOf(id) || tint}">${iconOf(id)}<span class="ublabel">${esc(l)}</span>${osBadge(id)}</button>`;
 }
 function menuHtml() {
   if (!osMenu) return "";
-  const { id } = osMenu, pinned = dockApps().includes(id), i = dockApps().indexOf(id), { icon, label: l } = entry(id), sp = OsApp.space(id), ic = sp ? "📁" : icon;
+  const { id } = osMenu, pinned = dockApps().includes(id), i = dockApps().indexOf(id), { icon, label: l } = entry(id), sp = OsApp.space(id), ic = sp ? plain() ? sp.icon : "📁" : icon;
   const items = [["open", "Ouvrir"], pinned ? ["unpin", "Retirer du dock"] : ["pin", "Épingler au dock"], ...(pinned && i > 0 ? [["up", "Monter"]] : []), ...(pinned && i < dockApps().length - 1 ? [["down", "Descendre"]] : []),
     ...(sp ? [["unfold", "Défaire le dossier"]] : OsApp.spaceOf(id) ? [["out", "Sortir du dossier"]] : [])];
-  return `<div class="ubmenu" style="left:${osMenu.x}px;top:${osMenu.y}px"><div class="ubmtitle">${ic} ${esc(l)}</div>${items.map(([a, t]) => `<button data-menu="${a}" data-id="${id}">${t}</button>`).join("")}</div>`;
+  return `<div class="ubmenu${performance.now() - osMenu.at < 250 ? " fresh" : ""}" role="menu" style="left:${osMenu.x}px;top:${osMenu.y}px"><div class="ubmtitle">${ic} ${esc(l)}</div>${items.map(([a, t]) => `<button role="menuitem" data-menu="${a}" data-id="${id}">${t}</button>`).join("")}</div>`;
 }
 export function dockSettingsHtml() {
   const pinned = dockApps(), others = [...OsApp.SPACES.map(s => s.id), ...OsApp.list().map(a => a.id)].filter(id => entryShown(id) && !pinned.includes(id));
   const where = id => { const sp = OsApp.space(id); return sp ? `dossier : ${OsApp.appsOf(sp).map(a => a.label).join(", ")}` : OsApp.spaceOf(id) ? `dans le dossier ${OsApp.spaceOf(id).label}` : "dans Activités"; };
-  const row = (id, isPinned, i) => { const { label: l, tint } = entry(id); return `<div class="osrow"><b><span style="--tint:${OsApp.space(id) ? FOLDER_TINT : tint}">${iconOf(id, "ubappic")}</span> ${esc(l)}</b><span class="muted">${isPinned ? `position ${i + 1} · ` : ""}${esc(where(id))}</span>
+  const row = (id, isPinned, i) => { const { label: l } = entry(id); return `<div class="osrow"><b><span style="--tint:${tintOf(id)}">${iconOf(id, "ubappic")}</span> ${esc(l)}</b><span class="muted">${isPinned ? `position ${i + 1} · ` : ""}${esc(where(id))}</span>
     <span class="osacts">${isPinned ? `<button data-dockset="up" data-id="${id}"${i === 0 ? " disabled" : ""} title="Monter">↑</button><button data-dockset="down" data-id="${id}"${i === pinned.length - 1 ? " disabled" : ""} title="Descendre">↓</button><button data-dockset="unpin" data-id="${id}">Retirer</button>` : `<button data-dockset="pin" data-id="${id}">📌 Épingler</button>`}</span></div>`; };
   return `<h4>DOCK</h4><p class="muted">Les dossiers (et applications) du dock, dans l'ordre. Un dossier s'ouvre comme sur un iPhone ; ses applications s'affichent ensuite en onglets. Aussi : clic droit sur une icône (dock ou Activités), ou glisser-déposer dans le dock. Dans Activités : glisse une application sur un dossier pour l'y ranger, sur une autre application pour créer un dossier, hors d'un dossier ouvert pour l'en sortir.</p>
     ${pinned.map((id, i) => row(id, true, i)).join("")}<h4>AUTRES DOSSIERS ET APPLICATIONS</h4>${others.map(id => row(id, false)).join("") || `<p class="muted">Toutes sont dans le dock.</p>`}
     <div class="osacts"><button data-dockset="reset">↺ Dock par défaut</button><button data-dockset="resetfolders">↺ Dossiers par défaut</button></div>`;
 }
+let lastShown = "";
 export function renderChiefOs() {
   if (osBox.hidden) return;
   const now = clockNow(), app = curApp(), { icon, label } = app;
   const skin = osSkin(), holo = skin === "holo", book = skin === "grimoire", crypt = skin === "crypte", ship = skin === "galion", zen = skin === "zen", trop = skin === "tropic";
   for (const k of ["holo", "grimoire", "crypte", "galion", "zen", "tropic"]) osBox.classList.toggle(k, skin === k);
+  osBox.classList.toggle("aos", skin === "ubuntu");  // the default look (css/11-chiefos-design.css)
+  const shownKey = osOverview ? "·overview" : osApp, fresh = shownKey !== lastShown; lastShown = shownKey;
   const day = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }), time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const pinned = dockApps(), running = !osOverview && !dockOf(osApp) ? osApp : null;  // the open app shows up while it runs, like Ubuntu
-  const dock = pinned.map(id => dockIcon(id)).join("") + (running ? `<span class="ubrun"></span>${dockIcon(running, " running")}` : "");
+  const dock = pinned.map(id => dockIcon(id)).join("") + (running ? `<span class="ubrun" aria-hidden="true"></span>${dockIcon(running, " running")}` : "");
   // Activités, like an iPhone home screen: the folders, then the apps outside every folder; a search lists the apps
   // themselves (a folder's name finds all its apps)
   const q = osFilter.toLowerCase(), hit = a => { const sp = OsApp.spaceOf(a.id); return a.label.toLowerCase().includes(q) || !!sp?.label.toLowerCase().includes(q); };
   const tile = ({ id, label: l, tint }, loose) => `<button data-os-app="${id}" data-dock="${id}"${loose ? ` data-loose="${id}"` : ""} draggable="true" style="--tint:${tint}">${iconOf(id)}${osBadge(id)}${pinned.includes(id) ? '<span class="ubpin" title="Dans le dock">📌</span>' : ""}<small>${esc(l)}</small></button>`;
-  const folderTile = sp => `<button data-fold="${sp.id}" data-dock="${sp.id}" draggable="true" style="--tint:${FOLDER_TINT}" title="${esc(OsApp.appsOf(sp).map(a => a.label).join(", "))}">${iconOf(sp.id)}${osBadge(sp.id)}<small>${esc(sp.label)}</small></button>`;
+  const folderTile = sp => `<button data-fold="${sp.id}" data-dock="${sp.id}" draggable="true" style="--tint:${tintOf(sp.id)}" title="${esc(OsApp.appsOf(sp).map(a => a.label).join(", "))}">${iconOf(sp.id)}${osBadge(sp.id)}<small>${esc(sp.label)}</small></button>`;
   const home = q ? OsApp.list().filter(hit).map(a => tile(a)).join("")
     : OsApp.SPACES.filter(sp => OsApp.appsOf(sp).length).map(folderTile).join("") + OsApp.list().filter(a => !OsApp.spaceOf(a.id)).map(a => tile(a, true)).join("");
   const tabs = OsApp.spaceOf(osApp) ? OsApp.appsOf(OsApp.spaceOf(osApp)) : [];
@@ -160,17 +189,18 @@ export function renderChiefOs() {
   const folder = fsp ? `<div class="ubfolderbg${performance.now() - folderOpened < 300 ? " fresh" : ""}"><div class="ubfolder"><input class="ubfname" value="${esc(fsp.label)}" maxlength="30" aria-label="Nom du dossier" title="Renommer le dossier">
       <div class="ubgrid">${OsApp.appsOf(fsp).map(a => tile(a)).join("")}</div><p class="ubhint">Glisse une application hors du dossier pour l'en sortir.</p></div></div>` : "";
   const body = osOverview
-    ? `<div class="ubover"><input class="ubsearch" placeholder="Rechercher une application…" value="${esc(osFilter)}" aria-label="Rechercher une application">
+    ? `<div class="ubover${fresh ? " enter" : ""}"><input class="ubsearch" placeholder="Rechercher une application…" value="${esc(osFilter)}" aria-label="Rechercher une application">
         <div class="ubgrid">${home || `<p>Aucune application.</p>`}</div>
-        <p class="ubhint">Glisse une application sur un dossier pour l'y ranger, ou sur une autre pour créer un dossier. Clic droit : épingler au dock, défaire un dossier.</p></div>`
-    : `<section class="ubwin"><div class="ubhead"><span class="ubappic" style="--tint:${app.tint}">${icon}</span><b>${esc(label)}</b>
-        <span class="ubctl"><button data-os="overview" title="Réduire">–</button><button data-os="max" title="Agrandir">▢</button><button class="x" data-os="close" title="Fermer (Échap)">×</button></span></div>
-        ${tabs.length > 1 ? `<nav class="ubtabs" aria-label="${esc(OsApp.spaceOf(osApp).label)}">${tabs.map(a => `<button data-os-app="${a.id}" class="${a.id === osApp ? "on" : ""}" style="--tint:${a.tint}">${a.icon} ${esc(a.label)}${osBadge(a.id)}</button>`).join("")}</nav>` : ""}
+        <p class="ubhint">Glisse une application sur un dossier pour l'y ranger, ou sur une autre pour créer un dossier. Clic droit : épingler au dock, défaire un dossier.</p>
+        ${OsApp.advanced ? "" : `<p class="ubhint">Mode simple : ${[...OsApp.all.values()].filter(a => !a.hidden && !a.away() && !OsApp.SIMPLE.has(a.id)).length} applications de plus (atelier, équipe, outils) avec <button data-os-advanced="1">le mode avancé</button>.</p>`}</div>`
+    : `<section class="ubwin${fresh ? " enter" : ""}" aria-label="${esc(label)}"><div class="ubhead"><span class="ubappic" style="--tint:${app.tint}">${icon}</span><b>${OsApp.spaceOf(osApp) && skin === "ubuntu" && OsApp.spaceOf(osApp).label !== label ? `<span class="ubcrumb">${esc(OsApp.spaceOf(osApp).label)}</span>` : ""}${esc(label)}</b>
+        <span class="ubctl"><button data-os="overview" title="Réduire : revenir à toutes les applications" aria-label="Réduire">–</button><button data-os="max" title="${osBox.classList.contains("max") ? "Restaurer la taille" : "Agrandir"}" aria-label="Agrandir">▢</button><button class="x" data-os="close" title="Fermer ChiefOS (Échap)" aria-label="Fermer">×</button></span></div>
+        ${tabs.length > 1 ? `<nav class="ubtabs" aria-label="${esc(OsApp.spaceOf(osApp).label)}">${tabs.map(a => `<button data-os-app="${a.id}" class="${a.id === osApp ? "on" : ""}"${a.id === osApp ? ' aria-current="page"' : ""} style="--tint:${a.tint}">${a.icon} ${esc(a.label)}${osBadge(a.id)}</button>`).join("")}</nav>` : ""}
         <div class="osapp">${app.render()}</div></section>`;
   const boot = BOOT[skin] && performance.now() < bootUntil ? `<div class="hoboot"><b>${BOOT[skin].title}</b><span>${holo ? `v${now.getFullYear() - 2000}.${now.getMonth() + 1}` : crypt ? "🕯 🦇 🕯" : ship ? "⚓ 🏴‍☠️ ⚓" : zen ? "⛩ 🌸 ⛩" : trop ? "🌴 ☀️ 🌴" : "✦ ✦ ✦"}</span>${BOOT[skin].lines.map((l, i) => `<i style="--d:${i * 0.22}s">${l}</i>`).join("")}<em></em></div>` : "";
   osBox.innerHTML = `${boot}<div class="ubtop"><button class="ubact${osOverview ? " on" : ""}" data-os="overview">${holo ? "◈ MODULES" : book ? "✦ Sortilèges" : crypt ? "☾ Séances" : ship ? "⚓ Cap" : zen ? "⛩ Chemins" : trop ? "🌴 Spots" : "Activités"}</button><span class="ubtitle">${holo ? `▸ ${esc(label).toUpperCase()}` : book ? `📜 ${esc(label)}` : crypt ? `🕯️ ${esc(label)}` : ship ? `🗺️ ${esc(label)}` : zen ? `🎴 ${esc(label)}` : trop ? `🌺 ${esc(label)}` : `${icon} ${esc(label)}`}</span>
-      <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : book ? `${esc(now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))} · ${time.replace(":", " h ")}` : crypt ? `☾ ${esc(day)} · ${time}${now.getHours() === 0 ? " · minuit…" : ""}` : ship ? `⚓ ${esc(day)} · ${time} · cap au ${["N", "NE", "E", "SE", "S", "SO", "O", "NO"][now.getHours() % 8]}` : zen ? `${esc(day)} · ${time} · ${["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][Math.floor(((now.getHours() + 1) % 24) / 2)]}の刻` : trop ? `☀️ ${esc(day)} · ${time}${now.getHours() >= 18 ? " · happy hour 🍹" : ""}` : `${esc(day)}  ${time}`}</span><span class="ubsys"><span title="Réseau">📶</span><span title="Son">🔊</span><span title="Batterie">🔋</span><button data-os="close" title="Éteindre ChiefOS (Échap)">⏻</button></span></div>
-    <div class="ubdesk"><nav class="ubdock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Afficher les applications">⋮⋮⋮</button></nav>${body}${folder}</div>${menuHtml()}`;
+      <span class="ubclock">${holo ? `${esc(day).toUpperCase()} · ${time} · SYS ✓` : book ? `${esc(now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))} · ${time.replace(":", " h ")}` : crypt ? `☾ ${esc(day)} · ${time}${now.getHours() === 0 ? " · minuit…" : ""}` : ship ? `⚓ ${esc(day)} · ${time} · cap au ${["N", "NE", "E", "SE", "S", "SO", "O", "NO"][now.getHours() % 8]}` : zen ? `${esc(day)} · ${time} · ${["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][Math.floor(((now.getHours() + 1) % 24) / 2)]}の刻` : trop ? `☀️ ${esc(day)} · ${time}${now.getHours() >= 18 ? " · happy hour 🍹" : ""}` : `${esc(day)}  ${time}`}</span><span class="ubsys"><button data-os="close" title="Quitter ChiefOS (Échap)" aria-label="Quitter ChiefOS">⏻<span class="ublabel">Quitter</span></button></span></div>
+    <div class="ubdesk"><nav class="ubdock" aria-label="Dock">${dock}<span class="ubsep"></span><button data-os="overview" class="ubshow${osOverview ? " on" : ""}" title="Toutes les applications" aria-label="Toutes les applications">⋮⋮⋮<span class="ublabel">Toutes les applis</span></button></nav>${body}${folder}</div>${menuHtml()}`;
   if (osOverview && !fsp) { const s = osBox.querySelector(".ubsearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   else app.mount();
 }
@@ -186,8 +216,9 @@ osBox.addEventListener("click", ev => {
   if (b.dataset.os === "close") return closeChiefOs();
   if (b.dataset.os === "overview") { osOverview = !osOverview; osFilter = ""; osFolder = null; return renderChiefOs(); }
   if (b.dataset.fold) return openFolder(b.dataset.fold);
-  if (b.dataset.os === "max") { osBox.classList.toggle("max"); return; }
-  if (b.dataset.osApp) { setOsApp(b.dataset.osApp); return renderChiefOs(); }
+  if (b.dataset.os === "max") { document.body.classList.toggle("osmax", osBox.classList.toggle("max")); return renderChiefOs(); }  // full screen: the office's own controls step aside (body.osmax)
+  if (b.dataset.osAdvanced) return setOsAdvanced(b.dataset.osAdvanced === "1");
+  if (b.dataset.osApp) { setOsApp(b.dataset.osApp); if (b.dataset.osSection) OsApp.get(b.dataset.osApp)?.goTo?.(b.dataset.osSection); return renderChiefOs(); }  // a section of it (Réglages → Connexions)
   if (b.dataset.osOpen) { if (OsApp.space(b.dataset.osOpen)) return osFolder === b.dataset.osOpen ? (osFolder = null, renderChiefOs()) : openFolder(b.dataset.osOpen); openEntry(b.dataset.osOpen); return renderChiefOs(); }
   if (!osOverview && ev.target.closest(".osapp")) curApp().click(b, ev);  // the app's own buttons
 });
@@ -198,7 +229,7 @@ for (const type of OsApp.EVENTS) osBox.addEventListener(type, ev => {
   if (osOverview || !ev.target.closest?.(".ubwin") || ev.target.closest(".ubtabs")) return;  // the tabs belong to ChiefOS
   for (const fn of OsApp.handlers.get(osApp)?.[type] || []) fn(ev);
 });
-addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); const inner = osBox.querySelector("[data-esc]"); if (inner) inner.click(); else if (osFolder) { osFolder = null; renderChiefOs(); } else closeChiefOs(); } }, true);  // an app's own window ([data-esc]: its close button), then an open folder, close first  // Escape belongs to a terminal that has the focus
+addEventListener("keydown", ev => { if (ev.key === "Escape" && !osBox.hidden && !ev.target.closest?.(".termscreen")) { ev.stopImmediatePropagation(); const inner = osBox.querySelector("[data-esc]"); if (osMenu) { osMenu = null; renderChiefOs(); } else if (inner) inner.click(); else if (osFolder) { osFolder = null; renderChiefOs(); } else closeChiefOs(); } }, true);  // an app's own window ([data-esc]: its close button), then an open folder, close first  // Escape belongs to a terminal that has the focus
 document.getElementById("osbtn").onclick = () => chiefToDesk();
 // live apps refresh every 3 s (not while a field of theirs has the focus); forms and long pages stay still
 setInterval(() => { if (!osBox.hidden && !osOverview && curApp().live && !osBox.contains(document.activeElement?.closest("select, input, textarea"))) { const sc = osBox.querySelector(".osapp")?.scrollTop; renderChiefOs(); const a = osBox.querySelector(".osapp"); if (a) a.scrollTop = sc || 0; } }, 3000);
@@ -209,7 +240,7 @@ osBox.addEventListener("contextmenu", ev => {
   ev.preventDefault();
   const r = osBox.getBoundingClientRect();
   const br = b.getBoundingClientRect(), inDock = !!b.closest(".ubdock");  // beside the dock icon, under the pointer in Activités
-  osMenu = { id: b.dataset.dock, x: Math.min((inDock ? br.right + 8 : ev.clientX) - r.left, r.width - 200), y: Math.min((inDock ? br.top : ev.clientY) - r.top, r.height - 170) };
+  osMenu = { id: b.dataset.dock, at: performance.now(), x: Math.min((inDock ? br.right + 8 : ev.clientX) - r.left, r.width - 200), y: Math.min((inDock ? br.top : ev.clientY) - r.top, r.height - 170) };
   renderChiefOs();
 });
 osBox.addEventListener("click", ev => {

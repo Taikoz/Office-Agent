@@ -31,8 +31,8 @@ function planCandidates() {
   return (data.backlog || []).filter(b => !busy.has(b.id) && !queued.has(b.id));
 }
 function planAppHtml() {
-  if (!planAgents) { planAgentList().then(renderChiefOs); return `<p class="muted">Chargement des agents…</p>`; }
-  if (!planTargets) { planTargetList(); return `<p class="muted">Chargement des projets…</p>`; }
+  if (!planAgents) { planAgentList().then(renderChiefOs); return `<p class="muted osloading" role="status">Chargement des agents…</p>`; }
+  if (!planTargets) { planTargetList(); return `<p class="muted osloading" role="status">Chargement des projets…</p>`; }
   const git = !!planTargets.find(t => t.path === plan.cwd)?.git;
   const opts = sel => planAgents.map(a => `<option${a === sel ? " selected" : ""}>${esc(a)}</option>`).join("");
   const cands = planCandidates();

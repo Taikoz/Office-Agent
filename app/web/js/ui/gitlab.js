@@ -3,6 +3,7 @@
 // job's log). The apps: apps/settings.js, apps/pipes.js, apps/gitlab.js (🦊 the merge requests).
 
 import { hub } from "../hub.js";
+import { esc } from "../core/data.js";
 import { DESKS } from "../core/core.js";
 import { openPanel } from "./panel.js";
 import { toast } from "../sims/progress.js";
@@ -38,8 +39,11 @@ export const ago2 = iso => { const s = (Date.now() - Date.parse(iso)) / 1000; re
 const CI_ICON = { success: "🟢", failed: "🔴", running: "🔵", pending: "⏳", created: "⏳", canceled: "⚪", skipped: "⚪", manual: "✋" };
 // the launch form, prefilled (launch.js reads launchPreset)
 export function launchWith(agent, prompt) { hub.launchPreset = { agent, prompt }; closeChiefOs(); const i = DESKS.findIndex(hub.freeDesk); openPanel(`launch:${Math.max(0, i)}:`); }
-export const notConfigured = () => `<div class="osrow"><b>🦊 GitLab non relié</b><span class="muted">Ajoute ton adresse GitLab et un jeton (lecture seule) pour voir tes MR et les pipelines rouges.</span><button data-os-app="settings">⚙️ Réglages</button></div>`;
+// GitLab answered with an error: what happened, and where to fix it
+export const glError = msg => `<div class="oserror" role="alert"><b>GitLab ne répond pas comme prévu</b><span>${esc(msg)}</span><small>Vérifie l'adresse et le jeton (droit read_api, pas expiré) dans Réglages → Connexions.</small><div class="osacts"><button data-os-app="settings" data-os-section="links">Ouvrir les connexions</button><button data-gl-retry>↻ Réessayer</button></div></div>`;
+export const notConfigured = () => `<div class="osempty"><span class="osemptyic" aria-hidden="true">🦊</span><b>GitLab n'est pas encore relié</b><span>Ajoute ton adresse GitLab et un jeton en lecture seule pour voir tes MR, celles à relire et les pipelines rouges.</span><div class="osacts"><button class="primary" data-os-app="settings" data-os-section="links">Relier GitLab</button></div></div>`;
 
+OsApp.listen(["gitlab", "codehome", "pipes"], "click", ev => { if (ev.target.closest("[data-gl-retry]")) { glLoad("mrs", true); glLoad("pipelines", true); } });
 OsApp.listen(["settings", "pipes"], "click", async ev => {  // their buttons (apps/settings.js, apps/pipes.js)
   const b = ev.target.closest("[data-gl]"); if (!b) return;
   const act = b.dataset.gl;

@@ -11,9 +11,9 @@ class ReportApp extends OsApp {
     if (!this.data) {
       const done = r => { this.data = r; renderChiefOs(); };
       (DEMO ? Promise.resolve(demoReport(isoDay(0))) : fetch(`/api/report?day=${isoDay(0)}`).then(r => r.json())).then(done).catch(() => done({ error: true }));
-      return `<p class="muted">Chargement…</p>`;
+      return `<p class="muted osloading" role="status">Chargement…</p>`;
     }
-    return this.data.error ? `<p class="muted">Serveur injoignable.</p>` : reportHtml(this.data);
+    return this.data.error ? `<div class="oserror" role="alert"><b>Serveur injoignable</b><span>Le rapport du jour n'a pas pu être lu. Rouvre l'application pour réessayer.</span></div>` : reportHtml(this.data);
   }
 }
 new ReportApp();

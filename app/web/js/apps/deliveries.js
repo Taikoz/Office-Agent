@@ -154,7 +154,7 @@ function nextTab() {
 
 function deliveriesHtml() {
   if (glStatus && !glStatus.configured && !DEMO) return notConfigured();
-  if (!dl) { loadDeliveries(); return `<div class="dl"><div class="dlempty">Lecture du dépôt de déploiement et des merge requests…</div></div>`; }
+  if (!dl) { loadDeliveries(); return `<div class="dl"><div class="dlempty osloading" role="status">Lecture du dépôt de déploiement et des merge requests…</div></div>`; }
   if (dl.error) return `<div class="dl"><div class="dlempty dlerr">${esc(dl.error)} <button data-dl="reload">Réessayer</button></div></div>`;
   if (dl.configured === false) return notConfigured();
   if (!dl.repo) return `<div class="dl"><div class="dlempty"><b>Dépôt de déploiement non configuré.</b> Ajoute dans <code>~/.claude/agent-office.json</code> : <code>"deploy_repo": "groupe/projet-des-déploiements"</code> (valeurs Helm en <code>applications/&lt;app&gt;/&lt;env&gt;/*.yaml</code> ; <code>deploy_path</code>, <code>deploy_projects</code> au besoin), puis relance l'Office.</div></div>`;

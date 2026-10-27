@@ -6,8 +6,8 @@
 import { hash } from "../core/core.js";
 import { esc } from "../core/data.js";
 import { OsApp } from "./base.js";
-import { osBox, renderChiefOs } from "../ui/chiefos.js";
-import { ago2, glGet, glLoad, glMrs, glStatus, launchWith, notConfigured } from "../ui/gitlab.js";
+import { osBox, renderChiefOs, setOsApp } from "../ui/chiefos.js";
+import { ago2, glGet, glLoad, glMrs, glStatus, launchWith, notConfigured, glError } from "../ui/gitlab.js";
 
 const glv = { tab: "review", q: "", open: null, sub: "overview", detail: null, err: "", unresolvedOnly: false, files: new Set(), job: null };
 const AV_COLORS = ["#e24329", "#fc6d26", "#6e49cb", "#1f75cb", "#108548", "#c17d10", "#dd2b0e", "#5943b6", "#0b5cad", "#217645"];
@@ -53,6 +53,9 @@ async function glvOpen(project, iid) {
   catch (err) { glv.err = err.message; }
   renderChiefOs();
 }
+// one MR in full, from another app (🧭 Vue d'ensemble)
+export function openMr(project, iid) { setOsApp("gitlab"); return glvOpen(project, iid); }
+export function openMrList(tab) { setOsApp("gitlab"); glv.tab = tab; glv.open = null; glv.detail = null; }
 async function glvJob(job) {
   const d = glv.detail; glv.job = { ...job, log: null }; renderChiefOs();
   try { glv.job.log = DEMO ? "tests/checkout/test_cart.py::test_discount FAILED\nE   AssertionError: assert 90.0 == 85.0\n=========== 1 failed, 213 passed in 41.2s ===========\nERROR: Job failed: exit code 1" : (await glGet(`job?project=${d.project}&job=${job.id}`)).log; }
@@ -63,14 +66,14 @@ async function glvJob(job) {
 /* ---------- the list ---------- */
 function glvListHtml() {
   if (!DEMO && glStatus && !glStatus.configured) return notConfigured();
-  if (!glMrs) { glLoad("mrs"); return `<p class="muted">Lecture de GitLab…</p>`; }
-  if (glMrs.error) return `<div class="osrow"><b>🦊 GitLab</b><span class="s-blocked">${esc(glMrs.error)}</span><button data-os-app="settings">⚙️ Réglages</button></div>`;
+  if (!glMrs) { glLoad("mrs"); return `<p class="muted osloading" role="status">Lecture de GitLab…</p>`; }
+  if (glMrs.error) return glError(glMrs.error);
   const all = [...glMrs.review, ...glMrs.mine, ...glMrs.assigned];
   const lists = { review: glMrs.review, mine: glMrs.mine, assigned: glMrs.assigned, all };
   const q = glv.q.toLowerCase(), list = lists[glv.tab].filter(m => !q || `${m.title} ${m.ref} ${m.branch} ${m.author} ${(m.labels || []).join(" ")}`.toLowerCase().includes(q));
   const tabs = [["review", "À relire"], ["mine", "Les miennes"], ["assigned", "Assignées"], ["all", "Toutes"]];
   return `<div class="glbar"><span class="gllogo">🦊</span><b>Merge requests</b><span class="muted">@${esc(glMrs.user)} · ${esc(glMrs.url)}</span>
-      <input class="glsearch" placeholder="Rechercher (titre, branche, auteur, label)…" value="${esc(glv.q)}" aria-label="Rechercher"><button data-gl="reload-mrs" title="Actualiser">↻</button></div>
+      <input class="glsearch" placeholder="Rechercher (titre, branche, auteur, label)…" value="${esc(glv.q)}" aria-label="Rechercher"><button data-gl="reload-mrs" title="Relire GitLab maintenant">↻ Actualiser</button></div>
     <nav class="gltabs">${tabs.map(([id, l]) => `<button data-glv-tab="${id}" class="${glv.tab === id ? "on" : ""}">${l} <span class="glcount">${lists[id].length}</span></button>`).join("")}</nav>
     <div class="gllist">${list.length ? list.map(m => `<button class="glmr" data-glv-open="${m.project}:${m.iid}">
         ${ciIcon(m.ci)}<span class="glmain"><b>${m.draft ? '<span class="gldraft">Brouillon</span> ' : ""}${esc(m.title)}</b>
@@ -78,7 +81,7 @@ function glvListHtml() {
           <span class="gllabels">${(m.labels || []).map(label).join("")}</span></span>
         <span class="glmeta">${m.conflicts ? '<span class="glwarn" title="Conflits">⚠️</span>' : ""}${!m.threadsOk ? '<span title="Discussions ouvertes">💬!</span>' : ""}
           <span title="Commentaires">💬 ${m.notes || 0}</span><span title="Approbations">👍 ${m.approved}${m.approvalsLeft != null ? `/${m.approved + m.approvalsLeft}` : ""}</span>${avatar({ username: m.author, name: m.authorName || m.author })}</span></button>`).join("")
-      : `<p class="muted glempty">Aucune merge request ici.</p>`}</div>`;
+      : `<p class="glempty">${q ? `Aucune merge request ne correspond à « ${esc(glv.q)} ».` : { review: "✓ Personne n'attend ta review.", mine: "Aucune merge request ouverte à ton nom.", assigned: "Aucune merge request ne t'est assignée.", all: "Aucune merge request ouverte." }[glv.tab]}</p>`}</div>`;
 }
 
 /* ---------- one merge request ---------- */
@@ -126,7 +129,7 @@ function glvFiles(d) {
 }
 function glvDetailHtml() {
   if (glv.err) return `<div class="osacts"><button data-glv-back>← Retour</button></div><p class="s-blocked">${esc(glv.err)}</p>`;
-  const d = glv.detail; if (!d) return `<div class="osacts"><button data-glv-back>← Retour</button></div><p class="muted">Chargement de la merge request…</p>`;
+  const d = glv.detail; if (!d) return `<div class="osacts"><button data-glv-back>← Retour</button></div><p class="muted osloading" role="status">Chargement de la merge request…</p>`;
   const unresolved = d.threads.filter(t => t.resolvable && !t.resolved).length, failed = d.jobs.filter(j => j.status === "failed" && !j.allowFailure);
   const subs = [["overview", "Aperçu", ""], ["threads", "Discussions", d.threads.filter(t => !t.system).length], ["pipeline", "Pipeline", d.pipeline ? ciIcon(d.pipeline.status) : ""], ["files", "Fichiers", d.files.length]];
   const state = d.state === "merged" ? '<span class="glstate merged">Fusionnée</span>' : d.state === "closed" ? '<span class="glstate closed">Fermée</span>' : d.draft ? '<span class="glstate draft">Brouillon</span>' : '<span class="glstate open">Ouverte</span>';

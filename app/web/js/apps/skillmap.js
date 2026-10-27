@@ -125,7 +125,7 @@ function topicHtml() {
 }
 
 function skillmapHtml() {
-  if (!km) { load(); return `<p class="muted">Lecture des missions des 30 derniers jours…</p>`; }
+  if (!km) { load(); return `<p class="muted osloading" role="status">Lecture des missions des 30 derniers jours…</p>`; }
   if (km.error) return `<p class="muted">Serveur injoignable (ou ancienne version : redémarre Agent Office).</p>`;
   if (!km.topics.length) return `<p class="muted">Pas encore assez de missions d'agents sur 30 jours pour dresser la carte.</p>`;
   const cells = devCells(), rows = TEAM.filter(n => topics().some(t => cells.has(`${n}\n${t.key}`)));
