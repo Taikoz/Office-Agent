@@ -218,7 +218,7 @@ osBox.addEventListener("click", ev => {
   if (b.dataset.fold) return openFolder(b.dataset.fold);
   if (b.dataset.os === "max") { document.body.classList.toggle("osmax", osBox.classList.toggle("max")); return renderChiefOs(); }  // full screen: the office's own controls step aside (body.osmax)
   if (b.dataset.osAdvanced) return setOsAdvanced(b.dataset.osAdvanced === "1");
-  if (b.dataset.osApp) { setOsApp(b.dataset.osApp); if (b.dataset.osSection) OsApp.get(b.dataset.osApp)?.goTo?.(b.dataset.osSection); return renderChiefOs(); }  // a section of it (Réglages → Connexions)
+  if (b.dataset.osApp) { setOsApp(b.dataset.osApp); if (b.dataset.osSection) OsApp.get(b.dataset.osApp)?.goTo?.(b.dataset.osSection); return renderChiefOs(); }  // a section of it (Réglages → Intégrations)
   if (b.dataset.osOpen) { if (OsApp.space(b.dataset.osOpen)) return osFolder === b.dataset.osOpen ? (osFolder = null, renderChiefOs()) : openFolder(b.dataset.osOpen); openEntry(b.dataset.osOpen); return renderChiefOs(); }
   if (!osOverview && ev.target.closest(".osapp")) curApp().click(b, ev);  // the app's own buttons
 });

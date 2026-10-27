@@ -1,5 +1,5 @@
 // ChiefOS → 🆘 Support: the messages of a Slack channel (the support one), read-only, through the server (office/slack.py:
-// the bot token stays there, entered in ChiefOS → Réglages). Who wrote, when, the text, its thread and reactions, a
+// the bot token stays there, entered in ChiefOS → Réglages → 🔌 Intégrations). Who wrote, when, the text, its thread and reactions, a
 // link to open it in Slack. A badge counts the new ones; a new message pops up (toast) even when the app is closed.
 
 import { esc } from "../core/data.js";
@@ -8,7 +8,7 @@ import { OsApp } from "./base.js";
 import { osApp, renderChiefOs } from "../ui/chiefos.js";
 import { sfx, toast } from "../sims/progress.js";
 
-let st = null, data = null, err = "", busy = false, msg = "", draft = { token: "", channel: "" }, notified = 0, loading = false;
+let st = null, data = null, err = "", notified = 0, loading = false;
 let seen = 0;
 try { seen = +localStorage.getItem("office-support-seen") || 0; } catch (_) { /* storage blocked */ }
 const demo = () => typeof DEMO !== "undefined" && DEMO;
@@ -67,30 +67,12 @@ class SupportApp extends OsApp {
 }
 new SupportApp();
 
-/* ---------- ChiefOS → Réglages: the token and the channel ---------- */
-export function supportSettingsHtml() {
-  const s = st || {};
-  if (!st) loadStatus().then(() => { if (osApp === "settings") renderChiefOs(); });
-  return `<h4>SLACK · SUPPORT</h4>
-    <div class="osrow"><b>État</b><span>${s.error ? `<span class="s-blocked">${esc(s.error)}</span>` : s.configured ? `✅ #${esc(s.channel)} sur ${esc(s.team)} (bot @${esc(s.bot)})` : "non relié"}</span><span>${s.configured ? `<button data-sl="forget">Oublier</button>` : ""}</span></div>
-    <div class="osrow"><b>Token du bot</b><span><input id="sl-token" type="password" autocomplete="off" value="${esc(draft.token)}" placeholder="${s.configured ? "•••••• enregistré (laisser vide pour le garder)" : "xoxb-…"}" aria-label="Token Slack"></span><span><a href="https://api.slack.com/apps" target="_blank" rel="noopener">Créer une app Slack ↗</a></span></div>
-    <div class="osrow"><b>Channel</b><span><input id="sl-channel" value="${esc(draft.channel || (s.configured ? `#${s.channel}` : ""))}" placeholder="#support ou C0123456789" aria-label="Channel Slack"></span><span></span></div>
-    <div class="osacts"><button data-sl="save" class="ubok"${busy ? " disabled" : ""}>${busy ? "Vérification…" : "Enregistrer et tester"}</button><span class="muted">${esc(msg)}</span></div>
-    <p class="muted">Lecture seule : rien n'est jamais envoyé dans Slack. Droits du bot : <b>channels:history</b> (<b>groups:history</b> pour un channel privé), <b>channels:read</b> / <b>groups:read</b>, <b>users:read</b> ; puis invite-le dans le channel (<code>/invite @ton-bot</code>). Le token reste sur cette machine (<code>~/.claude/agent-office/slack.json</code>, lisible par toi seul) : la page ne le revoit jamais et il n'est pas dans la sauvegarde.</p>`;
-}
-export async function slackClick(b) {
-  const act = b.dataset.sl; if (!act) return false;
-  if (act === "save") { draft.token = document.getElementById("sl-token")?.value || ""; draft.channel = document.getElementById("sl-channel")?.value || ""; }
-  busy = true; msg = ""; renderChiefOs();
-  try {
-    const r = await fetch("/api/slack/config", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify(act === "forget" ? { forget: true } : { token: draft.token, channel: draft.channel }) });
-    const body = await r.json();
-    if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
-    st = body; data = null; draft = { token: "", channel: "" }; msg = act === "forget" ? "Slack oublié." : `✅ #${body.channel} relié : les messages sont dans ChiefOS → Support.`;
-    if (st.configured) loadMessages(true);
-  } catch (e) { msg = `⚠️ ${e.message}`; } finally { busy = false; renderChiefOs(); }
-  return true;
-}
+/* ---------- 🔌 Intégrations connected, changed or disconnected Slack: read its state again ---------- */
+window.addEventListener("office:integration", ev => {
+  if (ev.detail !== "slack") return;
+  data = null; err = ""; notified = 0;
+  loadStatus().then(() => { loadMessages(true); renderChiefOs(); });
+});
 
 // in the background: new messages every minute (a badge, a toast), only when Slack is linked
 setTimeout(async () => { if (demo()) return; await loadStatus(); loadMessages(true); }, 3000);

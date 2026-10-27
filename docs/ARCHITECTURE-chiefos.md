@@ -20,7 +20,7 @@ Audit de l'existant, architecture cible et plan de migration. Document vivant : 
 - **Secrets** (`office/vault.py`) :
   - Jetons scellés au repos (encrypt-then-MAC). La clé est hors de `~/.claude`, liée à la machine.
   - `open_authed()` refuse toute redirection vers un autre hôte : le jeton ne quitte jamais son service.
-- **Tests** : `python3 -I -m unittest discover -s tests` (131 tests).
+- **Tests** : `python3 -I -m unittest discover -s tests` (131 tests ; `test_integrations.py` pour le registre).
 
 ### Intégrations existantes
 
@@ -123,7 +123,7 @@ Chaque fonction a un seul emplacement principal ; ailleurs, elle n'apparaît qu'
 | 1 Audit | Ce document, section 1 | ✅ |
 | 2 Architecture | Section 2 | ✅ |
 | 4 Socle d'intégrations | `office/integrations.py`, routes `/api/integrations*`, tests | ✅ (serveur) |
-| 4b Integration Hub (front) | Section « Intégrations » des Réglages, formulaires générés, états, vérification, apps dépendantes | à faire |
+| 4b Integration Hub (front) | `ui/integrations.js` : Réglages → 🔌 Intégrations remplace les trois formulaires ; événement `office:integration` pour que les apps relisent leur état | ✅ |
 | 5 Génération d'apps | `office/apps.py`, gabarits, `GeneratedApp`, cycle de vie | à faire |
 | 3 Centralisation | Contexte projet partagé ; retrait des doublons (🔀 MR) | à faire, après 4b |
 | 6 Sécurité | Journal des connexions, liste blanche d'hôtes optionnelle, limites de débit dans le runtime | à faire |

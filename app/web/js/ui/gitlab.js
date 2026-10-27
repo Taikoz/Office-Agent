@@ -1,16 +1,15 @@
-// The GitLab client of ChiefOS (office/gitlab.py): its state, loading, and the actions of ⚙️ Réglages (address and a
-// personal token, read_api; kept by the server, never shown back) and 🔴 Pipelines (relaunch an agent with the failed
-// job's log). The apps: apps/settings.js, apps/pipes.js, apps/gitlab.js (🦊 the merge requests).
+// The GitLab client of ChiefOS (office/gitlab.py): its state, loading, and the actions of 🔴 Pipelines (relaunch an
+// agent with the failed job's log). The address and the token are set in ⚙️ Réglages → 🔌 Intégrations
+// (ui/integrations.js). The apps: apps/codehome.js, apps/pipes.js, apps/gitlab.js (🦊 the merge requests).
 
 import { hub } from "../hub.js";
 import { esc } from "../core/data.js";
 import { DESKS } from "../core/core.js";
 import { openPanel } from "./panel.js";
-import { toast } from "../sims/progress.js";
 import { OsApp } from "../apps/base.js";
 import { closeChiefOs, renderChiefOs } from "./chiefos.js";
 
-export let glStatus = null, glMrs = null, glPipes = null, glMsg = "", glBusy = false, glDraftUrl = null;
+export let glStatus = null, glMrs = null, glPipes = null;
 const GL_DEMO = {
   status: { configured: true, url: "https://gitlab.example.com", user: "taikoz" },
   mrs: { configured: true, user: "taikoz", url: "https://gitlab.example.com",
@@ -40,7 +39,7 @@ const CI_ICON = { success: "🟢", failed: "🔴", running: "🔵", pending: "�
 // the launch form, prefilled (launch.js reads launchPreset)
 export function launchWith(agent, prompt) { hub.launchPreset = { agent, prompt }; closeChiefOs(); const i = DESKS.findIndex(hub.freeDesk); openPanel(`launch:${Math.max(0, i)}:`); }
 // GitLab answered with an error: what happened, and where to fix it
-export const glError = msg => `<div class="oserror" role="alert"><b>GitLab ne répond pas comme prévu</b><span>${esc(msg)}</span><small>Vérifie l'adresse et le jeton (droit read_api, pas expiré) dans Réglages → Connexions.</small><div class="osacts"><button data-os-app="settings" data-os-section="links">Ouvrir les connexions</button><button data-gl-retry>↻ Réessayer</button></div></div>`;
+export const glError = msg => `<div class="oserror" role="alert"><b>GitLab ne répond pas comme prévu</b><span>${esc(msg)}</span><small>Vérifie l'adresse et le jeton (droit read_api, pas expiré) dans Réglages → Intégrations.</small><div class="osacts"><button data-os-app="settings" data-os-section="links">Ouvrir les intégrations</button><button data-gl-retry>↻ Réessayer</button></div></div>`;
 export const notConfigured = () => `<div class="osempty"><span class="osemptyic" aria-hidden="true">🦊</span><b>GitLab n'est pas encore relié</b><span>Ajoute ton adresse GitLab et un jeton en lecture seule pour voir tes MR, celles à relire et les pipelines rouges.</span><div class="osacts"><button class="primary" data-os-app="settings" data-os-section="links">Relier GitLab</button></div></div>`;
 
 OsApp.listen(["gitlab", "codehome", "pipes"], "click", ev => { if (ev.target.closest("[data-gl-retry]")) { glLoad("mrs", true); glLoad("pipelines", true); } });
@@ -53,21 +52,6 @@ OsApp.listen(["settings", "pipes"], "click", async ev => {  // their buttons (ap
     const p = glPipes?.pipelines?.[+b.dataset.i]; if (!p) return;
     return launchWith("feature-builder", `La CI est rouge sur ${p.project} (branche ${p.ref}${p.mr ? `, MR ${p.mr.ref}` : ""}) : job « ${p.job} » (${p.jobUrl || p.url}).\n\nFin du log :\n${p.log.split("\n").slice(-25).join("\n")}\n\nTrouve la cause, corrige-la sur la branche ${p.ref} et pousse la correction.`);
   }
-  if (act === "save" || act === "forget") {
-    if (DEMO) { glMsg = "Démo : rien n'est enregistré."; return renderChiefOs(); }
-    // read the fields before the "Vérification…" re-render empties them
-    const body = act === "forget" ? { forget: true } : { url: document.getElementById("gl-url").value, token: document.getElementById("gl-token").value };
-    if (act === "save") glDraftUrl = body.url;
-    glBusy = true; glMsg = ""; renderChiefOs();
-    try {
-      const res = await fetch("/api/gitlab/config", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify(body) });
-      const out = await res.json();
-      if (res.status === 403) throw new Error("page périmée : recharge-la (Ctrl+Maj+R)");
-      if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      glStatus = out; glMrs = glPipes = null; glDraftUrl = null;
-      glMsg = act === "forget" ? "Jeton oublié." : `✓ Connecté en tant que @${out.user}.`;
-      if (act === "save") toast("GITLAB", "Relié ✓", `@${out.user} · ${out.url}`);
-    } catch (err) { glMsg = `✗ ${err.message}`; }
-    glBusy = false; renderChiefOs();
-  }
 });
+// 🔌 Intégrations connected, changed or disconnected GitLab: read its state again, the lists with it
+window.addEventListener("office:integration", ev => { if (ev.detail === "gitlab") { glMrs = glPipes = null; glLoad("status"); } });

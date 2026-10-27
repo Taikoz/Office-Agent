@@ -73,6 +73,7 @@ class ConnectionTest(Base):
         conn = self.connect_gitlab()
         self.assertEqual(conn["state"], "connected")
         self.assertIn("@adrien", conn["account"])
+        self.assertEqual(conn["settings"], {"url": "https://gitlab.example.com"})  # to prefill the form; never the token
         everything = json.dumps({**integrations.catalogue(), **integrations.connections(), "c": conn})
         self.assertNotIn(TOKEN, everything)
         on_disk = (self.tmp / "gitlab.json").read_text()

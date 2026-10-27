@@ -1,5 +1,5 @@
 // ChiefOS → 🐞 Erreurs: the Sentry errors of the organisation, through the server (office/sentry.py: the token stays
-// there, entered in ChiefOS → Réglages). Two tabs:
+// there, entered in ChiefOS → Réglages → 🔌 Intégrations). Two tabs:
 //   Tableau de bord — each project with errors of the day, split by environment (prod, staging, dev…), its issues;
 //     a click on an issue: Claude Haiku sums it up (cause, fix, severity, the agent fit to fix it) and drafts a YouTrack
 //     Bug, editable; « Créer le ticket » asks a second click, then the agent can be launched (the usual launch form).
@@ -14,8 +14,7 @@ import { ago2, launchWith } from "../ui/gitlab.js";
 import { toast } from "../sims/progress.js";
 import { SaveSlot } from "../save/slot.js";
 
-let st = null, data = null, dash = null, busy = false, msg = "", loading = false, dashLoading = false, first = true;
-const draft = { url: "", token: "", org: "", environments: "", grafana: undefined };
+let st = null, data = null, dash = null, loading = false, dashLoading = false, first = true;
 const seen = new SaveSlot("office-errors-seen", { keys: [] }).data;  // alerts already notified
 const view = new SaveSlot("office-errors-view", { tab: "dash" }).data;
 // the issue open in the detail window, and per issue: { loading, error, a (analysis), edit: { summary, description, severity, priority }, confirm, creating, ticket }
@@ -141,7 +140,7 @@ function detailHtml() {
   const steps = st?.grafana && grafanaPref.on ? ["grafana", "haiku"] : ["haiku"];
   const body = s.loading ? `<div class="dlempty erprogress">${steps.map(k => `<div class="${k === s.step ? "now" : steps.indexOf(k) < steps.indexOf(s.step) ? "done" : ""}">${k === s.step ? "⏳" : steps.indexOf(k) < steps.indexOf(s.step) ? "✓" : "·"} ${STEP[k]}</div>`).join("")}<small>depuis ${Math.round((Date.now() - (s.since || Date.now())) / 1000)} s · tu peux fermer cette fenêtre, l'analyse continue</small></div>`
     : !a ? `<div class="erintro"><p>Claude Haiku 5 lit le dernier événement de cette erreur (l'exception, les lignes de code en cause, l'environnement, la version ; jamais l'utilisateur ni la requête) et propose un résumé, la cause probable, le correctif, la sévérité et l'agent adapté, avec le brouillon du ticket YouTrack.</p>
-        ${st?.grafana ? `<label class="dltoggle"><input type="checkbox" data-er-grafana${grafanaPref.on ? " checked" : ""}><i></i>D'abord lire Grafana dans mon Chrome (ouvre un onglet, 1 à 3 min, lecture seule)</label>` : `<p class="dlnote">Grafana n'est pas renseigné (Réglages → Sentry) : l'analyse se fait sur Sentry seul.</p>`}
+        ${st?.grafana ? `<label class="dltoggle"><input type="checkbox" data-er-grafana${grafanaPref.on ? " checked" : ""}><i></i>D'abord lire Grafana dans mon Chrome (ouvre un onglet, 1 à 3 min, lecture seule)</label>` : `<p class="dlnote">Grafana n'est pas renseigné (Réglages → Intégrations → Sentry) : l'analyse se fait sur Sentry seul.</p>`}
         <button class="dlbtn ubok" data-er="analyze">✨ Analyser avec Haiku 5</button></div>`
     : `<div class="ersum"><div><span>Résumé</span><p>${esc(a.summary)}</p></div><div><span>Cause probable</span><p>${esc(a.cause)}</p></div><div><span>Correctif proposé</span><p>${esc(a.fix)}</p></div>
         <div class="ermeta"><span class="erlvl ${a.severity.startsWith("High") ? "lv-fatal" : a.severity.startsWith("Medium") ? "lv-warning" : ""}">${esc(a.severity)}</span><span class="erlvl">${esc(a.priority)}</span><span class="erlvl">Agent : ${esc(a.agent)}</span><small>${esc(a.agentWhy)}</small>
@@ -242,33 +241,9 @@ OsApp.listen("errors", "keydown", ev => {
   if (ev.key === "Enter" && ev.target.matches?.(".errow")) { openId = ev.target.dataset.id; renderChiefOs(); }
 });
 
-/* ---------- ChiefOS → Réglages: the address, the token, the organisation, the environments ---------- */
-export function sentrySettingsHtml() {
-  const s = st || {};
-  if (!st) loadStatus().then(() => { if (osApp === "settings") renderChiefOs(); });
-  const url = (draft.url || s.url || "https://sentry.io").replace(/\/$/, "");
-  return `<h4>SENTRY · ERREURS</h4>
-    <div class="osrow"><b>État</b><span>${s.error ? `<span class="s-blocked">${esc(s.error)}</span>` : s.configured ? `✅ ${esc(s.org)} sur ${esc(s.url)}${s.environments?.length ? ` · ${esc(s.environments.join(", "))}` : ""}` : "non relié"}</span><span>${s.configured ? `<button data-se="forget">Oublier le jeton</button>` : ""}</span></div>
-    <div class="osrow"><b>Adresse</b><span><input id="se-url" value="${esc(draft.url || s.url || "")}" placeholder="https://sentry.io ou https://sentry.mon-entreprise.fr" aria-label="Adresse Sentry"></span><span></span></div>
-    <div class="osrow"><b>Jeton</b><span><input id="se-token" type="password" autocomplete="off" placeholder="${s.configured ? "•••••• enregistré (laisser vide pour le garder)" : "sntryu_… ou jeton d'API"}" aria-label="Jeton Sentry"></span><span><a href="${esc(url)}/settings/account/api/auth-tokens/" target="_blank" rel="noopener">Créer un jeton ↗</a></span></div>
-    <div class="osrow"><b>Organisation</b><span><input id="se-org" value="${esc(draft.org || s.org || "")}" placeholder="trouvée seule s'il n'y en a qu'une" aria-label="Organisation Sentry"></span><span></span></div>
-    <div class="osrow"><b>Grafana</b><span><input id="se-grafana" value="${esc(draft.grafana ?? s.grafana ?? "")}" placeholder="facultatif : https://grafana.mon-entreprise.fr (lu dans ton Chrome avant chaque analyse)" aria-label="Adresse Grafana"></span><span></span></div>
-    <div class="osrow"><b>Environnements</b><span><input id="se-env" value="${esc(draft.environments || (s.environments || []).join(", "))}" placeholder="vide = tous ; ex. production, prd" aria-label="Environnements Sentry"></span><span></span></div>
-    <div class="osacts"><button data-se="save" class="ubok"${busy ? " disabled" : ""}>${busy ? "Vérification…" : "Enregistrer et tester"}</button><span class="muted">${esc(msg)}</span></div>
-    <p class="muted">Lecture seule : rien n'est jamais modifié dans Sentry. Droits du jeton : <b>org:read</b>, <b>project:read</b>, <b>event:read</b>. Le jeton reste sur cette machine (<code>~/.claude/agent-office/sentry.json</code>, lisible par toi seul) : la page ne le revoit jamais et il n'est pas dans la sauvegarde. Une fois relié, les erreurs sont vérifiées toutes les 2 min (ChiefOS → 🐞 Erreurs) : pic, nouvelle erreur, erreurs après une mise en prod. <b>Grafana</b> (facultatif) : avant une analyse, si tu coches la case, une session Claude Haiku ouvre un onglet dans ton Chrome (déjà connecté) et lit Grafana en lecture seule — logs du cluster et dashboard du service autour de l'heure de l'erreur — pour enrichir le résumé et le correctif. Elle agit avec ta session Grafana : n'active la case que si tu acceptes qu'un agent lise ces pages pour toi.</p>`;
-}
-export async function sentryClick(b) {
-  const act = b.dataset.se; if (!act) return false;
-  if (act === "save") for (const [k, id] of [["url", "se-url"], ["token", "se-token"], ["org", "se-org"], ["environments", "se-env"], ["grafana", "se-grafana"]]) draft[k] = document.getElementById(id)?.value || "";
-  busy = true; msg = ""; renderChiefOs();
-  try {
-    if (DEMO) throw new Error("pas en mode démo");
-    const r = await fetch("/api/sentry/config", { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify(act === "forget" ? { forget: true } : draft) });
-    const body = await r.json();
-    if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
-    st = body; data = null; first = true; Object.assign(draft, { url: "", token: "", org: "", environments: "", grafana: undefined });
-    msg = act === "forget" ? "Sentry oublié." : `✅ ${body.org} relié (${body.projects} projets) : les erreurs sont dans ChiefOS → 🐞 Erreurs.`;
-    if (st.configured) check();
-  } catch (e) { msg = `⚠️ ${e.message}`; } finally { busy = false; renderChiefOs(); }
-  return true;
-}
+/* ---------- 🔌 Intégrations connected, changed or disconnected Sentry: read its state again ---------- */
+window.addEventListener("office:integration", ev => {
+  if (ev.detail !== "sentry") return;
+  data = dash = null; first = true;
+  loadStatus().then(() => { if (st?.configured) check(); renderChiefOs(); });
+});

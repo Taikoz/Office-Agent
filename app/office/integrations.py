@@ -174,11 +174,14 @@ def connection(c: Connector) -> dict[str, Any]:
     if not st.get("configured"):
         return {"id": c.id, "state": "not_configured", "detail": STATES["not_configured"], "account": "", "apps": list(c.apps)}
     state, detail = ("expired", STATES["expired"]) if expired(st) else ("connected", STATES["connected"])
+    # the saved values of the non-secret fields (an address, an organisation, a channel), to prefill the form
+    settings = {k: ", ".join(map(str, st[k])) if isinstance(st[k], list) else str(st[k])
+                for k, f in c.fields().items() if f.kind != "secret" and st.get(k) not in (None, "", [])}
     last = _checks.get(c.id)
     if last and state == "connected" and last["state"] != "connected":
         state, detail = last["state"], last["detail"]
     return {"id": c.id, "state": state, "detail": detail, "account": c.account(st), "expires": st.get("expires", ""),
-            "scopes": st.get("scopes", []), "checked": last["at"] if last else 0, "apps": list(c.apps)}
+            "scopes": st.get("scopes", []), "checked": last["at"] if last else 0, "apps": list(c.apps), "settings": settings}
 
 
 def check(cid: str) -> dict[str, Any]:
@@ -301,7 +304,9 @@ register(Connector(
         Field("token", "Jeton", "secret", True, "sntrys_…"),
         Field("org", "Organisation", "text", False, "trouvée seule s'il n'y en a qu'une"),
         Field("environments", "Environnements suivis", "list", False, "production, staging"),
-        Field("grafana", "Grafana (optionnel)", "url", False, "https://grafana.mon-entreprise.fr", "Pour l'analyse d'une erreur avec les logs."),
+        Field("grafana", "Grafana (optionnel)", "url", False, "https://grafana.mon-entreprise.fr",
+              "Avant une analyse, si tu coches la case dans 🐞 Erreurs, une session Claude Haiku lit Grafana en lecture seule dans ton Chrome "
+              "(déjà connecté) : n'active la case que si tu acceptes qu'un agent lise ces pages pour toi."),
     ), ("org:read", "project:read", "event:read"), "{url}/settings/account/api/auth-tokens/"),),
     capabilities=(
         Capability("monitoring.issues", "monitoring", "Erreurs non résolues du jour, par projet et environnement", op="dashboard"),

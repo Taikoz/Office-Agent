@@ -87,3 +87,14 @@
   #chiefos .cvchip { --c: var(--cv-off); padding: 1px 8px; border-radius: 999px; font-size: 12px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); }
   #chiefos .cvchip.ok { --c: var(--cv-ok); } #chiefos .cvchip.bad { --c: var(--cv-bad); } #chiefos .cvchip.warn { --c: var(--cv-warn); } #chiefos .cvchip.run { --c: var(--cv-run); }
   @media (max-width: 900px) { #chiefos .cvtiles { grid-template-columns: 1fr 1fr; } #chiefos .cvcols { grid-template-columns: 1fr; } #chiefos .cvtodo { grid-template-columns: 28px 1fr; } #chiefos .cvacts { grid-column: 1 / -1; justify-content: flex-start; } }
+
+/* ⚙️ Réglages → 🔌 Intégrations (ui/integrations.js): one card per service, its state on the left edge */
+  #chiefos .ihcard { --c: var(--cv-off); display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; padding: 12px 14px; border-radius: 12px; background: var(--ub-card); border-left: 3px solid var(--c); }
+  #chiefos .ihcard.ok { --c: var(--cv-ok); } #chiefos .ihcard.warn { --c: var(--cv-warn); } #chiefos .ihcard.bad { --c: var(--cv-bad); }
+  #chiefos .ihhead { display: flex; align-items: center; gap: 10px; } #chiefos .ihic { font-size: 22px; }
+  #chiefos .ihtt { display: flex; flex-direction: column; flex: 1; min-width: 0; } #chiefos .ihtt small { color: var(--ub-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chiefos .ihcaps, #chiefos .ihapps { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  #chiefos .ihapps .muted { margin-right: 4px; }
+  #chiefos .ihapp { padding: 1px 10px; border-radius: 999px; font-size: 12px; }
+  #chiefos .ihform { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--ub-line); }
+  #chiefos .ihform .osrow small { display: block; margin-top: 2px; }
