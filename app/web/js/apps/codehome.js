@@ -10,6 +10,7 @@ import { ago2, glLoad, glMrs, glPipes, glStatus, launchWith, notConfigured, glEr
 import { openMr, openMrList } from "./gitlab.js";
 import { openSentry, sentryState } from "./errors.js";
 import { inProject, projectBarHtml } from "../ui/project.js";
+import { CH, area, bars, legend } from "../ui/charts.js";
 
 const REFRESH = 120_000;  // the server keeps GitLab 60 s; a page left open reads it again every 2 min
 const view = { at: 0, busy: false };
@@ -42,6 +43,27 @@ function todo(mine, review, pipes, sentry) {
   return out;
 }
 
+// the health of the code at a glance: the CI of the open MRs, the production errors of the last 24 h, the reviews waiting
+const CI_STACK = [{ key: "ok", label: "✓ CI verte", color: CH.done }, { key: "bad", label: "✗ CI rouge", color: CH.blocked }, { key: "run", label: "◷ en cours", color: CH.money }, { key: "none", label: "sans CI", color: CH.other }];
+const ciBucket = m => m.ci === "success" ? "ok" : m.ci === "failed" ? "bad" : ["running", "pending", "created", "manual"].includes(m.ci) ? "run" : "none";
+function healthHtml(mine, review, sentry) {
+  const count = list => list.reduce((o, m) => (o[ciBucket(m)]++, o), { ok: 0, bad: 0, run: 0, none: 0 });
+  const ci = (mine.length || review.length) ? bars({ rows: [["Mes MR", mine], ["À relire", review]].filter(([, l]) => l.length).map(([label, l]) => ({ key: label, label, values: count(l), meta: `${l.length} MR` })), stack: CI_STACK, fmt: v => `${v}` })
+    : `<p class="muted">Aucune MR ouverte.</p>`;
+  const projects = (sentry.projects || []).filter(p => inProject.sentry(p.slug) || inProject.sentry(p.service));
+  const hourly = Array.from({ length: 24 }, (_, i) => projects.reduce((n, p) => n + (p.hourly[i] || 0), 0)), now = new Date();
+  const errors = !sentry.configured ? `<p class="muted">Sentry n'est pas relié : <button class="linklike" data-os-app="settings" data-os-section="links">le relier</button>.</p>`
+    : !projects.length && !sentry.alerts ? `<p class="muted osloading" role="status">Lecture de Sentry…</p>`
+    : area({ rows: hourly.map((v, i) => { const h = new Date(now.getTime() - (23 - i) * 3600e3).getHours(); return { label: `${h} h – ${(h + 1) % 24} h`, short: `${h} h`, value: v }; }), color: CH.blocked, name: "Erreurs", height: 150, width: Math.max(320, Math.round((document.querySelector("#chiefos .osapp")?.clientWidth || 900) / 2 - 80)), aria: "Erreurs de production par heure, sur 24 h" });
+  const waiting = [...review].sort((a, b) => Date.parse(a.updated) - Date.parse(b.updated)).slice(0, 6);
+  const hours = m => Math.max(0, (Date.now() - Date.parse(m.updated)) / 3600e3);
+  const waits = waiting.length ? bars({ rows: waiting.map(m => ({ key: m.ref, label: `<button class="linklike" data-cv-mr="${m.project}:${m.iid}">${esc(m.title)}</button>`, values: { h: hours(m) }, meta: `${esc(m.ref)} · ${esc(m.authorName || m.author)}` })),
+    stack: [{ key: "h", label: "Attend depuis", color: CH.done }], fmt: v => v < 24 ? `${Math.round(v)} h` : `${Math.round(v / 24)} j` }) : `<div class="cvclear">✓ Personne n'attend ta review.</div>`;
+  return `<div class="chgrid2"><section class="chcard"><div class="chhead"><h4>CI de tes MR</h4>${legend(CI_STACK.map(k => [k.label, k.color]))}</div>${ci}</section>
+    <section class="chcard"><div class="chhead"><h4>Erreurs de prod, 24 h</h4><span class="muted">${sentry.configured ? `${hourly.reduce((a, b) => a + b, 0)} au total` : ""}</span></div>${errors}</section></div>
+    <section class="chcard"><div class="chhead"><h4>Reviews qui attendent</h4><span class="muted">les plus anciennes d'abord</span></div>${waits}</section>`;
+}
+
 function codeHomeHtml() {
   if (glStatus && !glStatus.configured && !DEMO) return notConfigured();
   if (!view.busy && (!glMrs || !glPipes || Date.now() - view.at > REFRESH)) load(!!glMrs);
@@ -63,6 +85,7 @@ function codeHomeHtml() {
   return `${projectBarHtml()}<div class="cvbar"><span class="muted">${view.busy ? "Actualisation…" : `@${esc(glMrs.user || "")} · à jour il y a ${Math.max(0, Math.round((Date.now() - view.at) / 60000))} min`}</span><button data-cv-reload title="Actualiser">↻ Actualiser</button></div>
     <div class="cvtiles">${tiles}</div>
     <h4>À FAIRE MAINTENANT${list.length ? ` · ${list.length}` : ""}</h4><div class="cvtodos">${actions}</div>
+    <h4>SANTÉ DU CODE</h4>${healthHtml(mine, review, sentry)}
     <div class="cvcols"><section><h4>MES MR · ${mine.length}</h4>${mine.length ? mine.map(m => mrRow(m, "moi")).join("") : `<p class="muted">Aucune MR ouverte.</p>`}</section>
       <section><h4>À RELIRE · ${review.length}</h4>${review.length ? review.map(m => mrRow(m, esc(m.authorName || m.author))).join("") : `<p class="muted">Personne n'attend ta review.</p>`}</section></div>`;
 }

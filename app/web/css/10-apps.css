@@ -445,3 +445,4 @@
 #chiefos .dbcmds code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 #chiefos .dberrs { margin: 0; padding-left: 18px; color: #ffc9a8; } #chiefos .dberrs li { margin: 3px 0; overflow-wrap: anywhere; }
 @media (max-width: 900px) { #chiefos .dbwrap { grid-template-columns: minmax(0, 1fr); } #chiefos .dblist { position: static; max-height: 220px; } }
+#chiefos .chgrid2 + .chcard { margin-top: 14px; }

@@ -114,3 +114,20 @@
   #chiefos .pjbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; padding: 6px 10px; border-radius: 10px; background: var(--ub-card); font-size: 13px; }
   #chiefos .pjbar.on { box-shadow: inset 3px 0 0 var(--cv-run); }
   #chiefos .pjpick { display: inline-flex; align-items: center; gap: 6px; } #chiefos .pjpick select { max-width: 320px; }
+
+/* 🔴 Pipelines (apps/pipes.js): one card per red pipeline, the log in a terminal */
+  #chiefos .pplist { display: grid; gap: 12px; }
+  #chiefos .ppcard { display: grid; gap: 10px; padding: 14px 16px; border-radius: 14px; background: var(--ub-card); border: 1px solid var(--ub-line); border-left: 3px solid var(--cv-bad); }
+  #chiefos .pphead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+  #chiefos .ppdot { width: 10px; height: 10px; border-radius: 50%; background: var(--cv-bad); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cv-bad) 22%, transparent); }
+  #chiefos .pptitle { display: flex; flex-direction: column; flex: 1; min-width: 160px; } #chiefos .pptitle b { font-size: 15px; } #chiefos .pptitle small { color: var(--ub-dim); font-size: 12px; }
+  #chiefos .ppmeta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12.5px; }
+  #chiefos .ppref { padding: 2px 8px; border-radius: 7px; background: var(--os-sunk, #0e1426); border: 1px solid var(--ub-line); font-size: 12px; }
+  #chiefos .ppjob { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12.5px; }
+  #chiefos .ppterm { margin: 0; max-height: 360px; overflow: auto; padding: 12px 14px; border-radius: 10px; background: #070b16; border: 1px solid #ffffff12;
+    color: #c9d1e3; font: 12px/1.55 var(--os-mono, "JetBrains Mono", monospace); white-space: pre-wrap; overflow-wrap: anywhere; scrollbar-width: thin; }
+  #chiefos .ppterm .bad { color: #ff8a8f; } #chiefos .ppterm .warn { color: #f5c46b; } #chiefos .ppterm .ok { color: #6fdca6; }
+  #chiefos .ppcard .osacts { margin: 0; align-items: center; } #chiefos .ppopen { font-size: 12.5px; }
+  #chiefos .linklike { padding: 0; border: 0; background: none; color: var(--os-info, #5aa9ff); font: inherit; cursor: pointer; text-align: left; justify-self: start; }
+  #chiefos .linklike:hover { text-decoration: underline; }
+  #chiefos .ppterm i { font-style: normal; color: #5d6884; }

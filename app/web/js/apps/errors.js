@@ -213,7 +213,7 @@ function errorsHtml() {
 
 // for 🧭 Vue d'ensemble: what the automatic check found (null until its first answer), and one issue opened here
 // the projects: their slug, and the service each one watches when 🚚 Livraisons knows it (ui/project.js matches them)
-const sentryProjects = () => { const svc = Object.fromEntries((dash?.projects || []).map(p => [p.slug, p.service || ""])); return (data?.projects || dash?.projects || []).map(p => ({ slug: p.slug, service: svc[p.slug] || p.service || "" })); };
+const sentryProjects = () => { const svc = Object.fromEntries((dash?.projects || []).map(p => [p.slug, p.service || ""])); return (data?.projects || dash?.projects || []).map(p => ({ slug: p.slug, service: svc[p.slug] || p.service || "", hourly: p.hourly || [], day: p.day || 0 })); };
 export const sentryState = () => ({ known: !!st, configured: !!st?.configured, error: data?.error || st?.error || "", alerts: data?.alerts || null, top: data?.top || [], projects: sentryProjects() });
 export function openSentry(id) { setOsApp("errors"); if (id) openId = id; else { view.tab = "alerts"; SaveSlot.get("office-errors-view").save(view); } }
 
