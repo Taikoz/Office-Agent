@@ -30,6 +30,7 @@ class Base(unittest.TestCase):
             p.start()
         self.tmp = tmp
         integrations._checks.clear()
+        integrations._cooldown.clear()
         gitlab._cache.clear()
 
     def tearDown(self) -> None:
@@ -124,6 +125,45 @@ class RunTest(Base):
             self.assertEqual(integrations.safe(boom)[0], 400)
 
 
+class SecurityTest(Base):
+    def test_the_journal_tells_what_was_done_never_a_value(self) -> None:
+        self.connect_gitlab()
+        with mock.patch.object(gitlab.vault, "open_authed", side_effect=http_error(401)):
+            integrations.safe(lambda: integrations.configure("gitlab", {"url": "https://gitlab.example.com", "token": TOKEN + "x"}))
+        integrations.disconnect("gitlab")
+        entries = integrations.audit()["entries"]
+        self.assertEqual([(e["action"], e["ok"]) for e in entries], [("disconnect", True), ("connect", False), ("connect", True)])
+        raw = (self.tmp / "integrations-audit.jsonl").read_text()
+        self.assertNotIn(TOKEN, raw)
+        self.assertEqual(oct((self.tmp / "integrations-audit.jsonl").stat().st_mode & 0o777), "0o600")
+
+    def test_an_address_out_of_the_allowlist_is_refused_when_saved_and_before_each_call(self) -> None:
+        self.connect_gitlab()  # saved before the list existed: gitlab.example.com
+        with mock.patch.dict(config.CFG, {"integration_hosts": ["*.corp.example"]}):
+            code, body = integrations.safe(lambda: integrations.configure("gitlab", {"url": "https://gitlab.evil.example", "token": TOKEN}))
+            self.assertEqual(code, 403)
+            self.assertIn("liste autorisée", body["error"])
+            self.assertEqual(integrations.safe(lambda: integrations.run("gitlab", "merge_requests"))[0], 403)
+            self.assertEqual(integrations.check("gitlab")["state"], "host_refused")
+            self.assertTrue(integrations.host_allowed("git.corp.example"))
+            self.assertFalse(integrations.host_allowed("corp.example.evil.org"))
+
+    def test_a_429_pauses_the_calls_until_retry_after(self) -> None:
+        self.connect_gitlab()
+        err = gitlab.GitLabError("GitLab a répondu 429")
+        err.__cause__ = urllib.error.HTTPError("u", 429, "x", {"Retry-After": "30"}, None)  # type: ignore[arg-type]
+        with mock.patch.object(gitlab, "my_mrs", side_effect=err) as mrs:
+            self.assertEqual(integrations.safe(lambda: integrations.run("gitlab", "merge_requests"))[0], 400)
+            code, body = integrations.safe(lambda: integrations.run("gitlab", "merge_requests"))
+            self.assertEqual(code, 429)
+            self.assertIn("réessaie dans", body["error"])
+            self.assertEqual(mrs.call_count, 1)  # the second call never reached GitLab
+        self.assertGreater(integrations._cooldown["gitlab"] - __import__("time").time(), 25)
+        self.assertEqual(integrations.check("gitlab")["state"], "rate_limited")
+        integrations.disconnect("gitlab")
+        self.assertNotIn("gitlab", integrations._cooldown)
+
+
 class RouteTest(Base):
     def test_the_routes_need_the_page_token_and_never_return_a_secret(self) -> None:
         import http.client
@@ -152,6 +192,8 @@ class RouteTest(Base):
             self.assertNotIn(TOKEN, text)
             self.assertEqual({c["id"]: c["state"] for c in json.loads(text)["connections"]}["gitlab"], "connected")
             self.assertEqual(call("GET", "/api/integrations/run?id=gitlab&op=forget")[0], 403)
+            self.assertEqual(call("POST", "/api/gitlab/config", {"forget": True})[0], 403)  # the former per-service routes are gone
+            self.assertEqual(json.loads(call("GET", "/api/integrations/audit")[1])["entries"][0]["action"], "connect")
             self.assertEqual(call("POST", "/api/integrations/config", {"id": "gitlab", "forget": True})[0], 200)
             self.assertFalse((self.tmp / "gitlab.json").exists())
         finally:

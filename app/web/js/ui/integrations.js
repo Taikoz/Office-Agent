@@ -32,7 +32,21 @@ export async function loadIntegrations() {
 // a connection that needs the user: refused, expired, insufficient, unreachable, misconfigured
 export const integrationsBroken = () => Object.values(intg.conns).some(c => !["connected", "not_configured"].includes(c.state));
 
-const CHIP = { connected: "ok", not_configured: "off", expired: "warn", insufficient: "warn", unreachable: "warn", invalid: "bad", error: "bad" };
+const CHIP = { connected: "ok", not_configured: "off", expired: "warn", insufficient: "warn", unreachable: "warn", rate_limited: "warn", invalid: "bad", error: "bad", host_refused: "bad" };
+const FIX = { unreachable: "Vérifie l'adresse et ton réseau (VPN ?), puis Vérifier.", rate_limited: "Le service limite les appels : Agent Office attend la fin du délai avant de le rappeler.",
+  host_refused: "Change l'adresse, ou ajoute son hôte à integration_hosts dans ~/.claude/agent-office.json puis relance le serveur." };
+// the journal (connect, disconnect, check, apps), read when its box is opened
+const ACTION = { connect: "Connexion", disconnect: "Déconnexion", check: "Vérification", app_create: "Application créée", app_update: "Application modifiée", app_delete: "Application supprimée" };
+let journal = null, journalOpen = false;
+async function loadJournal() { try { journal = (await call("/api/integrations/audit")).entries; } catch (e) { journal = { error: e.message }; } renderChiefOs(); }
+function journalHtml() {
+  if (!journal) return `<p class="muted osloading" role="status">Lecture du journal…</p>`;
+  if (journal.error) return `<p class="s-blocked">${esc(journal.error)}</p>`;
+  if (!journal.length) return `<p class="muted">Rien encore.</p>`;
+  const name = id => intg.cat.connectors.find(c => c.id === id)?.name || id;
+  return journal.slice(0, 30).map(e => `<div class="osrow"><b>${e.ok ? "✅" : "⚠️"} ${esc(ACTION[e.action] || e.action)} · ${esc(name(e.id))}</b><span class="muted">${esc(e.detail || intg.cat.states[e.state] || e.state || "")}</span>
+    <span class="muted">${new Date(e.at * 1000).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>`).join("");
+}
 const appName = id => { const a = OsApp.get(id); return a ? `${a.icon} ${a.label}` : id; };
 
 function formHtml(c, conn) {
@@ -58,7 +72,7 @@ function cardHtml(c) {
   const domains = c.capabilities.map(k => `<span class="cvchip off" title="${esc(intg.cat.domains[k.domain] || k.domain)}">${esc(k.label)}</span>`).join("");
   const apps = (conn.apps || []).filter(id => OsApp.get(id)).map(id => `<button class="ihapp" data-os-app="${id}">${esc(appName(id))}</button>`).join("");
   const why = linked && conn.state !== "connected" ? `<div class="oserror" role="alert"><b>${esc(intg.cat.states[conn.state] || conn.state)}</b><span>${esc(conn.detail)}</span>
-      <small>${conn.state === "unreachable" ? "Vérifie l'adresse et ton réseau (VPN ?), puis Vérifier." : "Crée un nouveau jeton et enregistre-le : les applications reprennent seules."}</small></div>` : "";
+      <small>${FIX[conn.state] || "Crée un nouveau jeton et enregistre-le : les applications reprennent seules."}</small></div>` : "";
   return `<section class="ihcard ${CHIP[conn.state] || "off"}" aria-label="${esc(c.name)}">
     <div class="ihhead"><span class="ihic" aria-hidden="true">${c.icon}</span><span class="ihtt"><b>${esc(c.name)}</b><small>${esc(linked ? conn.account || c.description : c.description)}</small></span>
       <span class="cvchip ${CHIP[conn.state] || "off"}">● ${esc(intg.cat.states[conn.state] || conn.state)}</span></div>
@@ -97,6 +111,8 @@ export function integrationsHtml() {
   const all = intg.cat.connectors, linked = all.filter(c => intg.conns[c.id]?.state !== "not_configured"), free = all.filter(c => !linked.includes(c));
   return `${linked.length ? `<h4>CONNECTÉS · ${linked.length}</h4>${linked.map(cardHtml).join("")}` : ""}
     ${free.length ? `<h4>DISPONIBLES · ${free.length}</h4>${free.map(cardHtml).join("")}` : ""}
+    ${intg.cat.allowedHosts?.length ? `<p class="muted">🔒 Adresses autorisées : ${intg.cat.allowedHosts.map(h => `<code>${esc(h)}</code>`).join(", ")} (integration_hosts de agent-office.json).</p>` : ""}
+    <details class="ihgens" data-ih-journal${journalOpen ? " open" : ""}><summary>Journal des connexions et des applications</summary>${journalOpen ? journalHtml() : ""}</details>
     <p class="muted">Chaque service est en lecture seule : Agent Office ne fait que les lectures que son connecteur déclare, et une application créée ici ne lit que ce que son modèle prévoit. Un service déconnecté ou dont le jeton a expiré ne supprime aucune application : elles attendent qu'il soit reconnecté.</p>`;
 }
 
@@ -104,7 +120,7 @@ const changed = id => window.dispatchEvent(new CustomEvent("office:integration",
 async function act(id, fn) {
   intg.busy = id; intg.msg[id] = ""; renderChiefOs();
   try { intg.msg[id] = await fn(); } catch (e) { intg.msg[id] = `⚠️ ${e.message}`; }
-  intg.busy = ""; await loadIntegrations();
+  intg.busy = ""; if (journal) journal = null; await loadIntegrations();
 }
 OsApp.listen("settings", "click", async ev => {
   const g = ev.target.closest("[data-ih-app]");
@@ -153,3 +169,8 @@ OsApp.listen("settings", "click", async ev => {
   }
 });
 setTimeout(() => { if (typeof DEMO === "undefined" || !DEMO) loadIntegrations(); }, 2500);  // the « ! » on Réglages when a token stopped working
+document.addEventListener("toggle", ev => {
+  if (!ev.target.matches?.("[data-ih-journal]") || ev.target.open === journalOpen) return;
+  journalOpen = ev.target.open;
+  if (journalOpen && !Array.isArray(journal)) loadJournal(); else renderChiefOs();
+}, true);

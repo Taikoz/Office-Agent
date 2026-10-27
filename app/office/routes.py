@@ -168,7 +168,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             elif self.path.startswith("/api/integrations"):  # 🔌 Intégrations (integrations.py): catalogue, connections, live check, declared reads; never a secret
                 what, q = urlparse(self.path).path.rstrip("/").rsplit("/", 1)[-1], parse_qs(urlparse(self.path).query)
                 arg = lambda k: q.get(k, [""])[0]
-                fn = {"integrations": lambda: {**integrations.catalogue(), **integrations.connections()},
+                fn = {"integrations": lambda: {**integrations.catalogue(), **integrations.connections()}, "audit": integrations.audit,
                       "check": lambda: integrations.check(arg("id")),
                       "run": lambda: integrations.run(arg("id"), arg("op"), {k: v[0] for k, v in q.items() if k not in ("id", "op")})}.get(what)
                 code, body = integrations.safe(fn) if fn else (404, {"error": "inconnu"})
@@ -248,7 +248,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/integrations/config", "/api/apps", "/api/slack/config", "/api/sentry/config", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/integrations/config", "/api/apps", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -296,10 +296,6 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     code, body = integrations.safe(lambda: integrations.disconnect(cid) if data.get("forget") else integrations.configure(cid, data.get("values")))
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
-                if self.path == "/api/slack/config":
-                    code, body = slack.safe(slack.forget if data.get("forget") else lambda: slack.save(str(data.get("token", "")), str(data.get("channel", ""))))
-                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
-                    return
                 if self.path == "/api/sentry/analyze":  # one Haiku call (quota of quips.py), on the user's click
                     def run_analyze() -> dict[str, Any]:
                         try:
@@ -314,14 +310,6 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     return
                 if self.path == "/api/sentry/ticket":  # creates a YouTrack Bug: only after the user confirmed it in the page
                     code, body = sentry.safe(lambda: sentry.create_ticket(str(data.get("id", "")), data if isinstance(data, dict) else {}, tickets.yt))
-                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
-                    return
-                if self.path == "/api/sentry/config":
-                    code, body = sentry.safe(sentry.forget if data.get("forget") else lambda: sentry.save(str(data.get("url", "")), str(data.get("token", "")), str(data.get("org", "")), str(data.get("environments", "")), str(data.get("grafana", ""))))
-                    self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
-                    return
-                if self.path == "/api/gitlab/config":
-                    code, body = gitlab.safe(gitlab.forget if data.get("forget") else lambda: gitlab.save(str(data.get("url", "")), str(data.get("token", ""))))
                     self.reply(200 if code == 200 else 400, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/net":  # ChiefOS → Réseau: open / close the office to the internal network, the host's own presence and chat (net.py)

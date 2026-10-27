@@ -16,17 +16,30 @@ Security, the same for every connector:
     secret back: catalogue() and connections() return the field definitions and the state, not the values;
   - every read operation the page may run is declared in `reads` (op id → function); run() refuses any other one, so a
     generated app cannot reach more than its connector exposes, whatever its saved settings say;
-  - nothing here writes to a provider: `writes` is empty for every connector so far, and run() only runs reads.
+  - nothing here writes to a provider: `writes` is empty for every connector so far, and run() only runs reads;
+  - "integration_hosts" in ~/.claude/agent-office.json (optional: ["gitlab.example.com", "*.example.com"]) limits
+    the addresses a connection may use: refused when it is saved, and again before every call;
+  - a provider that answers 429 (or asks to wait) gets no call from run() or check() until its Retry-After is over
+    (COOLDOWN_S by default): the page gets a readable « réessaie dans N s »;
+  - every connect, disconnect, check and app change is written to STATE_DIR/integrations-audit.jsonl (0600): when,
+    what, which service, ok or not and why; never a value of a field.
 """
 
 from __future__ import annotations
 
+import json
+import os
+import threading
 import time
+import urllib.parse
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Callable
 
-from . import gitlab, sentry, slack
+from . import config, gitlab, sentry, slack
+
+COOLDOWN_S = 60      # a provider that asked to wait, when it does not say how long
+AUDIT_KEEP = 500     # lines kept in the journal
 
 # the domains of ChiefOS a capability belongs to (the workspaces of the unified dev environment)
 DOMAINS = {
@@ -46,6 +59,8 @@ STATES = {
     "insufficient": "droits insuffisants",
     "unreachable": "service injoignable",
     "error": "erreur de configuration",
+    "rate_limited": "limite de débit atteinte",
+    "host_refused": "adresse hors de la liste autorisée",
 }
 
 
@@ -152,6 +167,95 @@ class Connector:
 
 _registry: dict[str, Connector] = {}
 _checks: dict[str, dict[str, Any]] = {}  # connector id → the last live check (state, detail, at)
+_cooldown: dict[str, float] = {}          # connector id → no call before this time (it answered 429)
+_audit_lock = threading.Lock()
+
+
+class RateLimited(Exception):
+    """The provider asked to wait: no call until the end of its cooldown."""
+
+
+# ---------- the journal: what was done to the connections and apps, never a value ----------
+
+def _audit_file() -> Any:
+    return config.STATE_DIR / "integrations-audit.jsonl"  # read at call time (the tests move it)
+
+
+def audit_event(action: str, cid: str, ok: bool, detail: str = "", **extra: Any) -> None:
+    entry = {"at": round(time.time(), 1), "action": action, "id": cid, "ok": ok, "detail": str(detail)[:200],
+             **{k: str(v)[:80] for k, v in extra.items()}}
+    f = _audit_file()
+    with _audit_lock:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as out:
+            out.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        if f.stat().st_size > AUDIT_KEEP * 400:  # now and then, keep the last AUDIT_KEEP lines
+            lines = f.read_text(encoding="utf-8").splitlines()[-AUDIT_KEEP:]
+            tmp = f.with_suffix(".tmp")
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as out:
+                out.write("\n".join(lines) + "\n")
+            os.replace(tmp, f)
+
+
+def audit(limit: int = 50) -> dict[str, Any]:
+    """The last entries of the journal, newest first."""
+    try:
+        lines = _audit_file().read_text(encoding="utf-8").splitlines()[-max(1, min(limit, AUDIT_KEEP)):]
+    except OSError:
+        lines = []
+    out = []
+    for line in reversed(lines):
+        try:
+            out.append(json.loads(line))
+        except ValueError:
+            continue
+    return {"entries": out}
+
+
+# ---------- the addresses a connection may use (optional allowlist) ----------
+
+def allowed_hosts() -> list[str]:
+    v = config.CFG.get("integration_hosts") or []
+    return [str(h).strip().lower() for h in (v if isinstance(v, list) else [v]) if str(h).strip()]
+
+
+def host_allowed(host: str) -> bool:
+    patterns, host = allowed_hosts(), (host or "").lower()
+    if not patterns:
+        return True
+    return any(host == p or (p.startswith("*.") and host.endswith(p[1:])) for p in patterns)
+
+
+def _host(url: str) -> str:
+    return urllib.parse.urlparse(url if "://" in url else f"https://{url}").hostname or ""
+
+
+def _refuse_hosts(c: "Connector", urls: list[str]) -> None:
+    for u in urls:
+        if u and not host_allowed(_host(u)):
+            raise PermissionError(f"{c.name} : l'adresse {_host(u)} n'est pas dans la liste autorisée (integration_hosts de agent-office.json)")
+
+
+def _saved_urls(c: "Connector", st: dict[str, Any]) -> list[str]:
+    return [str(st.get(k) or "") for k, f in c.fields().items() if f.kind == "url"]
+
+
+def _waiting(c: "Connector") -> None:
+    left = _cooldown.get(c.id, 0) - time.time()
+    if left > 0:
+        raise RateLimited(f"{c.name} demande d'attendre : réessaie dans {int(left) + 1} s")
+
+
+def _note_limit(c: "Connector", err: Exception) -> None:
+    """A 429: no call to c before its Retry-After (COOLDOWN_S when it does not say), between 5 s and 15 min."""
+    headers = getattr(err.__cause__, "headers", None)
+    try:
+        wait = float(headers.get("Retry-After")) if headers is not None and headers.get("Retry-After") else COOLDOWN_S
+    except (TypeError, ValueError):
+        wait = COOLDOWN_S
+    _cooldown[c.id] = time.time() + max(5.0, min(900.0, wait))
 
 
 def register(c: Connector) -> Connector:
@@ -182,6 +286,8 @@ def state_of(c: Connector, err: Exception) -> str:
     """The state a provider's error means: from the HTTP code behind it when there is one, else a configuration error."""
     code = getattr(err.__cause__, "code", None)
     text = str(err)
+    if code == 429 or "attendre" in text:
+        return "rate_limited"
     if code == 401 or "invalide" in text or "révoqué" in text or "refusé" in text and "accès" not in text:
         return "invalid"
     if code == 403 or "droit" in text or "accès refusé" in text:
@@ -220,15 +326,25 @@ def connection(c: Connector) -> dict[str, Any]:
 def check(cid: str) -> dict[str, Any]:
     """A live call with the saved credentials: connected, or why not (invalid, expired, insufficient, unreachable)."""
     c = get(cid)
-    if not c.status().get("configured"):
+    st = c.status()
+    if not st.get("configured"):
         _checks.pop(cid, None)
         return connection(c)
     try:
+        _refuse_hosts(c, _saved_urls(c, st))
+        _waiting(c)
         c.verify()
         _checks[cid] = {"state": "connected", "detail": STATES["connected"], "at": time.time()}
+    except PermissionError as err:
+        _checks[cid] = {"state": "host_refused", "detail": str(err), "at": time.time()}
+    except RateLimited as err:
+        _checks[cid] = {"state": "rate_limited", "detail": str(err), "at": time.time()}
     except c.error as err:
         state = state_of(c, err)
+        if state == "rate_limited":
+            _note_limit(c, err)
         _checks[cid] = {"state": state, "detail": str(err) or STATES[state], "at": time.time()}
+    audit_event("check", cid, _checks[cid]["state"] == "connected", _checks[cid]["detail"] if _checks[cid]["state"] != "connected" else "", state=_checks[cid]["state"])
     return connection(c)
 
 
@@ -238,15 +354,25 @@ def configure(cid: str, values: Any) -> dict[str, Any]:
     c = get(cid)
     declared = c.fields()
     clean = {k: str(v)[:2000].strip() for k, v in (values if isinstance(values, dict) else {}).items() if k in declared and isinstance(v, (str, int, float))}
-    c.save(clean)
+    try:
+        _refuse_hosts(c, [clean.get(k, "") for k, f in declared.items() if f.kind == "url"])
+        c.save(clean)
+    except (PermissionError, c.error) as err:
+        audit_event("connect", cid, False, str(err))
+        raise
+    _cooldown.pop(cid, None)
     _checks[cid] = {"state": "connected", "detail": STATES["connected"], "at": time.time()}
-    return connection(c)
+    conn = connection(c)
+    audit_event("connect", cid, True, conn.get("account", ""))
+    return conn
 
 
 def disconnect(cid: str) -> dict[str, Any]:
     c = get(cid)
     c.forget()
     _checks.pop(cid, None)
+    _cooldown.pop(cid, None)
+    audit_event("disconnect", cid, True)
     return connection(c)
 
 
@@ -256,14 +382,22 @@ def run(cid: str, op: str, params: Any = None) -> Any:
     fn = c.reads.get(op)
     if fn is None:
         raise PermissionError(f"opération non autorisée pour {c.name} : {op}")
-    if not c.status().get("configured"):
+    st = c.status()
+    if not st.get("configured"):
         raise PermissionError(f"{c.name} n'est pas relié")
+    _refuse_hosts(c, _saved_urls(c, st))
+    _waiting(c)
     p = {str(k)[:40]: str(v)[:200] for k, v in (params if isinstance(params, dict) else {}).items() if isinstance(v, (str, int, float))}
-    return fn(p)
+    try:
+        return fn(p)
+    except c.error as err:
+        if state_of(c, err) == "rate_limited":
+            _note_limit(c, err)
+        raise
 
 
 def catalogue() -> dict[str, Any]:
-    return {"domains": DOMAINS, "states": STATES, "connectors": [c.public() for c in _registry.values()]}
+    return {"domains": DOMAINS, "states": STATES, "connectors": [c.public() for c in _registry.values()], "allowedHosts": allowed_hosts()}
 
 
 def connections() -> dict[str, Any]:
@@ -276,6 +410,8 @@ def safe(fn: Callable[[], Any]) -> tuple[int, Any]:
         return 200, fn()
     except PermissionError as err:
         return 403, {"error": str(err)}
+    except RateLimited as err:
+        return 429, {"error": str(err)}
     except LookupError as err:
         return 404, {"error": str(err)}
     except (gitlab.GitLabError, sentry.SentryError, slack.SlackError) as err:

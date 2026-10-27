@@ -54,6 +54,7 @@ DEFAULTS: dict[str, Any] = {
     "deploy_projects": {},           # {"<app>": "<GitLab project path>"} when the image path does not tell the project
     "deliveries_days": 14,           # how far back merged MRs are followed
     "network": {"enabled": False},   # ChiefOS → Réseau (the office on the internal network): off unless set to true here
+    "integration_hosts": [],         # 🔌 Intégrations: hosts a connection may use, e.g. ["gitlab.example.com", "*.example.com"]; [] = any
 }
 
 COLOR_NAMES = {  # Claude Code agent frontmatter colors

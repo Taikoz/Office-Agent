@@ -92,6 +92,7 @@ def create(connector: str, view: str, name: str = "", icon: str = "", params: An
         app = {"id": secrets.token_hex(4), "connector": c.id, "view": v.id, "name": _text(name, NAME_MAX) or f"{v.label} · {c.name}",
                "icon": _text(icon, ICON_MAX) or v.icon, "params": _params(v, params), "enabled": True, "created": time.time()}
         _write([*apps, app])
+    integrations.audit_event("app_create", c.id, True, app["name"], app=app["id"], view=v.id)
     return _status(app)
 
 
@@ -111,15 +112,18 @@ def update(app_id: str, changes: Any) -> dict[str, Any]:
         if "params" in changes:
             app["params"] = _params(integrations.get(app["connector"]).view(app["view"]), changes["params"])
         _write(apps)
+    integrations.audit_event("app_update", app["connector"], True, app["name"], app=app_id, enabled=app.get("enabled", True))
     return _status(app)
 
 
 def delete(app_id: str) -> dict[str, Any]:
     with _lock:
         apps = _read()
-        if not any(a["id"] == app_id for a in apps):
+        gone = next((a for a in apps if a["id"] == app_id), None)
+        if gone is None:
             raise LookupError("application introuvable")
         _write([a for a in apps if a["id"] != app_id])
+    integrations.audit_event("app_delete", gone.get("connector", ""), True, gone.get("name", ""), app=app_id)
     return list_apps()
 
 
@@ -146,6 +150,10 @@ def data(app_id: str) -> dict[str, Any]:
     except c.error as err:
         state = integrations.state_of(c, err)
         return {"id": app_id, "state": "connection", "connection": state, "detail": str(err), "rows": []}
+    except integrations.RateLimited as err:
+        return {"id": app_id, "state": "connection", "connection": "rate_limited", "detail": str(err), "rows": []}
+    except PermissionError as err:  # an address out of the allowlist
+        return {"id": app_id, "state": "connection", "connection": "host_refused", "detail": str(err), "rows": []}
     keys = [k for k, _label, _kind in view.columns] + ([view.link] if view.link else []) + ([view.scope[1]] if view.scope else [])
     rows = []
     for r in view.rows(answer)[:MAX_ROWS]:

@@ -126,7 +126,7 @@ Chaque fonction a un seul emplacement principal ; ailleurs, elle n'apparaît qu'
 | 4b Integration Hub (front) | `ui/integrations.js` : Réglages → 🔌 Intégrations remplace les trois formulaires ; événement `office:integration` pour que les apps relisent leur état | ✅ |
 | 5 Génération d'apps | `View` (modèle déclaré par le connecteur : lecture, colonnes, mise en forme des lignes, paramètres) ; `office/apps.py` (registre `apps.json`, création, renommage, activation, suppression, données) ; `apps/generated.js` (une fenêtre générique) ; création depuis 🔌 Intégrations | ✅ |
 | 3 Centralisation | `ui/project.js` : le projet en cours (chemin GitLab), choisi une fois, filtre Vue d'ensemble, GitLab, Pipelines, Erreurs (compteurs compris) et les applications générées (`View.scope`) ; projet Sentry associé par règle (slug ou service = fin du chemin) ou choisi ; 🔀 MR (masquée) retirée des apps de la connexion GitLab | ✅ |
-| 6 Sécurité | Journal des connexions, liste blanche d'hôtes optionnelle, limites de débit dans le runtime | à faire |
+| 6 Sécurité | Journal `integrations-audit.jsonl` (connexion, déconnexion, vérification, apps ; jamais une valeur) ; `integration_hosts` (liste blanche optionnelle, à l'enregistrement et avant chaque appel) ; pause après un 429 (Retry-After, 60 s sinon) ; anciennes routes `/api/<service>/config` retirées | ✅ |
 | 7 Validation | Parcours réels avec de vrais jetons, anciennes apps | en continu |
 
 ### Limites connues
@@ -135,5 +135,5 @@ Chaque fonction a un seul emplacement principal ; ailleurs, elle n'apparaît qu'
   - seul l'utilisateur (page + jeton) configure une adresse ;
   - le jeton ne suit aucune redirection vers un autre hôte.
 
-  Une liste blanche d'hôtes optionnelle est prévue en phase 6.
+  Une liste blanche d'hôtes optionnelle existe : `integration_hosts` dans `agent-office.json`.
 - **Programme local** : un programme qui tourne sous le compte de l'utilisateur peut lire les jetons, comme le serveur (voir `vault.py`).
