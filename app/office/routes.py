@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
+from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, integrations, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, agent_files, discover_agents, frontmatter, network_enabled
 from .detail import agent_detail
@@ -160,6 +160,14 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                           "analysis": lambda: sentry.analysis_status(issue)}.get(urlparse(self.path).path.rsplit("/", 1)[-1])
                     code, body = sentry.safe(fn) if fn else (404, {"error": "inconnu"})
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
+            elif self.path.startswith("/api/integrations"):  # 🔌 Intégrations (integrations.py): catalogue, connections, live check, declared reads; never a secret
+                what, q = urlparse(self.path).path.rstrip("/").rsplit("/", 1)[-1], parse_qs(urlparse(self.path).query)
+                arg = lambda k: q.get(k, [""])[0]
+                fn = {"integrations": lambda: {**integrations.catalogue(), **integrations.connections()},
+                      "check": lambda: integrations.check(arg("id")),
+                      "run": lambda: integrations.run(arg("id"), arg("op"), {k: v[0] for k, v in q.items() if k not in ("id", "op")})}.get(what)
+                code, body = integrations.safe(fn) if fn else (404, {"error": "inconnu"})
+                self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
             elif self.path.startswith("/api/slack/"):  # a Slack channel, read-only, the token kept server-side (slack.py); only this page
                 if not secrets.compare_digest(self.headers.get("X-Office-Token", ""), TOKEN):
                     self.reply(403, "application/json", b'{"error": "interdit"}')
@@ -235,7 +243,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/slack/config", "/api/sentry/config", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/integrations/config", "/api/slack/config", "/api/sentry/config", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -269,6 +277,11 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     return
                 if self.path == "/api/blueprint/publish":
                     code, body = blueprints.publish(data if isinstance(data, dict) else {})
+                    self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/integrations/config":  # connect (the declared fields only) or disconnect one integration
+                    cid = str(data.get("id", ""))
+                    code, body = integrations.safe(lambda: integrations.disconnect(cid) if data.get("forget") else integrations.configure(cid, data.get("values")))
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/slack/config":
