@@ -4,7 +4,8 @@ Three things, kept apart:
   - a CONNECTOR is code that knows a provider (its auth form, its capabilities, its read operations); it exists
     whether the user connected it or not: the catalogue;
   - a CONNECTION is the user's own credentials for one connector, sealed on this machine (vault.py), with its state;
-  - an APPLICATION (apps.py) is a view of ChiefOS built on a connection.
+  - an APPLICATION (apps.py) is a view of ChiefOS built on a connection, from one of the connector's VIEWS: a template
+    that names the read it calls, its columns and how its rows are cut from the read's answer (no code is generated).
 
 A connector does not re-implement its provider: it declares what the page needs to know (fields, scopes, capabilities)
 and adapts the provider's module (gitlab.py, sentry.py, slack.py), which keeps its own API client, cache and errors.
@@ -89,6 +90,27 @@ class Capability:
     op: str = ""
 
 
+@dataclass(frozen=True)
+class View:
+    """A template of application: the read op it calls, its columns (key, label, kind: text, num, date, level), the
+    key holding each row's link, and rows(answer) → the rows. params: the settings a user may give the app (its own
+    form); they reach the op as strings, and nothing else does."""
+
+    id: str
+    label: str
+    icon: str
+    description: str
+    op: str
+    columns: tuple[tuple[str, str, str], ...]
+    rows: Callable[[Any], list[dict[str, Any]]]
+    link: str = ""
+    params: tuple[Field, ...] = ()
+
+    def public(self) -> dict[str, Any]:
+        return {"id": self.id, "label": self.label, "icon": self.icon, "description": self.description, "op": self.op,
+                "columns": [{"key": k, "label": label, "kind": kind} for k, label, kind in self.columns], "params": [f.public() for f in self.params]}
+
+
 @dataclass
 class Connector:
     id: str
@@ -105,6 +127,7 @@ class Connector:
     reads: dict[str, Callable[[dict[str, str]], Any]] = field(default_factory=dict)  # op id → fn(params)
     writes: dict[str, Callable[[dict[str, Any]], Any]] = field(default_factory=dict)  # none yet: everything is read-only
     apps: tuple[str, ...] = ()                               # the built-in ChiefOS apps that use this connection
+    views: tuple[View, ...] = ()                             # the applications that can be generated from it
     account: Callable[[dict[str, Any]], str] = lambda st: ""  # who / where the connection is, from its status
 
     def fields(self) -> dict[str, Field]:
@@ -114,7 +137,13 @@ class Connector:
         return {"id": self.id, "name": self.name, "icon": self.icon, "description": self.description,
                 "auth": [m.public() for m in self.auth], "domains": sorted({c.domain for c in self.capabilities}),
                 "capabilities": [{"id": c.id, "domain": c.domain, "label": c.label, "access": c.access} for c in self.capabilities],
-                "reads": sorted(self.reads), "writes": sorted(self.writes), "apps": list(self.apps)}
+                "reads": sorted(self.reads), "writes": sorted(self.writes), "apps": list(self.apps), "views": [v.public() for v in self.views]}
+
+    def view(self, vid: str) -> View:
+        for v in self.views:
+            if v.id == vid:
+                return v
+        raise LookupError(f"modèle d'application inconnu pour {self.name} : {vid}")
 
 
 _registry: dict[str, Connector] = {}
@@ -127,7 +156,7 @@ def register(c: Connector) -> Connector:
     unknown = {cap.domain for cap in c.capabilities} - DOMAINS.keys()
     if unknown:
         raise ValueError(f"domaine inconnu pour {c.id} : {', '.join(sorted(unknown))}")
-    missing = {cap.op for cap in c.capabilities if cap.op} - c.reads.keys()
+    missing = ({cap.op for cap in c.capabilities if cap.op} | {v.op for v in c.views}) - c.reads.keys()
     if missing:
         raise ValueError(f"opération non implémentée pour {c.id} : {', '.join(sorted(missing))}")
     _registry[c.id] = c
@@ -251,6 +280,16 @@ def safe(fn: Callable[[], Any]) -> tuple[int, Any]:
 
 # ---------- the first connectors: the providers ChiefOS already reads ----------
 
+def _mr_rows(answer: Any, key: str) -> list[dict[str, Any]]:
+    return [{"title": m.get("title", ""), "ref": m.get("ref", ""), "author": m.get("authorName") or m.get("author", ""), "ci": m.get("ci") or "",
+             "state": "brouillon" if m.get("draft") else "conflit" if m.get("conflicts") else "retours" if not m.get("threadsOk", True) else "ouverte",
+             "updated": m.get("updated", ""), "url": m.get("url", "")} for m in (answer or {}).get(key, [])]
+
+
+def _issue_rows(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{k: i.get(k, "") for k in ("short", "title", "projectSlug", "level", "day", "first", "url")} for i in issues]
+
+
 def _gitlab_save(v: dict[str, str]) -> dict[str, Any]:
     return gitlab.save(v.get("url", ""), v.get("token", ""))
 
@@ -285,6 +324,17 @@ register(Connector(
            "merge_request": lambda p: gitlab.mr_detail(_num(p, "project"), _num(p, "iid")),
            "job_log": lambda p: gitlab.job_log(_num(p, "project"), _num(p, "job"))},
     apps=("codehome", "gitlab", "mr", "pipes", "deliveries"),
+    views=(
+        View("mrs_review", "MR à relire", "👀", "Les merge requests qui attendent ta review, avec leur CI.", "merge_requests",
+             (("title", "MR", "text"), ("ref", "Réf.", "text"), ("author", "Auteur", "text"), ("ci", "CI", "level"), ("updated", "Mise à jour", "date")),
+             lambda a: _mr_rows(a, "review"), "url"),
+        View("mrs_mine", "Mes MR", "🔀", "Mes merge requests ouvertes et assignées : CI, conflits, approbations.", "merge_requests",
+             (("title", "MR", "text"), ("ref", "Réf.", "text"), ("ci", "CI", "level"), ("state", "État", "text"), ("updated", "Mise à jour", "date")),
+             lambda a: _mr_rows(a, "mine") + _mr_rows(a, "assigned"), "url"),
+        View("red_pipelines", "Pipelines rouges", "🔴", "Les pipelines en échec de mes projets récents et de mes MR, avec le job en cause.", "failing_pipelines",
+             (("project", "Projet", "text"), ("ref", "Branche", "text"), ("job", "Job", "text"), ("stage", "Étape", "text"), ("updated", "Échec", "date")),
+             lambda a: [{**{k: p.get(k, "") for k in ("project", "ref", "job", "stage", "updated")}, "url": p.get("jobUrl") or p.get("url", "")} for p in (a or {}).get("pipelines", [])], "url"),
+    ),
     account=lambda st: f"@{st.get('user', '')} · {st.get('url', '')}",
 ))
 
@@ -316,6 +366,14 @@ register(Connector(
     status=sentry.status, save=_sentry_save, forget=sentry.forget, verify=_sentry_verify, error=sentry.SentryError,
     reads={"dashboard": lambda p: sentry.dashboard(), "alerts": lambda p: sentry.check()},
     apps=("errors",),
+    views=(
+        View("top_issues", "Erreurs du jour", "🐞", "Les erreurs non résolues les plus fréquentes des dernières 24 h.", "alerts",
+             (("short", "Id", "text"), ("title", "Erreur", "text"), ("projectSlug", "Projet", "text"), ("level", "Niveau", "level"), ("day", "24 h", "num")),
+             lambda a: _issue_rows((a or {}).get("top", [])), "url"),
+        View("new_issues", "Nouvelles erreurs", "🆕", "Les erreurs apparues dans les dernières 24 h.", "alerts",
+             (("short", "Id", "text"), ("title", "Erreur", "text"), ("projectSlug", "Projet", "text"), ("level", "Niveau", "level"), ("first", "Apparue", "date")),
+             lambda a: _issue_rows((a or {}).get("new", [])), "url"),
+    ),
     account=lambda st: f"{st.get('org', '')} · {st.get('url', '')}",
 ))
 
@@ -338,5 +396,11 @@ register(Connector(
     status=slack.status, save=_slack_save, forget=slack.forget, verify=_slack_verify, error=slack.SlackError,
     reads={"messages": lambda p: slack.messages()},
     apps=("support",),
+    views=(
+        View("channel", "Fil du channel", "💬", "Les derniers messages du channel relié, les plus récents d'abord.", "messages",
+             (("name", "Auteur", "text"), ("text", "Message", "text"), ("replies", "Réponses", "num"), ("when", "Quand", "date")),
+             lambda a: [{"name": m.get("name", ""), "text": m.get("text", ""), "replies": m.get("replies", 0), "when": m.get("t", 0), "url": m.get("link", "")}
+                        for m in reversed((a or {}).get("messages", []))], "url"),
+    ),
     account=lambda st: f"#{st.get('channel', '')} · {st.get('team', '')}",
 ))

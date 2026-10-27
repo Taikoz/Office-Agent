@@ -124,7 +124,7 @@ Chaque fonction a un seul emplacement principal ; ailleurs, elle n'apparaît qu'
 | 2 Architecture | Section 2 | ✅ |
 | 4 Socle d'intégrations | `office/integrations.py`, routes `/api/integrations*`, tests | ✅ (serveur) |
 | 4b Integration Hub (front) | `ui/integrations.js` : Réglages → 🔌 Intégrations remplace les trois formulaires ; événement `office:integration` pour que les apps relisent leur état | ✅ |
-| 5 Génération d'apps | `office/apps.py`, gabarits, `GeneratedApp`, cycle de vie | à faire |
+| 5 Génération d'apps | `View` (modèle déclaré par le connecteur : lecture, colonnes, mise en forme des lignes, paramètres) ; `office/apps.py` (registre `apps.json`, création, renommage, activation, suppression, données) ; `apps/generated.js` (une fenêtre générique) ; création depuis 🔌 Intégrations | ✅ |
 | 3 Centralisation | Contexte projet partagé ; retrait des doublons (🔀 MR) | à faire, après 4b |
 | 6 Sécurité | Journal des connexions, liste blanche d'hôtes optionnelle, limites de débit dans le runtime | à faire |
 | 7 Validation | Parcours réels avec de vrais jetons, anciennes apps | en continu |

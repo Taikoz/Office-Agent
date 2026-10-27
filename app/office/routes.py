@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, integrations, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
+from . import apps, blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, integrations, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, agent_files, discover_agents, frontmatter, network_enabled
 from .detail import agent_detail
@@ -160,6 +160,11 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                           "analysis": lambda: sentry.analysis_status(issue)}.get(urlparse(self.path).path.rsplit("/", 1)[-1])
                     code, body = sentry.safe(fn) if fn else (404, {"error": "inconnu"})
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
+            elif self.path.startswith("/api/apps"):  # the generated apps (apps.py): their records and their rows, through their connector's declared read
+                what, q = urlparse(self.path).path.rstrip("/").rsplit("/", 1)[-1], parse_qs(urlparse(self.path).query)
+                fn = {"apps": apps.list_apps, "data": lambda: apps.data(q.get("id", [""])[0])}.get(what)
+                code, body = apps.safe(fn) if fn else (404, {"error": "inconnu"})
+                self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
             elif self.path.startswith("/api/integrations"):  # 🔌 Intégrations (integrations.py): catalogue, connections, live check, declared reads; never a secret
                 what, q = urlparse(self.path).path.rstrip("/").rsplit("/", 1)[-1], parse_qs(urlparse(self.path).query)
                 arg = lambda k: q.get(k, [""])[0]
@@ -243,7 +248,7 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
             origin = self.headers.get("Origin", "")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             tools = ("/api/term/open", "/api/term/input", "/api/term/resize", "/api/term/close", "/api/claudefile", "/api/schedules")
-            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/integrations/config", "/api/slack/config", "/api/sentry/config", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
+            if (self.path not in ("/api/answer", "/api/mmx/validate", "/api/launch", "/api/team", "/api/save", "/api/gitlab/config", "/api/integrations/config", "/api/apps", "/api/slack/config", "/api/sentry/config", "/api/sentry/analyze", "/api/sentry/ticket", "/api/blueprint/publish", "/api/net", "/api/quips", "/api/quip", "/api/comic", "/api/insights", "/api/lessons", "/api/process", *tools)
                     or not self.host_ok() or origin not in allowed or not self.token_ok()):
                 self.reply(403, "application/json", b'{"error": "interdit"}')
                 return
@@ -277,6 +282,13 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                     return
                 if self.path == "/api/blueprint/publish":
                     code, body = blueprints.publish(data if isinstance(data, dict) else {})
+                    self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
+                    return
+                if self.path == "/api/apps":  # create, change or delete a generated app (its record only; its data stays read-only)
+                    what, aid = str(data.get("action", "")), str(data.get("id", ""))
+                    fn = {"create": lambda: apps.create(str(data.get("connector", "")), str(data.get("view", "")), str(data.get("name", "")), str(data.get("icon", "")), data.get("params")),
+                          "update": lambda: apps.update(aid, data.get("changes")), "delete": lambda: apps.delete(aid)}.get(what)
+                    code, body = apps.safe(fn) if fn else (400, {"error": "action inconnue"})
                     self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
                     return
                 if self.path == "/api/integrations/config":  # connect (the declared fields only) or disconnect one integration

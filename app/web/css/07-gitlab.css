@@ -98,3 +98,14 @@
   #chiefos .ihapp { padding: 1px 10px; border-radius: 999px; font-size: 12px; }
   #chiefos .ihform { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--ub-line); }
   #chiefos .ihform .osrow small { display: block; margin-top: 2px; }
+  #chiefos .ihgens summary { cursor: pointer; color: var(--ub-dim); font-size: 13px; } #chiefos .ihgens h5 { margin: 8px 0 4px; font-size: 12px; color: var(--ub-dim); }
+  #chiefos .ihgen { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--ub-line); } #chiefos .ihgen.off .ihtt b { opacity: .6; }
+  #chiefos .ihgen .osacts { margin: 0; flex-wrap: nowrap; } #chiefos .ihgen input { width: 180px; }
+
+/* the generated apps (apps/generated.js): one table, its first column a link to the source */
+  #chiefos .gawrap { overflow: auto; max-height: 62vh; border-radius: 10px; background: var(--ub-card); }
+  #chiefos .gatable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #chiefos .gatable th { position: sticky; top: 0; background: var(--ub-head, var(--ub-card)); text-align: left; font-weight: 600; color: var(--ub-dim); }
+  #chiefos .gatable th, #chiefos .gatable td { padding: 6px 10px; border-bottom: 1px solid var(--ub-line); vertical-align: top; }
+  #chiefos .gatable td { max-width: 520px; overflow-wrap: anywhere; } #chiefos .gatable .n { text-align: right; font-variant-numeric: tabular-nums; }
+  #chiefos .gatable tbody tr:hover { background: var(--os-hover, #ffffff0d); }

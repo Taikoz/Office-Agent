@@ -4,13 +4,16 @@
 // generated from the fields the connector declares (an address, a token, an organisation, a channel…). A secret is
 // never shown back: its field stays empty and keeps the saved one. After a change, the event "office:integration"
 // tells the apps of that service to read their status again (ui/gitlab.js, apps/errors.js, apps/support.js).
+// Each card also lists the applications generated from the service (apps/generated.js) and the ones that can be:
+// one per view the connector declares, created in one click, renamed, disabled or deleted here.
 
 import { esc } from "../core/data.js";
 import { OsApp } from "../apps/base.js";
 import { renderChiefOs } from "./chiefos.js";
 import { toast } from "../sims/progress.js";
+import { appAction, genApps, openGenerated } from "../apps/generated.js";
 
-export const intg = { cat: null, conns: {}, error: "", open: null, busy: "", msg: {}, confirm: "" };
+export const intg = { cat: null, conns: {}, error: "", open: null, busy: "", msg: {}, confirm: "", rename: "" };
 const call = async (path, body) => {
   const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json", "X-Office-Token": TOKEN }, body: JSON.stringify(body) }
     : { headers: { "X-Office-Token": TOKEN } });
@@ -67,7 +70,25 @@ function cardHtml(c) {
       ${linked ? `<button data-ih-check="${c.id}"${busy ? " disabled" : ""}>${busy ? "Vérification…" : "Vérifier"}</button>
       <button data-ih-forget="${c.id}">${intg.confirm === c.id ? "Confirmer la déconnexion" : "Déconnecter"}</button>` : ""}
       ${intg.open === c.id ? "" : `<span class="muted" role="status">${esc(intg.msg[c.id] || "")}</span>`}</div>
-    ${intg.open === c.id ? formHtml(c, conn) : ""}</section>`;
+    ${intg.open === c.id ? formHtml(c, conn) : ""}
+    ${appsHtml(c, linked && conn.state === "connected")}</section>`;
+}
+
+// the apps generated from c, and the templates it offers (only once connected: a template reads through the connection)
+const STATE_LABEL = { ready: "", disabled: "désactivée", connection: "connexion à réparer", broken: "modèle disparu" };
+function appsHtml(c, ready) {
+  if (!c.views?.length) return "";
+  const mine = genApps.list.filter(a => a.connector === c.id);
+  const rows = mine.map(a => `<div class="ihgen${a.state === "ready" ? "" : " off"}"><span class="ihtt"><b>${esc(a.icon)} ${intg.rename === a.id
+      ? `<input id="ih-rename-${a.id}" value="${esc(a.name)}" maxlength="40" aria-label="Nouveau nom"> <button data-ih-app="rename-ok" data-id="${a.id}">OK</button>` : esc(a.name)}</b>
+      <small>${esc(a.template?.label || a.view)}${STATE_LABEL[a.state] ? ` · ${STATE_LABEL[a.state]}` : ""}</small></span>
+    <span class="osacts">${a.state !== "disabled" ? `<button data-ih-app="open" data-id="${a.id}">Ouvrir</button>` : ""}<button data-ih-app="rename" data-id="${a.id}">Renommer</button>
+      <button data-ih-app="${a.state === "disabled" ? "enable" : "disable"}" data-id="${a.id}">${a.state === "disabled" ? "Activer" : "Désactiver"}</button>
+      <button data-ih-app="delete" data-id="${a.id}">${intg.confirm === `app:${a.id}` ? "Confirmer la suppression" : "Supprimer"}</button></span></div>`).join("");
+  const offer = c.views.map(v => `<div class="ihgen"><span class="ihtt"><b>${esc(v.icon)} ${esc(v.label)}</b><small>${esc(v.description)} · colonnes : ${v.columns.map(k => esc(k.label)).join(", ")}</small></span>
+    <span class="osacts"><button data-ih-app="create" data-connector="${c.id}" data-view="${v.id}"${ready ? "" : ` disabled title="Connecte ${esc(c.name)} d'abord"`}>Créer l'application</button></span></div>`).join("");
+  return `<details class="ihgens"${mine.length || intg.msg[`apps:${c.id}`] ? " open" : ""}><summary>Applications · ${mine.length} créée${mine.length > 1 ? "s" : ""}, ${c.views.length} modèle${c.views.length > 1 ? "s" : ""}</summary>
+    ${rows}${rows ? "<h5>Créer</h5>" : ""}${offer}<span class="muted" role="status">${esc(intg.msg[`apps:${c.id}`] || "")}</span></details>`;
 }
 
 export function integrationsHtml() {
@@ -76,7 +97,7 @@ export function integrationsHtml() {
   const all = intg.cat.connectors, linked = all.filter(c => intg.conns[c.id]?.state !== "not_configured"), free = all.filter(c => !linked.includes(c));
   return `${linked.length ? `<h4>CONNECTÉS · ${linked.length}</h4>${linked.map(cardHtml).join("")}` : ""}
     ${free.length ? `<h4>DISPONIBLES · ${free.length}</h4>${free.map(cardHtml).join("")}` : ""}
-    <p class="muted">Chaque service est en lecture seule : Agent Office ne fait que les lectures que son connecteur déclare. Un service déconnecté ou dont le jeton a expiré ne supprime aucune application : elles attendent qu'il soit reconnecté.</p>`;
+    <p class="muted">Chaque service est en lecture seule : Agent Office ne fait que les lectures que son connecteur déclare, et une application créée ici ne lit que ce que son modèle prévoit. Un service déconnecté ou dont le jeton a expiré ne supprime aucune application : elles attendent qu'il soit reconnecté.</p>`;
 }
 
 const changed = id => window.dispatchEvent(new CustomEvent("office:integration", { detail: id }));
@@ -85,7 +106,25 @@ async function act(id, fn) {
   try { intg.msg[id] = await fn(); } catch (e) { intg.msg[id] = `⚠️ ${e.message}`; }
   intg.busy = ""; await loadIntegrations();
 }
-OsApp.listen("settings", "click", ev => {
+OsApp.listen("settings", "click", async ev => {
+  const g = ev.target.closest("[data-ih-app]");
+  if (g) {
+    const what = g.dataset.ihApp, id = g.dataset.id, rec = genApps.list.find(a => a.id === id), key = `apps:${g.dataset.connector || rec?.connector}`;
+    if (what === "open") return openGenerated(id);
+    if (what === "rename") { intg.rename = id; renderChiefOs(); return document.getElementById(`ih-rename-${id}`)?.focus(); }
+    if (what === "delete" && intg.confirm !== `app:${id}`) { intg.confirm = `app:${id}`; return renderChiefOs(); }
+    if (DEMO) { intg.msg[key] = "Démo : rien n'est enregistré."; return renderChiefOs(); }
+    const body = what === "create" ? { action: "create", connector: g.dataset.connector, view: g.dataset.view }
+      : what === "rename-ok" ? { action: "update", id, changes: { name: document.getElementById(`ih-rename-${id}`)?.value || "" } }
+      : what === "delete" ? { action: "delete", id } : { action: "update", id, changes: { enabled: what === "enable" } };
+    intg.confirm = ""; intg.rename = "";
+    try {
+      const out = await appAction(body);
+      intg.msg[key] = what === "create" ? `✅ « ${out.name} » créée : elle est dans Activités.` : what === "delete" ? "Application supprimée." : "";
+      if (what === "create") { toast("APPLICATION", "Créée ✓", out.name); return openGenerated(out.id); }
+    } catch (e) { intg.msg[key] = `⚠️ ${e.message}`; }
+    return renderChiefOs();
+  }
   const b = ev.target.closest("[data-ih-open], [data-ih-save], [data-ih-check], [data-ih-forget], [data-ih-reload]"); if (!b) return;
   if (b.hasAttribute("data-ih-reload")) { intg.error = ""; intg.cat = null; return loadIntegrations(); }
   if (b.hasAttribute("data-ih-open")) { intg.open = b.dataset.ihOpen || null; intg.confirm = ""; return renderChiefOs(); }

@@ -164,6 +164,7 @@ import "./apps/costs.js";
 import "./apps/week.js";
 import "./ui/gitlab.js";
 import "./apps/support.js";
+import "./apps/generated.js";
 import "./ui/integrations.js";
 import "./apps/settings.js";
 import "./apps/pipes.js";
