@@ -21,7 +21,7 @@ from . import config, usage
 DAYS = 30
 GRACE = 2 * 3600
 DEFAULT_RULES = [
-    {"id": "guardian", "label": "Feature front → tests e2e", "when": ["feature-builder", "tech-lead"], "project": "front", "then": "guardian-test-writer"},
+    {"id": "e2e", "label": "Feature front → tests e2e", "when": ["feature-builder", "tech-lead"], "project": "front", "then": "guardian-test-writer"},
     {"id": "security", "label": "Feature livrée → audit sécurité", "when": ["feature-builder", "tech-lead"], "then": "security-auditor"},
     {"id": "review", "label": "MR ouverte → review", "when": ["feature-builder", "tech-lead"], "mr": True, "then": "mr-reviewer"},
 ]

@@ -130,9 +130,9 @@ class ProcessTests(unittest.TestCase):
                  item("feature-builder", "DEMO-2", "https://gitlab.x/g/api/-/merge_requests/5", project="api"),  # same number, other repository: not reviewed
                  item("feature-builder", "DEMO-3", last=now - 60)]  # just delivered: waiting
         tmp = Path(tempfile.mkdtemp())
-        with mock.patch.object(process, "work_items", return_value=items), mock.patch.object(usage, "summaries", return_value=[]), mock.patch.object(config, "STATE_DIR", tmp):
+        with mock.patch.object(process, "work_items", return_value=items), mock.patch.object(usage, "summaries", return_value=[]), mock.patch.object(config, "STATE_DIR", tmp), mock.patch.dict(config.CFG, {"process_rules": None}):
             out = {r["id"]: r for r in process.compliance(None)["rules"]}
-            self.assertEqual((out["guardian"]["ok"], len(out["guardian"]["missing"]), out["guardian"]["waiting"]), (1, 0, 1))
+            self.assertEqual((out["e2e"]["ok"], len(out["e2e"]["missing"]), out["e2e"]["waiting"]), (1, 0, 1))
             self.assertEqual((out["review"]["ok"], [m["ticket"] for m in out["review"]["missing"]]), (1, ["DEMO-2"]))
             self.assertEqual(sorted(m["ticket"] for m in out["security"]["missing"]), ["DEMO-1", "DEMO-2"])
             process.ignore("security|DEMO-1")
