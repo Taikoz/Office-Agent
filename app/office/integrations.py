@@ -105,10 +105,14 @@ class View:
     rows: Callable[[Any], list[dict[str, Any]]]
     link: str = ""
     params: tuple[Field, ...] = ()
+    # how a row belongs to a project, for the project in focus of ChiefOS: (kind, key) with kind gitlab_ref (an MR
+    # reference group/name!iid), gitlab_project (a path) or sentry (a project slug); () = not tied to a project
+    scope: tuple[str, str] | tuple[()] = ()
 
     def public(self) -> dict[str, Any]:
         return {"id": self.id, "label": self.label, "icon": self.icon, "description": self.description, "op": self.op,
-                "columns": [{"key": k, "label": label, "kind": kind} for k, label, kind in self.columns], "params": [f.public() for f in self.params]}
+                "columns": [{"key": k, "label": label, "kind": kind} for k, label, kind in self.columns], "params": [f.public() for f in self.params],
+                "scope": list(self.scope)}
 
 
 @dataclass
@@ -323,17 +327,17 @@ register(Connector(
     reads={"merge_requests": lambda p: gitlab.my_mrs(), "failing_pipelines": lambda p: gitlab.failing_pipelines(),
            "merge_request": lambda p: gitlab.mr_detail(_num(p, "project"), _num(p, "iid")),
            "job_log": lambda p: gitlab.job_log(_num(p, "project"), _num(p, "job"))},
-    apps=("codehome", "gitlab", "mr", "pipes", "deliveries"),
+    apps=("codehome", "gitlab", "pipes", "deliveries"),  # (🔀 MR, hidden, reads the agents, not this connection)
     views=(
         View("mrs_review", "MR à relire", "👀", "Les merge requests qui attendent ta review, avec leur CI.", "merge_requests",
              (("title", "MR", "text"), ("ref", "Réf.", "text"), ("author", "Auteur", "text"), ("ci", "CI", "level"), ("updated", "Mise à jour", "date")),
-             lambda a: _mr_rows(a, "review"), "url"),
+             lambda a: _mr_rows(a, "review"), "url", scope=("gitlab_ref", "ref")),
         View("mrs_mine", "Mes MR", "🔀", "Mes merge requests ouvertes et assignées : CI, conflits, approbations.", "merge_requests",
              (("title", "MR", "text"), ("ref", "Réf.", "text"), ("ci", "CI", "level"), ("state", "État", "text"), ("updated", "Mise à jour", "date")),
-             lambda a: _mr_rows(a, "mine") + _mr_rows(a, "assigned"), "url"),
+             lambda a: _mr_rows(a, "mine") + _mr_rows(a, "assigned"), "url", scope=("gitlab_ref", "ref")),
         View("red_pipelines", "Pipelines rouges", "🔴", "Les pipelines en échec de mes projets récents et de mes MR, avec le job en cause.", "failing_pipelines",
              (("project", "Projet", "text"), ("ref", "Branche", "text"), ("job", "Job", "text"), ("stage", "Étape", "text"), ("updated", "Échec", "date")),
-             lambda a: [{**{k: p.get(k, "") for k in ("project", "ref", "job", "stage", "updated")}, "url": p.get("jobUrl") or p.get("url", "")} for p in (a or {}).get("pipelines", [])], "url"),
+             lambda a: [{**{k: p.get(k, "") for k in ("project", "ref", "job", "stage", "updated")}, "url": p.get("jobUrl") or p.get("url", "")} for p in (a or {}).get("pipelines", [])], "url", scope=("gitlab_project", "project")),
     ),
     account=lambda st: f"@{st.get('user', '')} · {st.get('url', '')}",
 ))
@@ -369,10 +373,10 @@ register(Connector(
     views=(
         View("top_issues", "Erreurs du jour", "🐞", "Les erreurs non résolues les plus fréquentes des dernières 24 h.", "alerts",
              (("short", "Id", "text"), ("title", "Erreur", "text"), ("projectSlug", "Projet", "text"), ("level", "Niveau", "level"), ("day", "24 h", "num")),
-             lambda a: _issue_rows((a or {}).get("top", [])), "url"),
+             lambda a: _issue_rows((a or {}).get("top", [])), "url", scope=("sentry", "projectSlug")),
         View("new_issues", "Nouvelles erreurs", "🆕", "Les erreurs apparues dans les dernières 24 h.", "alerts",
              (("short", "Id", "text"), ("title", "Erreur", "text"), ("projectSlug", "Projet", "text"), ("level", "Niveau", "level"), ("first", "Apparue", "date")),
-             lambda a: _issue_rows((a or {}).get("new", [])), "url"),
+             lambda a: _issue_rows((a or {}).get("new", [])), "url", scope=("sentry", "projectSlug")),
     ),
     account=lambda st: f"{st.get('org', '')} · {st.get('url', '')}",
 ))

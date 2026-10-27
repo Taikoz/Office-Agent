@@ -13,6 +13,7 @@ import { osApp, renderChiefOs, setOsApp } from "../ui/chiefos.js";
 import { ago2, launchWith } from "../ui/gitlab.js";
 import { toast } from "../sims/progress.js";
 import { SaveSlot } from "../save/slot.js";
+import { inProject, projectBarHtml, sentryFiltered } from "../ui/project.js";
 
 let st = null, data = null, dash = null, loading = false, dashLoading = false, first = true;
 const seen = new SaveSlot("office-errors-seen", { keys: [] }).data;  // alerts already notified
@@ -173,8 +174,9 @@ const time24 = isoStr => Date.now() - Date.parse(isoStr) < 86400e3;
 function dashHtml() {
   if (!dash) { loadDash(); return `<div class="dlempty osloading" role="status">Lecture des projets et de leurs environnements…</div>`; }
   if (dash.error) return `<div class="dlempty dlerr">${esc(dash.error)} <button class="dlbtn" data-er="reload">Réessayer</button></div>`;
-  if (!dash.projects.length) return `<div class="dlempty">Aucune erreur sur les dernières 24 h.</div>`;
-  return dash.projects.map(p => `<section class="erproject${p.spike ? " spike" : ""}">
+  const projects = dash.projects.filter(p => inProject.sentry(p.slug) || inProject.sentry(p.service));
+  if (!projects.length) return `<div class="dlempty">Aucune erreur sur les dernières 24 h${dash.projects.length ? " pour ce projet" : ""}.</div>`;
+  return projects.map(p => `<section class="erproject${p.spike ? " spike" : ""}">
       <div class="erphead"><div class="dlmr"><b>${link(p.url, esc(p.name))}</b><small>${esc(p.platform || "")}${p.service ? ` · service ${esc(p.service)}` : ""}${p.quiet.length ? ` · sans erreur : ${esc(p.quiet.join(", "))}` : ""}</small></div>
         ${bars(p.hourly)}<span class="ernum"><b>${p.day}</b><small>24 h</small></span><span class="ernum"><b>${p.hourly.at(-1) || 0}</b><small>dernière h</small></span>
         ${p.spike ? `<span class="erlvl lv-fatal">Pic ×${p.spike.ratio}</span>` : p.new ? `<span class="erlvl lv-warning">${p.new} nouvelle${p.new > 1 ? "s" : ""}</span>` : `<span class="erlvl">Stable</span>`}</div>
@@ -184,29 +186,35 @@ function dashHtml() {
 function alertsHtml() {
   if (!data) { check(); return `<div class="dlempty osloading" role="status">Lecture des erreurs Sentry…</div>`; }
   if (data.error) return `<div class="dlempty dlerr">${esc(data.error)} <button class="dlbtn" data-er="reload">Réessayer</button></div>`;
-  const alerts = data.alerts.length ? `<div class="eralerts">${data.alerts.map(a => `<div class="dlwarn eralert ${a.level === "high" ? "high" : ""}"><b>${{ spike: "Pic", new: "Nouvelle", deploy: "Mise en prod" }[a.kind] || "Alerte"}</b><span><strong>${esc(a.title)}</strong> — ${esc(a.body)}</span>${a.url ? link(a.url, "Ouvrir ↗", "dlext") : ""}</div>`).join("")}</div>` : `<div class="dlempty">Aucune alerte : pas de pic, pas de nouvelle erreur après une mise en prod.</div>`;
-  const deploys = data.deploys.length ? `<h4>APRÈS LES MISES EN PROD</h4>${data.deploys.map(d => `<details class="dldet"${d.newCount ? " open" : ""}><summary><b>${esc(d.service)}</b> <code>${esc(d.tag)}</code><span>en prod depuis ${ago2(d.since)}</span><span>${d.newCount ? `<b class="s-blocked">${d.newCount} nouvelle${d.newCount > 1 ? "s" : ""} erreur${d.newCount > 1 ? "s" : ""}</b>` : "aucune nouvelle erreur"}</span>${d.rate ? `<span>${d.rate.before}/h avant → <b class="${d.rate.after > d.rate.before * 2 ? "s-blocked" : ""}">${d.rate.after}/h après</b></span>` : ""}</summary>
+  const shown = { alerts: data.alerts.filter(a => inProject.sentry(a.project)), new: data.new.filter(i => inProject.sentry(i.projectSlug)), top: data.top.filter(i => inProject.sentry(i.projectSlug)), deploys: data.deploys.filter(d => inProject.sentry(d.service)) };
+  const alerts = shown.alerts.length ? `<div class="eralerts">${shown.alerts.map(a => `<div class="dlwarn eralert ${a.level === "high" ? "high" : ""}"><b>${{ spike: "Pic", new: "Nouvelle", deploy: "Mise en prod" }[a.kind] || "Alerte"}</b><span><strong>${esc(a.title)}</strong> — ${esc(a.body)}</span>${a.url ? link(a.url, "Ouvrir ↗", "dlext") : ""}</div>`).join("")}</div>` : `<div class="dlempty">Aucune alerte : pas de pic, pas de nouvelle erreur après une mise en prod.</div>`;
+  const deploys = shown.deploys.length ? `<h4>APRÈS LES MISES EN PROD</h4>${shown.deploys.map(d => `<details class="dldet"${d.newCount ? " open" : ""}><summary><b>${esc(d.service)}</b> <code>${esc(d.tag)}</code><span>en prod depuis ${ago2(d.since)}</span><span>${d.newCount ? `<b class="s-blocked">${d.newCount} nouvelle${d.newCount > 1 ? "s" : ""} erreur${d.newCount > 1 ? "s" : ""}</b>` : "aucune nouvelle erreur"}</span>${d.rate ? `<span>${d.rate.before}/h avant → <b class="${d.rate.after > d.rate.before * 2 ? "s-blocked" : ""}">${d.rate.after}/h après</b></span>` : ""}</summary>
       ${d.new.length ? `<div class="dlcommits">${d.new.map(i => `<div>${levelBadge(i.level)}${link(i.url, `<span class="dltitle">${esc(i.title)}</span>`)}<small>${esc(i.short)} · apparue il y a ${ago2(i.first)}</small></div>`).join("")}</div>` : ""}</details>`).join("")}` : "";
   return `<h4>ALERTES</h4>${alerts}${deploys}
-    ${data.new.length ? `<h4>NOUVELLES ERREURS (24 H)</h4><div class="dlgrid">${data.new.map(issueRow).join("")}</div>` : ""}
-    <h4>LES PLUS FRÉQUENTES</h4><div class="dlgrid">${data.top.slice(0, 15).map(issueRow).join("") || `<div class="dlempty">Rien à signaler.</div>`}</div>`;
+    ${shown.new.length ? `<h4>NOUVELLES ERREURS (24 H)</h4><div class="dlgrid">${shown.new.map(issueRow).join("")}</div>` : ""}
+    <h4>LES PLUS FRÉQUENTES</h4><div class="dlgrid">${shown.top.slice(0, 15).map(issueRow).join("") || `<div class="dlempty">Rien à signaler.</div>`}</div>`;
 }
 function errorsHtml() {
   if (!st) { loadStatus().then(renderChiefOs); return `<div class="dl"><div class="dlempty osloading" role="status">Chargement…</div></div>`; }
   if (!st.configured) return `<div class="dl"><div class="dlempty"><span class="osemptyic" aria-hidden="true">🐞</span><b>Sentry n'est pas encore relié</b><span>Ajoute ton adresse Sentry et un jeton en lecture seule pour suivre les erreurs de production.</span><button class="dlbtn primary" data-os-app="settings" data-os-section="links">Relier Sentry</button></div></div>`;
   if (!data) check();
-  const t = data?.totals, kpi = (label, value, sub = "", cls = "") => `<div class="dlkpi ${cls}"><span>${label}</span><b>${value}</b><small>${sub}</small></div>`;
+  // the counters of the project in focus when its Sentry project is known (ui/project.js), else of the organisation
+  const mine = data?.projects && sentryFiltered() ? data.projects.filter(p => inProject.sentry(p.slug)) : null;
+  const t = mine ? { day: mine.reduce((n, p) => n + p.day, 0), new: mine.reduce((n, p) => n + p.new, 0), spikes: mine.filter(p => p.spike).length, issues: data.top.filter(i => inProject.sentry(i.projectSlug)).length } : data?.totals;
+  const nAlerts = (data?.alerts || []).filter(a => inProject.sentry(a.project)).length, kpi = (label, value, sub = "", cls = "") => `<div class="dlkpi ${cls}"><span>${label}</span><b>${value}</b><small>${sub}</small></div>`;
   const tab = (id, label, n) => `<button data-er="tab" data-tab="${id}" class="${view.tab === id ? "on" : ""}">${label}${n != null ? `<em>${n}</em>` : ""}</button>`;
-  return `<div class="dl">
-    ${t ? `<div class="dlkpis">${kpi("Erreurs 24 h", t.day, `${t.issues} problèmes ouverts`)}${kpi("Nouvelles", t.new, "apparues en 24 h", t.new ? "warn" : "")}${kpi("Pics", t.spikes, "dernière heure ≥ ×3", t.spikes ? "warn" : "")}${kpi("Alertes", data.alerts.length, "pics, nouvelles, mises en prod", data.alerts.length ? "warn" : "")}</div>` : ""}
-    <div class="dlbar"><div class="dlseg">${tab("dash", "Tableau de bord", dash?.projects?.length)}${tab("alerts", "Alertes", data?.alerts?.length)}</div>
+  return `${projectBarHtml({ sentry: true })}<div class="dl">
+    ${t ? `<div class="dlkpis">${kpi("Erreurs 24 h", t.day, `${t.issues} problèmes ouverts`)}${kpi("Nouvelles", t.new, "apparues en 24 h", t.new ? "warn" : "")}${kpi("Pics", t.spikes, "dernière heure ≥ ×3", t.spikes ? "warn" : "")}${kpi("Alertes", nAlerts, "pics, nouvelles, mises en prod", nAlerts ? "warn" : "")}</div>` : ""}
+    <div class="dlbar"><div class="dlseg">${tab("dash", "Tableau de bord", dash?.projects?.filter(p => inProject.sentry(p.slug) || inProject.sentry(p.service)).length)}${tab("alerts", "Alertes", data ? nAlerts : null)}</div>
       <span class="dlmeta">${link(st.url, esc((st.url || "").replace(/^https?:\/\//, "")))} · ${esc(st.org)}${data?.updated ? ` · vérifié il y a ${ago2(new Date(data.updated * 1000).toISOString())}, toutes les 2 min` : ""}</span>
       <button class="dlbtn" data-er="reload"${loading || dashLoading ? " disabled" : ""}>↻ Actualiser</button></div>
     ${view.tab === "alerts" ? alertsHtml() : dashHtml()}</div>${openId ? detailHtml() : ""}`;
 }
 
 // for 🧭 Vue d'ensemble: what the automatic check found (null until its first answer), and one issue opened here
-export const sentryState = () => ({ known: !!st, configured: !!st?.configured, error: data?.error || st?.error || "", alerts: data?.alerts || null, top: data?.top || [] });
+// the projects: their slug, and the service each one watches when 🚚 Livraisons knows it (ui/project.js matches them)
+const sentryProjects = () => { const svc = Object.fromEntries((dash?.projects || []).map(p => [p.slug, p.service || ""])); return (data?.projects || dash?.projects || []).map(p => ({ slug: p.slug, service: svc[p.slug] || p.service || "" })); };
+export const sentryState = () => ({ known: !!st, configured: !!st?.configured, error: data?.error || st?.error || "", alerts: data?.alerts || null, top: data?.top || [], projects: sentryProjects() });
 export function openSentry(id) { setOsApp("errors"); if (id) openId = id; else { view.tab = "alerts"; SaveSlot.get("office-errors-view").save(view); } }
 
 class ErrorsApp extends OsApp {

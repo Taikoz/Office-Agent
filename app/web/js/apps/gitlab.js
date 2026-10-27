@@ -6,6 +6,7 @@
 import { hash } from "../core/core.js";
 import { esc } from "../core/data.js";
 import { OsApp } from "./base.js";
+import { inProject, projectBarHtml } from "../ui/project.js";
 import { osBox, renderChiefOs, setOsApp } from "../ui/chiefos.js";
 import { ago2, glGet, glLoad, glMrs, glStatus, launchWith, notConfigured, glError } from "../ui/gitlab.js";
 
@@ -70,7 +71,7 @@ function glvListHtml() {
   if (glMrs.error) return glError(glMrs.error);
   const all = [...glMrs.review, ...glMrs.mine, ...glMrs.assigned];
   const lists = { review: glMrs.review, mine: glMrs.mine, assigned: glMrs.assigned, all };
-  const q = glv.q.toLowerCase(), list = lists[glv.tab].filter(m => !q || `${m.title} ${m.ref} ${m.branch} ${m.author} ${(m.labels || []).join(" ")}`.toLowerCase().includes(q));
+  const q = glv.q.toLowerCase(), list = lists[glv.tab].filter(inProject.mr).filter(m => !q || `${m.title} ${m.ref} ${m.branch} ${m.author} ${(m.labels || []).join(" ")}`.toLowerCase().includes(q));
   const tabs = [["review", "À relire"], ["mine", "Les miennes"], ["assigned", "Assignées"], ["all", "Toutes"]];
   return `<div class="glbar"><span class="gllogo">🦊</span><b>Merge requests</b><span class="muted">@${esc(glMrs.user)} · ${esc(glMrs.url)}</span>
       <input class="glsearch" placeholder="Rechercher (titre, branche, auteur, label)…" value="${esc(glv.q)}" aria-label="Rechercher"><button data-gl="reload-mrs" title="Relire GitLab maintenant">↻ Actualiser</button></div>
@@ -140,7 +141,7 @@ function glvDetailHtml() {
     <nav class="gltabs">${subs.map(([id, l, n]) => `<button data-glv-sub="${id}" class="${glv.sub === id ? "on" : ""}">${l} ${n !== "" ? `<span class="glcount">${n}</span>` : ""}</button>`).join("")}</nav>
     <div class="glpane">${glv.sub === "threads" ? glvThreads(d) : glv.sub === "pipeline" ? glvPipeline(d) : glv.sub === "files" ? glvFiles(d) : glvOverview(d)}</div>`;
 }
-function gitlabAppHtml() { return `<div class="glapp">${glv.open ? glvDetailHtml() : glvListHtml()}</div>`; }
+function gitlabAppHtml() { return `${glv.open ? "" : projectBarHtml()}<div class="glapp">${glv.open ? glvDetailHtml() : glvListHtml()}</div>`; }
 
 /* ---------- events ---------- */
 OsApp.listen("gitlab", "input", ev => { if (ev.target.classList.contains("glsearch")) { glv.q = ev.target.value; const pos = ev.target.selectionStart; renderChiefOs(); const s = osBox.querySelector(".glsearch"); s.focus(); s.setSelectionRange(pos, pos); } });

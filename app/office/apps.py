@@ -146,7 +146,7 @@ def data(app_id: str) -> dict[str, Any]:
     except c.error as err:
         state = integrations.state_of(c, err)
         return {"id": app_id, "state": "connection", "connection": state, "detail": str(err), "rows": []}
-    keys = [k for k, _label, _kind in view.columns] + ([view.link] if view.link else [])
+    keys = [k for k, _label, _kind in view.columns] + ([view.link] if view.link else []) + ([view.scope[1]] if view.scope else [])
     rows = []
     for r in view.rows(answer)[:MAX_ROWS]:
         row = {k: _cell(r.get(k)) for k in keys}

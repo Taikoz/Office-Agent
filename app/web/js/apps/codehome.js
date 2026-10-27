@@ -9,6 +9,7 @@ import { renderChiefOs } from "../ui/chiefos.js";
 import { ago2, glLoad, glMrs, glPipes, glStatus, launchWith, notConfigured, glError } from "../ui/gitlab.js";
 import { openMr, openMrList } from "./gitlab.js";
 import { openSentry, sentryState } from "./errors.js";
+import { inProject, projectBarHtml } from "../ui/project.js";
 
 const REFRESH = 120_000;  // the server keeps GitLab 60 s; a page left open reads it again every 2 min
 const view = { at: 0, busy: false };
@@ -34,7 +35,7 @@ function todo(mine, review, pipes, sentry) {
   const out = [];
   for (const a of sentry.alerts || []) if (a.level === "high") out.push(["bad", "🐞", a.title, `${a.body} · ${a.project}`, [["Voir l'erreur", `data-cv-er="${esc(a.key.startsWith("new:") ? a.key.slice(4) : "")}"`]]]);
   for (const m of mine) if (m.ci === "failed") out.push(["bad", "🔴", `CI rouge : ${m.title}`, m.ref, [["Corriger avec un agent", `data-cv-fix="${m.project}:${m.iid}"`], ["Ouvrir", `data-cv-mr="${m.project}:${m.iid}"`]]]);
-  for (const p of pipes.filter(p => !p.mr)) out.push(["bad", "🔴", `Pipeline rouge sur ${p.ref}`, `${p.project} · job ${p.job || "?"} · il y a ${ago2(p.updated)}`, [["Corriger avec un agent", `data-cv-pipe="${pipes.indexOf(p)}"`], ["Ouvrir ↗", `data-cv-url="${esc(p.jobUrl || p.url)}"`]]]);
+  for (const p of pipes.filter(p => !p.mr)) out.push(["bad", "🔴", `Pipeline rouge sur ${p.ref}`, `${p.project} · job ${p.job || "?"} · il y a ${ago2(p.updated)}`, [["Corriger avec un agent", `data-cv-pipe="${(glPipes?.pipelines || []).indexOf(p)}"`], ["Ouvrir ↗", `data-cv-url="${esc(p.jobUrl || p.url)}"`]]]);
   for (const m of mine) if (m.ci !== "failed" && (m.conflicts || !m.threadsOk)) out.push(["warn", m.conflicts ? "⚠️" : "💬", `${m.conflicts ? "Conflit à résoudre" : "Retours de review à traiter"} : ${m.title}`, m.ref, [["Ouvrir", `data-cv-mr="${m.project}:${m.iid}"`]]]);
   for (const m of [...review].sort((a, b) => Date.parse(a.updated) - Date.parse(b.updated))) out.push(["warn", "👀", `À relire : ${m.title}`, `${m.ref} · par ${m.authorName || m.author} · attend depuis ${ago2(m.updated)}`, [["Relire", `data-cv-mr="${m.project}:${m.iid}"`], ["Review par un agent", `data-cv-review="${m.project}:${m.iid}"`]]]);
   for (const m of mine) if (ready(m)) out.push(["ok", "✅", `Prête à merger : ${m.title}`, `${m.ref} · CI verte, approuvée, sans conflit`, [["Merger dans GitLab ↗", `data-cv-url="${esc(m.url)}"`]]]);
@@ -46,7 +47,8 @@ function codeHomeHtml() {
   if (!view.busy && (!glMrs || !glPipes || Date.now() - view.at > REFRESH)) load(!!glMrs);
   if (!glMrs || !glPipes) return `<p class="muted osloading" role="status">Lecture de GitLab…</p>`;
   if (glMrs.error) return glError(glMrs.error);
-  const mine = [...(glMrs.mine || []), ...(glMrs.assigned || [])], review = glMrs.review || [], pipes = glPipes.pipelines || [], sentry = sentryState();
+  const all = sentryState(), sentry = { ...all, alerts: all.alerts && all.alerts.filter(a => inProject.sentry(a.project)) };
+  const mine = [...(glMrs.mine || []), ...(glMrs.assigned || [])].filter(inProject.mr), review = (glMrs.review || []).filter(inProject.mr), pipes = (glPipes.pipelines || []).filter(inProject.pipe);
   const blocked = mine.filter(m => m.ci === "failed" || m.conflicts || !m.threadsOk).length, prod = (sentry.alerts || []).filter(a => a.level === "high").length;
   const tile = (n, label, sub, state, act) => `<button class="cvtile ${state}" ${act}><b>${n}</b><span>${label}</span><small>${sub}</small></button>`;
   const tiles = tile(review.length, "à relire", review.length ? `la plus ancienne : ${ago2(review.map(m => m.updated).sort()[0])}` : "rien en attente", review.length ? "warn" : "ok", `data-cv-tab="review"`)
@@ -58,7 +60,7 @@ function codeHomeHtml() {
   const actions = list.length ? list.slice(0, 12).map(([lvl, icon, title, ctx, acts]) => `<div class="cvtodo ${lvl}"><span class="cvic">${icon}</span><span class="cvtt"><b>${esc(title)}</b><small>${esc(ctx)}</small></span>
       <span class="cvacts">${acts.map(([l, attr], i) => `<button class="${i ? "" : "cvmain"}" ${attr}>${l}</button>`).join("")}</span></div>`).join("") + (list.length > 12 ? `<p class="muted">… et ${list.length - 12} autre(s).</p>` : "")
     : `<div class="cvclear">✓ Rien ne t'attend : CI verte, aucune review en attente, rien d'anormal en prod.</div>`;
-  return `<div class="cvbar"><span class="muted">${view.busy ? "Actualisation…" : `@${esc(glMrs.user || "")} · à jour il y a ${Math.max(0, Math.round((Date.now() - view.at) / 60000))} min`}</span><button data-cv-reload title="Actualiser">↻ Actualiser</button></div>
+  return `${projectBarHtml()}<div class="cvbar"><span class="muted">${view.busy ? "Actualisation…" : `@${esc(glMrs.user || "")} · à jour il y a ${Math.max(0, Math.round((Date.now() - view.at) / 60000))} min`}</span><button data-cv-reload title="Actualiser">↻ Actualiser</button></div>
     <div class="cvtiles">${tiles}</div>
     <h4>À FAIRE MAINTENANT${list.length ? ` · ${list.length}` : ""}</h4><div class="cvtodos">${actions}</div>
     <div class="cvcols"><section><h4>MES MR · ${mine.length}</h4>${mine.length ? mine.map(m => mrRow(m, "moi")).join("") : `<p class="muted">Aucune MR ouverte.</p>`}</section>

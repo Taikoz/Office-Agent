@@ -109,3 +109,8 @@
   #chiefos .gatable th, #chiefos .gatable td { padding: 6px 10px; border-bottom: 1px solid var(--ub-line); vertical-align: top; }
   #chiefos .gatable td { max-width: 520px; overflow-wrap: anywhere; } #chiefos .gatable .n { text-align: right; font-variant-numeric: tabular-nums; }
   #chiefos .gatable tbody tr:hover { background: var(--os-hover, #ffffff0d); }
+
+/* the project in focus (ui/project.js), on top of the code views */
+  #chiefos .pjbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; padding: 6px 10px; border-radius: 10px; background: var(--ub-card); font-size: 13px; }
+  #chiefos .pjbar.on { box-shadow: inset 3px 0 0 var(--cv-run); }
+  #chiefos .pjpick { display: inline-flex; align-items: center; gap: 6px; } #chiefos .pjpick select { max-width: 320px; }

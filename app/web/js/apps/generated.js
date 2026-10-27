@@ -6,6 +6,7 @@
 import { esc } from "../core/data.js";
 import { OsApp } from "./base.js";
 import { renderChiefOs, setOsApp } from "../ui/chiefos.js";
+import { inProject, project, projectBarHtml } from "../ui/project.js";
 
 const REFRESH = 120_000;
 export const genApps = { list: [], loaded: false, error: "" };
@@ -74,11 +75,13 @@ class GeneratedApp extends OsApp {
       return `${head}<div class="oserror" role="alert"><b>${esc(rec.provider)} ne répond plus pour cette application</b><span>${esc(c.detail || rec.detail || "connexion perdue")}</span>
         <small>L'application est conservée : reconnecte ${esc(rec.provider)} et elle reprend seule.</small><div class="osacts"><button class="primary" data-os-app="settings" data-os-section="links">Reconnecter</button></div></div>`;
     }
-    if (!c.rows.length) return `${head}<div class="cvclear">✓ Rien à afficher pour l'instant.</div>`;
+    const scoped = t.scope?.length > 0, rows = c.rows.filter(r => inProject.row(t.scope, r));
+    const bar = scoped ? projectBarHtml({ sentry: t.scope[0] === "sentry" }) : project.id ? `<div class="pjbar"><span class="muted">📁 Cette application n'est pas liée à un projet : elle montre tout.</span></div>` : "";
+    if (!rows.length) return `${head}${bar}<div class="cvclear">✓ Rien à afficher${c.rows.length ? " pour ce projet" : " pour l'instant"}.</div>`;
     const cols = t.columns, link = rec.link;
-    return `${head}<div class="gawrap"><table class="gatable"><thead><tr>${cols.map(k => `<th${k.kind === "num" ? ' class="n"' : ""}>${esc(k.label)}</th>`).join("")}</tr></thead>
-      <tbody>${c.rows.map(r => `<tr>${cols.map((k, i) => `<td${k.kind === "num" ? ' class="n"' : ""}>${i === 0 && link && r[link] ? `<a href="${esc(r[link])}" target="_blank" rel="noopener noreferrer">${cell(k.kind, r[k.key])}</a>` : cell(k.kind, r[k.key])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      <p class="muted">${c.rows.length} ligne${c.rows.length > 1 ? "s" : ""} · lecture seule, par la connexion ${esc(rec.provider)} de 🔌 Intégrations.</p>`;
+    return `${head}${bar}<div class="gawrap"><table class="gatable"><thead><tr>${cols.map(k => `<th${k.kind === "num" ? ' class="n"' : ""}>${esc(k.label)}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${cols.map((k, i) => `<td${k.kind === "num" ? ' class="n"' : ""}>${i === 0 && link && r[link] ? `<a href="${esc(r[link])}" target="_blank" rel="noopener noreferrer">${cell(k.kind, r[k.key])}</a>` : cell(k.kind, r[k.key])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+      <p class="muted">${rows.length} ligne${rows.length > 1 ? "s" : ""}${rows.length < c.rows.length ? ` sur ${c.rows.length}` : ""} · lecture seule, par la connexion ${esc(rec.provider)} de 🔌 Intégrations.</p>`;
   }
   badge() { return 0; }
 }

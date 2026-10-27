@@ -41,6 +41,17 @@ class AppsTest(unittest.TestCase):
             for v in c.views:
                 self.assertIn(v.op, c.reads, f"{c.id}.{v.id}")
 
+    def test_a_scoped_view_keeps_its_project_key_in_every_row(self) -> None:
+        app = apps.create("gitlab", "mrs_review")
+        with mock.patch.object(gitlab, "my_mrs", return_value=MRS):
+            rows = apps.data(app["id"])["rows"]
+        self.assertEqual(app["template"]["scope"], ["gitlab_ref", "ref"])
+        self.assertTrue(all(r["ref"] for r in rows))
+        for c in integrations.all_connectors():
+            for v in c.views:
+                if v.scope:
+                    self.assertIn(v.scope[0], ("gitlab_ref", "gitlab_project", "sentry"), f"{c.id}.{v.id}")
+
     def test_create_persist_and_read_an_app(self) -> None:
         app = apps.create("gitlab", "mrs_review")
         self.assertEqual((app["name"], app["icon"], app["state"]), ("MR à relire · GitLab", "👀", "ready"))
