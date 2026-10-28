@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import apps, blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, integrations, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, team, terminal
+from . import apps, blueprints, claudefiles, deliveries, framecheck, gitlab, history, improve, insights, integrations, knowhow, lessons, net, quips, savegame, schedules, sentry, slack, spend, team, terminal
 from .billing import billing
 from .config import CFG, GL_TOOLS, MMX, TICKET_RE, TOKEN, VERSION, WEB, agent_files, discover_agents, frontmatter, network_enabled
 from .detail import agent_detail
@@ -188,6 +188,9 @@ def make_handler(window: float, tickets: TicketStates) -> type[BaseHTTPRequestHa
                       "job": (lambda: gitlab.job_log(num("project"), num("job"))) if num("project") and num("job") else None}.get(what)
                 code, body = gitlab.safe(fn) if fn else (404, {"error": "inconnu"})
                 self.reply(code, "application/json", json.dumps(body, ensure_ascii=False).encode())
+            elif self.path.startswith("/api/spend"):  # 💸 Coûts (spend.py): every transcript, per day, model, token kind, project, agent
+                days = parse_qs(urlparse(self.path).query).get("days", ["30"])[0]
+                self.reply(200, "application/json", json.dumps(spend.spend(float(days) if days.isdigit() else 30.0), ensure_ascii=False).encode())
             elif self.path.startswith("/api/costs"):
                 days = parse_qs(urlparse(self.path).query).get("days", ["30"])[0]
                 self.reply(200, "application/json", json.dumps(history.costs(GAME, min(90.0, max(1.0, float(days) if days.isdigit() else 30.0))), ensure_ascii=False).encode())

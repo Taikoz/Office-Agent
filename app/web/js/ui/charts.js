@@ -12,7 +12,7 @@ export const CH = { done: "#3987e5", blocked: "#d95926", money: "#199e70", other
 // the width a chart is drawn at: its window's, so 11px text stays 11px (the SVG then only scales a little)
 export const chartWidth = (inset = 72) => Math.max(320, Math.round((document.querySelector("#chiefos .osapp")?.clientWidth || 790) - inset));
 const tip = (t, rows) => esc(JSON.stringify({ t, r: rows }));
-export const compact = v => Math.abs(v) >= 1e6 ? `${+(v / 1e6).toFixed(1)}M` : Math.abs(v) >= 1e3 ? `${+(v / 1e3).toFixed(1)}K` : `${+(+v).toFixed(v % 1 ? 1 : 0)}`;
+export const compact = v => Math.abs(v) >= 1e9 ? `${+(v / 1e9).toFixed(1)} Md` : Math.abs(v) >= 1e6 ? `${+(v / 1e6).toFixed(1)}M` : Math.abs(v) >= 1e3 ? `${+(v / 1e3).toFixed(1)}K` : `${+(+v).toFixed(v % 1 ? 1 : 0)}`;
 // a clean top for the axis (1, 2, 2.5, 5 × 10ⁿ) and its ticks
 function nice(max, n = 4) {
   if (max <= 0) return { top: 1, ticks: [0, 1] };
