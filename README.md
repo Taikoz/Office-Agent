@@ -1,360 +1,495 @@
 # Agent Office
 
-Un bureau en pixel art, dans ton navigateur, où tu vois travailler tes agents Claude Code en direct.
+**Watch your Claude Code agents work, live, in a pixel-art office in your browser.**
 
-- **Le chef**, c'est toi (la session principale) : tu le pilotes à la souris.
-- **Les devs**, ce sont tes sous-agents : chacun s'assoit à un bureau avec sa spécialité, et un clic montre son écran (code modifié + terminal).
-- **Le tableau** suit les tickets : TO DO, EN COURS, BLOQUÉ, LIVRÉ.
-- **La salle de repos** accueille les devs libres : ping-pong, baby-foot, fléchettes, arcade, besoins façon Sims, amitiés et cuisine : clic sur un dev = menu d'actions en cercle (discuter, blague, câlin, taquiner, dispute, cuisiner ensemble…), les devs se rendent visite et se lient d'amitié seuls, et on cuisine pour l'équipe (préparation, poêle, vapeur, plats servis à table, compétence cuisine, risque de feu).
-- Et aussi : coûts estimés et budgets par mission, alertes navigateur, rapport du jour, recherche, XP, succès, quêtes et boutique.
+- **You are the chief.** Your main Claude Code session is the chief, and you move them around with the mouse.
+- **Your subagents are the devs.** Each one sits at a desk. Click a dev to see their screen: the code they changed and the commands they ran.
+- **The ticket board** tracks the work: TO DO, IN PROGRESS, BLOCKED, DELIVERED.
+- **The break room** is where idle devs hang out: ping-pong, foosball, darts, arcade, karaoke, cooking, friendships and Sims-style needs.
+- **ChiefOS**, the chief's computer, gathers your daily work tools: agent questions, merge requests and CI, tickets, deliveries to production, Sentry errors, costs, reports.
+- **Also included:** estimated cost and budget per mission, browser alerts, search, XP, achievements, quests, a buy mode and themed decorations.
 
-Toutes tes sessions Claude Code sont réunies dans le même bureau.
+All your Claude Code sessions share the same office.
 
-**Tout reste en local.** Un petit serveur Python (bibliothèque standard uniquement) lit tes transcripts dans `~/.claude/projects` sans jamais les modifier. Il n'écoute que sur `127.0.0.1`, et aucune donnée ne quitte ta machine. Seule exception : la police VT323 est chargée depuis Google Fonts.
+**Everything runs locally.** A small Python server (standard library only) reads your transcripts in `~/.claude/projects`. It never changes them, listens only on `127.0.0.1`, and sends no data off your machine. Exceptions: the VT323 font comes from Google Fonts, and the optional integrations (GitLab, Sentry, Slack, real weather, error analysis) call the services you connect.
+
+> The office interface is in French. This README gives the French labels with their English meaning, for example **ÉQUIPE** (team).
 
 ---
 
-## 1. Prérequis
+## Contents
 
-- **Claude Code**, avec la gestion des plugins (`/plugin`).
-- **Python 3.9 ou plus récent** (`python3`, `python` ou `py -3`). Pour vérifier : `python3 --version` (sous Windows : `python --version`).
-- **Un navigateur** : le bureau s'ouvre dans ton navigateur par défaut.
-- Optionnel, pour lancer des agents depuis le bureau : un terminal graphique.
-  - Linux : `gnome-terminal`, `konsole`, `x-terminal-emulator` ou `xterm`.
-  - macOS : Terminal.
-  - Windows : une nouvelle console s'ouvre.
+1. [Quick start](#1-quick-start)
+2. [Requirements](#2-requirements)
+3. [First run: create your team](#3-first-run-create-your-team)
+4. [Using the office](#4-using-the-office)
+5. [ChiefOS: the chief's tools](#5-chiefos-the-chiefs-tools)
+6. [Office life (the game side)](#6-office-life-the-game-side)
+7. [Your agents](#7-your-agents)
+8. [Configuration (optional)](#8-configuration-optional)
+9. [Update and uninstall](#9-update-and-uninstall)
+10. [Troubleshooting](#10-troubleshooting)
+11. [Privacy and security](#11-privacy-and-security)
+12. [Development](#12-development)
 
-### Sous Windows
+---
 
-Deux installations sont nécessaires avant le plugin :
+## 1. Quick start
 
-1. **Git for Windows** — https://git-scm.com/download/win (options par défaut).
-   - Sans git, `/plugin marketplace add` échoue : la commande clone le dépôt GitHub.
-   - Avec git, Claude Code exécute aussi les hooks du plugin dans Git Bash.
-2. **Python 3** — https://www.python.org/downloads/ : coche **« Add python.exe to PATH »** pendant l'installation.
-
-Le plugin essaie `python3`, puis `python`, puis `py -3` : pas besoin de commande `python3`. Ferme et rouvre ensuite le terminal et Claude Code.
-
-Vérification dans un nouveau terminal : `git --version` et `python --version` (ou `py -3 --version`).
-
-Pour lancer un agent depuis le bureau sous Windows, il faut la version native de Claude Code (`claude.exe`). Avec une installation par npm, lance les agents depuis Claude Code.
-
-## 2. Installation
-
-Dans Claude Code :
+In Claude Code, run:
 
 ```
 /plugin marketplace add Taikoz/Office-Agent
 /plugin install agent-office@agent-office
 ```
 
-Puis **redémarre Claude Code**, pour que les hooks du plugin soient chargés.
-
-Pour vérifier que tout marche :
+Then **restart Claude Code** so it loads the plugin's hooks, and run:
 
 ```
 /office
 ```
 
-La commande affiche l'URL du bureau (par défaut http://127.0.0.1:8765/) et l'ouvre dans le navigateur.
+This prints the office URL (http://127.0.0.1:8765/ by default) and opens it in your browser.
 
-Pas encore d'agent sous la main ? Ouvre la démo : http://127.0.0.1:8765/?demo=1
+No agents running yet? Open the demo: http://127.0.0.1:8765/?demo=1
 
-## 3. Premier lancement : crée ton équipe
+## 2. Requirements
 
-À la première ouverture, un écran d'accueil te demande :
+- **Claude Code** with plugin support (`/plugin`).
+- **Python 3.9 or later**, available as `python3`, `python` or `py -3`. Check with `python3 --version` (on Windows: `python --version`).
+- **A web browser.** The office opens in your default browser.
+- **Optional:** a graphical terminal, to launch agents from the office.
+  - Linux: `gnome-terminal`, `konsole`, `x-terminal-emulator` or `xterm`
+  - macOS: Terminal
+  - Windows: a new console window opens
 
-- ton prénom (le chef) ;
-- les prénoms des 8 devs, un par bureau (🎲 pour les tirer au sort) ;
-- le nom du chat du bureau et un nom pour ton bureau ;
-- si tu veux, ton logo (PNG, JPEG, WebP ou SVG, 300 ko max). Il s'affiche sur l'enseigne murale, dans l'en-tête et dans l'onglet.
+### Windows setup
 
-Tout est enregistré dans `~/.claude/agent-office/`. Pour le modifier plus tard : 👥 **ÉQUIPE** → « Modifier l'équipe et le logo ».
+Install these two tools before the plugin:
 
-## 4. Utilisation au quotidien
+1. **Git for Windows**: https://git-scm.com/download/win (default options are fine).
+   `/plugin marketplace add` clones the GitHub repo, so it fails without git. Claude Code also uses Git Bash to run the plugin's hooks.
+2. **Python 3**: https://www.python.org/downloads/
+   During setup, tick **"Add python.exe to PATH"**.
 
-### Le bureau s'ouvre tout seul
+You don't need a `python3` command: the plugin tries `python3`, then `python`, then `py -3`.
 
-Tu n'as rien à lancer. Dès qu'une session Claude Code démarre un sous-agent (outil `Agent`), le plugin démarre le serveur et ouvre le bureau, s'il n'est pas déjà ouvert dans un onglet. Tu peux aussi l'ouvrir à tout moment avec `/office`. S'il est ouvert dans plusieurs onglets, seul celui que tu regardes travaille : les autres dorment (rien n'est dessiné ni interrogé) jusqu'à ce que tu y reviennes.
+Then close and reopen your terminal and Claude Code. In the new terminal, check with `git --version` and `python --version` (or `py -3 --version`).
 
-- Un **dev arrive** par la porte de la salle de repos et s'assoit à un bureau à chaque sous-agent lancé.
-- Il **repart** une fois sa mission livrée.
-- Une **session principale qui travaille sans sous-agent** apparaît aussi : un dev vient travailler à la place du chef.
-- `/clear` dans Claude Code **vide le bureau** des anciennes sessions.
+To launch agents from the office on Windows, you need the native Claude Code build (`claude.exe`). If you installed Claude Code with npm, launch agents from Claude Code instead.
 
-### Ce que tu peux faire
+### What works where
 
-| Action | Effet |
-|---|---|
-| Clic sur un dev | Son écran : éditeur (diff des fichiers modifiés) et terminal (ses commandes et leur sortie). **DÉTAILS** ouvre le panneau latéral. |
-| Carte dans la colonne **EN MISSION** (à droite) | Statut, action en cours, coût estimé, temps restant, lien de la MR, alertes. |
-| Clic sur un **bureau libre** | Lance un agent : choisis l'agent et sa mission, puis 🚀 Lancer et confirme. Un terminal s'ouvre avec `claude --agent …`. |
-| **Glisser un ticket** du tableau sur un bureau libre | Même chose, avec la mission préremplie pour ce ticket. |
-| Clic sur un ticket du tableau | Son historique sur 30 jours. |
-| Colonne de plus de 5 cartes | ◀ ▶ ou molette pour changer de page. |
-| Clic sur le sol | Le chef y marche. Machine à café, console et porte REPOS ont chacune leur action. |
-| **SALLE DE REPOS** (touche `L`) | Les devs libres. Clic sur un dev : discuter, offrir un café, ou le défier au ping-pong, au baby-foot ou aux fléchettes. |
-
-### L'écran, façon Sims
-
-La scène occupe toute la fenêtre ; le reste flotte par-dessus :
-
-- **En haut** : le nom du bureau, les sessions, 📋 MISSIONS (panneau repliable à droite : agents en mission, conso, quêtes) et ☰ MENU (toutes les options ci-dessous, en menu déroulant).
-- **En bas à gauche** : ton personnage (le chef), son humeur, sa file d'actions (l'action en cours avec sa progression, puis les ordres en attente ; clic = annuler) et l'argent du foyer (clic = relevé des salaires et dépenses).
-
-### Le mode achat (🛒, bouton rond en bas à droite)
-
-Un catalogue façon Sims : bureaux + ordinateur, lampes, réfrigérateurs, gazinières, plantes, posters, tapis, aquarium, jukebox, et la garde-robe (chapeaux, couronne). Chaque objet existe en plusieurs styles (pastilles de couleur). « Placer » : l'objet suit la souris, vert là où il rentre, clic pour le poser (clic droit ou Échap pour annuler) ; « Placement auto » le pose tout seul. Clic sur un objet de la scène en mode achat : changer son style, le déplacer, le vendre (75 % du prix).
-
-Hors mode achat, les objets sont interactifs : lampe (allumer, éteindre ; elle éclaire le soir), frigo (encas, cuisiner), gazinière (cuisiner : il faut un frigo et une gazinière, la cuisine se fait devant la gazinière, où qu'elle soit), aquarium (nourrir), jukebox (musique), plante (arroser), bureau libre (lancer un agent, ou le chef y joue sur l'ordinateur).
-
-Les bureaux sont des objets : un dev dont le bureau a été vendu travaille sur un carton avec un portable, son humeur chute et il le fait savoir. Le chef envoie en priorité les devs qui ont un bureau.
-
-### Les compétences
-
-Chaque mission livrée fait monter une compétence du dev qui l'a faite, selon le type d'agent : 💻 Développement, 🧪 Tests, 🛡️ Sécurité, 🔍 Review, 🧭 Pilotage, 📋 Organisation, 🔭 Exploration (niveaux 1 à 10 ; une mission complexe, avec tests verts et MR, fait monter plus vite). Pour chaque nouvel agent, le chef envoie le dev libre le plus compétent pour ce travail (puis le moins fatigué), et l'annonce dans sa bulle. L'expertise rapporte +5 % de salaire par niveau. Les compétences s'affichent sur les cartes EN MISSION, dans la fenêtre des besoins et sur la fiche du dev.
-
-### La vie au bureau
-
-- **Traits** : chaque membre de l'équipe a deux traits (gourmand, fêtard, solitaire, perfectionniste, caféinomane, bavard, zen, sportif, lève-tôt, ambitieux) qui changent ses besoins et ses réactions.
-- **Humeurs (moodlets)** : des émotions temporaires pèsent sur l'humeur, la plupart venues du vrai travail des agents : tests rouges (déprime après 3 échecs d'affilée), tests enfin verts, CI cassée ou verte, MR ouverte, fusionnée ou refusée, bloqué, tourne en rond, mission livrée, heures sup le soir.
-- **Envies** : chaque dev a trois envies du moment (manger un plat, jouer au baby-foot, discuter avec un collègue, livrer une mission, monter de niveau…). Une envie réalisée rapporte de l'argent et des points de satisfaction, qui achètent des récompenses (potion d'énergie, inspiration, journée spa, bonne humeur d'équipe) dans la fenêtre des besoins.
-- **La journée** : l'équipe arrive à 8 h et rentre à 19 h (20 h le vendredi) ; seuls les devs en mission restent. La salle de repos est vide le soir et le week-end. Le vendredi à 17 h, afterwork (sur la terrasse si elle existe) ; après une semaine d'au moins 5 missions livrées, c'est la fête de la semaine, avec une prime d'équipe. Aperçu : `?hour=18&day=5` dans l'URL.
-- **Événements** : coupure de courant (réarmer le disjoncteur au mur), visite d'un client (l'accueillir avant qu'il reparte : bonus), pizzas livrées, anniversaire de chaque dev (un jour par an : gâteau, et 🎁 dans son menu). Aperçu : `?event=power|client|pizza|birthday`.
-- **Construction** (🏗️ dans le mode achat) : agrandir l'open space (10 puis 12 bureaux, avec des recrues), salle de réunion (réunir l'équipe autour de la table), terrasse, fenêtres sur n'importe quel mur. Une barre en haut passe d'une pièce à l'autre.
-- **Bureau du chef** : son bureau près du podium ouvre ChiefOS (aussi dans le menu) : questions en attente, merge requests et leur CI, tickets, rapport du jour, comptes, équipe d'un coup d'œil.
-- **Primes d'efficacité** : une mission rapide (moins de 15 min), sans erreur ou économe (moins de la moitié du budget) rapporte plus ; une mission qui a tourné en rond ou dépassé son budget, moins. Tant qu'un agent tourne en rond, il coûte § 10 par minute.
-
-### Créer ton chef
-
-☰ MENU → 👑 CRÉER TON CHEF (ou ✏️ près de son portrait, ou « Personnaliser » dans la fenêtre des besoins) : un éditeur façon Créer un Sim, avec un grand aperçu (de face ou de dos, debout, bras levés, au podium, assis). Visage (peau, barbe et sa couleur), cheveux (9 coupes, couleurs), tenue (smoking, costume, chemise, polo, sweat, t-shirt ; veste ou haut, cravate ou nœud papillon, pantalon, chaussures), accessoires (lunettes carrées, rondes ou solaires ; couronne si achetée, casquette, bonnet, feutre, casque-micro), et personnalité (deux traits au choix et une phrase fétiche qu'il dit quand l'équipe n'a besoin de rien). Chaque couleur a aussi un nuancier libre ; 🎲 tire un chef au hasard.
-
-### Encore plus de vie
-
-- **Carrières** : Junior → Confirmé → Senior → Expert → Lead, selon les missions livrées et la meilleure compétence. Une promotion est fêtée (gâteau) et augmente le salaire (+5 % par grade). Un dev malheureux depuis une heure pense à partir ; au bout de trois, il démissionne (jamais en pleine mission) : recrute quelqu'un dans ChiefOS → Équipe (§ 1 500).
-- **Devs au travail** : clic sur un dev à son bureau → voir son écran, lui apporter un café, l'encourager, et s'il est bloqué ou tourne en rond, lui souffler une idée ou relancer l'agent avec une consigne.
-- **Worktree séparé** : au lancement d'un agent (bureau libre, ticket glissé, 📅 Planning), choisis le projet ; dans un dépôt git, « 🌿 Worktree séparé » (coché par défaut) lance `claude --agent … --worktree <ticket>-<agent>` : l'agent travaille dans `.claude/worktrees/<nom>`, sur sa propre branche, et plusieurs agents en parallèle ne touchent plus les mêmes fichiers. Sa carte affiche 🌿 le worktree et ⎇ la branche, son bureau aussi ; 🔁 relancer reprend dans le même worktree. À la fin de la session, Claude Code propose de garder ou de supprimer le worktree. Pense à ignorer `.claude/worktrees/` dans le `.gitignore` du projet.
-- **Permissions en attente** : quand un agent attend ton accord dans son terminal (hook `PermissionRequest` du plugin), le dev lève les bras avec une bulle 🔐, sa carte passe en tête et clignote (outil et commande attendus, depuis combien de temps), et une alerte part. Ça s'efface dès que tu as répondu (accordé, refusé ou interrompu) ; une commande autorisée qui tourne encore est reconnue dans la liste des processus. Le statut reste « au travail » : un agent qui t'attend n'est ni bloqué ni parti.
-- **Relations** : rivaux (amitié ≤ −40) qui se piquent quand ils travaillent en même temps, binômes (≥ 70) qui se motivent, et un parrain pour chaque nouveau pendant deux semaines (il apprend plus vite).
-- **Animaux** : Brume a faim et besoin de câlins, elle va manger à sa gamelle (à remplir) ; adopte Biscuit le chien (🐾 dans le mode achat) : il se promène, rend visite aux devs, et joue à la balle.
-- **Salle de repos** : en plus du canapé, des jeux et de la cuisine, un coin karaoké (scène, enceintes, paroles à l'écran) et une table de jeu de société à deux ; les devs y vont seuls quand ils ont besoin de fun ou de social, et le chef aussi (clic dessus quand il est en salle de repos). Nouvelles envies : chanter au karaoké, faire un jeu de société.
-- **Tout s'utilise, partout** : chaque objet acheté a au moins une action, dans chaque pièce (bureau, salle de repos, réunion, terrasse, salle de sport, bibliothèque). Le chef y va depuis n'importe quelle pièce, s'assoit ou se place devant, et le fait : s'asseoir sur un tabouret, bronzer sur un transat, se baigner dans le jacuzzi, lancer le barbecue, se réchauffer au brasero, écrire le menu sur l'ardoise, faire un vœu à la fontaine, regarder l'heure ou dehors, ranger, admirer… Les néons s'allument et s'éteignent d'un clic. L'effet sur ses besoins vient au plus une fois toutes les 5 minutes par objet.
-- **Le bar, de A à Z** (🛒 → 🍸 Bar) : modules de comptoir (droit, angle, passage de barman) qui s'alignent, et dessus une tireuse à bière (30 pintes par fût), une station à cocktails, une caisse enregistreuse ; derrière, une étagère à bouteilles éclairée, un frigo sous comptoir, une machine à glaçons (cocktails frappés), des fûts de réserve ; des tabourets hauts, les néons BAR, OPEN et cocktail. Le chef tire une pression, prépare un cocktail, paie une tournée à tous ceux de la pièce, change le fût (le fût de réserve de la pièce, sinon § 60) et fait la caisse une fois par jour (§ 3 par verre servi). En salle de repos, les devs viennent boire un verre au comptoir ; sur la terrasse, l'afterwork se passe au comptoir et sur les tabourets.
-- **L'afterwork sur le toit** (🛒 → 🍸 Bar) : **Marcel, le barman** (moustache, nœud pap', sur son caillebotis derrière le comptoir) shake, tire les pressions, essuie ses verres ; clic : le cocktail du jour, les potins du comptoir (vrais agents bloqués, CI rouges, MR qui attendent leur review, questions), sa tournée (§ 30), une blague ; pendant la fête il anime la foule. **Guirlande guinguette** : les premières ampoules sont les vrais agents (vert au travail, jaune question, rouge bloqué, violet qui tourne en rond, bleu MR à relire), les autres s'allument le soir. **Cloche du happy hour** (sur le comptoir) : un afterwork tout de suite, 30 min, n'importe quel jour ; « Dernière tournée » le termine. **Carte des cocktails** : réécrite à la craie d'après la journée (Pipeline Rouge, Débloqueur, Merge ×N, Sprint ×N…). **Piste de danse lumineuse** : dalles disco pendant la fête (une sur quatre rouge si une CI casse), les devs y dansent ; « Ouvrir le bal » l'allume une minute. La terrasse prend le sol peint en mode achat (le sable de la crique en fait une plage ; le parquet par défaut garde le deck) ; dans les dalles du thème plage, une **très grande dalle de mer** (128 × 128) et un **long rivage** (128 × 32, ↻) couvrent un lagon en peu d'objets.
-- **Thèmes** (🛒 → 🎭 Thèmes) : des collections complètes rangées par rayon (murs à composer, fenêtres, tapis, éclairage, chaises et fauteuils, tables, bureaux, déco, garde-robe du chef) ; chaque objet reste aussi dans sa catégorie habituelle. Premier thème, 🪄 **École de sorcellerie** : murs de château à composer pièce par pièce (mur à créneaux, arche ogivale, mur à vitrail qui s'allume le soir, pilier à torche ; nouvelle catégorie Cloisons), fenêtre ogivale, tapis de ciel étoilé et cercle des runes, chandelles flottantes, lustre de fer forgé, torche murale, chaise gothique, fauteuil du directeur, table de réfectoire (festin pour toute la pièce), table de potions, bureau de sorcier, chaudron bouillonnant, bibliothèque de grimoires (un livre flotte), balai volant, perchoir à hibou (envoyer un hibou à un dev), chapeau répartiteur (Phénix, Dragon, Licorne, Griffon), boule de cristal, portrait animé. Garde-robe : robe de sorcier, chapeau pointu, écharpe rayée, baguette pour le chef (puis réglables dans « Créer ton chef »), chapeaux pointus pour l'équipe.
-- 🚀 **Station spatiale** (deuxième thème) : cloisons de vaisseau à composer (plaques rivetées, cloison à hublot sur les étoiles, porte coulissante qui s'ouvre toute seule quand quelqu'un approche, pilier énergétique), baie d'observation sur l'espace profond, tapis à grille lumineuse et hexagonal, lampe à plasma, colonne lumineuse, néon circuit, siège de pilote, fauteuil capsule, table holographique (l'état des vrais agents), bureau de commandement, **ordinateurs du futur** (holographique, terminal quantique, écran transparent : ils montrent le travail du dev, teintés), robot assistant (rapport sur les agents, danse), téléporteurs (deux pièces : le chef passe de l'un à l'autre), caisson cryogénique, réacteur à fusion (booster la pièce), drone de livraison (café, pizza), plante alien. Garde-robe : combinaison spatiale, casque d'astronaute, visière holo, jetpack (flammes quand il marche), visières pour l'équipe.
-- 🦇 **Manoir hanté** (troisième thème) : murs de manoir à composer (boiseries et papier damassé déchiré, porte qui grince et s'ouvre toute seule quand quelqu'un approche, mur au portrait de l'ancêtre dont les yeux suivent le chef et rougeoient la nuit, colonne à bougeoir), fenêtre sur la lande (toujours la nuit : pleine lune, arbre mort, chauves-souris, brume), tapis toile d'araignée et persan élimé, candélabre, citrouille lanterne, néon BOO!, toile d'araignée murale (son araignée descend et remonte), chaise sculptée, fauteuil à oreilles, table de spiritisme (les esprits épellent les questions des agents qui t'attendent), bureau d'outre-tombe, **bocal à fantômes** (un fantôme par vrai agent bloqué ou qui tourne en rond ; clic : qui et sur quoi), **horloge comtoise** (l'heure réelle ; elle sonne l'état des CI des MR des agents), cercueil (sieste de vampire), poutre aux chauves-souris (elles s'envolent pendant l'alarme sécurité), corbeau sur son buste (il croasse les MR qui attendent une review), plante carnivore. Garde-robe : cape de vampire, haut-de-forme, hauts-de-forme pour l'équipe.
-- 🏴‍☠️ **Navire pirate** (quatrième thème) : coque à composer (bordé goudronné et main courante de cordage, **sabord à canon** qui s'ouvre quand quelqu'un approche et tire pendant l'alarme sécurité, bordé à hublot sur la mer, mât et sa lanterne), **fenêtre de poupe** (la mer de l'heure, une île, des mouettes, et une voile à l'horizon par agent au travail), tapis carte au trésor et rose des vents, lanterne de navire, néon ARRR!, tabouret tonneau, fauteuil du capitaine, **table des cartes** (une île par ticket en cours, un petit navire de l'une à l'autre ; clic : faire le point), bureau de l'intendant, **coffre au trésor** (il se remplit à chaque mission livrée), **cloche du bord** (pique l'heure des marins, qui est à son poste), **perroquet** (il répète les tickets en cours et crie quand une question attend), **canon** (une salve par MR fusionnée), **bouteille à la mer** (la plus ancienne question qui t'attend), longue-vue (le backlog à l'horizon), **tonneau du kraken** (un tentacule par CI rouge), tonneau de rhum (tournée de grog), palmier en tonneau. Garde-robe : habit de capitaine, tricorne, bandeau sur l'œil, perroquet d'épaule, tricornes pour l'équipe.
-- ⛩️ **Maison japonaise** (cinquième thème) : murs à composer (cloison shōji qui s'allume le soir, **porte fusuma** à la grande vague qui coulisse quand quelqu'un approche, **mur au tokonoma** dont le rouleau écrit l'humeur réelle du bureau en un kanji : 和 calme, 働 travail, 待 question, 火 CI rouge, 困 agent bloqué, poteau et lanterne rouge), fenêtre ronde sur le Fuji (une lanterne allumée sur la pagode par agent au travail), tapis grande vague et pétales, andon, tōrō de pierre, néon ラーメン, zabuton, zaisu, **kotatsu** (toute la pièce au chaud), bureau en hinoki, **étagère à daruma** (un par agent : un œil au départ, le second une fois livré), **maneki-neko** (sa patte s'agite plus vite à chaque MR ouverte), **jardin zen** (une pierre par agent au travail ; clic : ratisser), **bassin aux carpes koï** (une carpe par agent, une dorée par mission livrée), **torii** (ses lanternes s'allument quand toutes les CI sont vertes), **omikuji** (la fortune suit l'état réel du bureau), cerisier en fleur, bonsaï, tambour taiko. Garde-robe : kimono, chapeau kasa, katana, hachimaki pour l'équipe.
-- 🏖️ **Plage & beach club** (sixième thème) : murs à composer (cabine de plage rayée et sa bouée, mur de bambou, **rideau de coquillages** qui s'écarte quand on passe, totem tiki et sa torche), **baie sur l'océan** (coucher de soleil, voilier, un surfeur par agent au travail), serviette géante et tapis tropical, torche tiki, néon BEACH CLUB, transat, fauteuil suspendu en rotin, bureau planche de surf, **piscine** (un nageur par agent au travail, un flamant gonflable par mission livrée), **château de sable** (une tour par agent aux tests verts ; une CI rouge l'emporte), **drapeau de baignade** (vert, orange ou rouge selon les CI), **rocher aux crabes** (un crabe par agent aux tests rouges), paillote bar tiki (tournée de cocktails), **platines du DJ** (l'égaliseur suit l'activité des agents ; clic : un set, la pièce danse), hamac entre deux cocotiers, parasol, chariot de glaces, monstera. Garde-robe : chemise hawaïenne, chapeau de paille, collier de fleurs, chapeaux de paille pour l'équipe. **Dalles à composer** (rayon 🏝️) : dalle de sable, de rivage (sable et eau, l'écume qui monte et redescend), de pointe et de crique pour les angles (↻ pour tourner la côte), dalle de mer (vagues qui roulent d'une dalle à l'autre, reflets de soleil), en grand format pour le sable et la mer ; elles se posent côte à côte comme des tapis, on marche dessus, et tout se pose par-dessus (transats, tables, tapis, serviettes).
-- **Sols des thèmes** : trois sols par thème, peints sur toute la pièce comme les sols de base (les meubles se posent dessus), chacun avec ses coloris ; dans 🛒 → La pièce → Sols et sur le rayon Sols de chaque thème. École de sorcellerie : dalles de château, plancher de tour, mosaïque à l'étoile. Station spatiale : tôle de pont, caillebotis lumineux, dalles hexagonales. Manoir hanté : carreaux de ciment, parquet qui grince, marbre veiné. Navire pirate : pont de navire, sable de la crique, tomettes de la taverne. Maison japonaise : tatamis, plancher d'engawa, gravier ratissé. Plage & beach club : deck en teck, mosaïque de piscine, natte de jonc.
-- **Fonds des thèmes** : autour d'une pièce à thème (ses murs, sinon son sol, sa porte, ou au moins 3 de ses meubles), le décor de l'extérieur suit l'ambiance et l'heure réelle : château au bord d'un lac sous les étoiles (sorcier à balai, étincelles), espace profond avec nébuleuses, planète à anneaux et satellite, cimetière sous la pleine lune (brume, chauves-souris, éclairs), pleine mer avec île et navire à l'horizon (vagues, mouettes), mont Fuji, pagode et cerisiers (pétales, ronds dans l'eau), plage tropicale avec palmiers, voilier et écume ; figé en mode Focus.
-- **ChiefOS a sept styles** (ChiefOS → ⚙️ Réglages → Général → Apparence) : ChiefOS ; **HOLO**, futuriste (verre sombre, néon cyan, coins biseautés, lignes de balayage, dock en hexagones, barre « ◈ MODULES ») ; **Grimoire**, un livre de sorts (reliure de cuir bordeaux et dorures, pages de parchemin, texte à l'encre, sceaux de cire en guise d'icônes, barre « ✦ Sortilèges »). Chacun a sa séquence d'ouverture. En Auto, le style suit le bureau du chef : HOLO au poste de commandement holographique, Grimoire au **bureau du directeur** (thème École de sorcellerie : caissons sculptés, grimoire aux runes qui brillent, boule de cristal, plume, chandelles, petit planétaire qui tourne), **Crypte** (velours noir, fenêtres en ogive, icônes en pierres tombales, cire de bougie et rouge sang, barre « ☾ Séances ») à l'**orgue du maître des lieux** (thème Manoir hanté : tuyaux de laiton, deux claviers, candélabres ; clic : jouer la toccata), **Galion** (bois de pont, laiton, cordage, icônes en hublots, titres sur parchemin, barre « ⚓ Cap ») à la **barre du capitaine** (thème Navire pirate : grande roue, habitacle et compas, pupitre à cartes ; clic : prendre la barre), **Zen** (papier de riz dans un treillis de bois, encre sumi, icônes en sceaux rouges, dock en bambou, l'heure du zodiaque, barre « ⛩ Chemins ») à l'**estrade du sensei** (thème Maison japonaise : tatamis, bureau bas laqué, paravent d'or, katana, encens ; clic : méditer), **Tropical** (ciel de coucher de soleil sur la mer, fenêtres de sable arrondies, icônes en bouées, dock vert palmier, boutons corail, « happy hour » le soir, barre « 🌴 Spots ») au **poste du maître-nageur** (thème Plage : chaise haute, parasol, croix rouge, jumelles ; clic : surveiller la baignade, c'est-à-dire les agents bloqués ou qui tournent en rond), Ubuntu sinon.
-- **Frigo et courses** : cuisiner prend les ingrédients du frigo (🍝 pâtes, 🍅 tomates, 🥩 viande, 🌾 farine, 🥚 œufs, 🥛 lait, 🧀 fromage, 🥕 légumes, 🍚 riz, 🍫 chocolat, 🧈 beurre). « 🛒 Faire les courses… » (frigo ou cuisine) achète avec les § ce qu'il faut pour une recette ; le contenu du frigo s'affiche au centre du menu. Les devs ne cuisinent que ce qu'il y a dans le frigo et réclament des courses quand il est vide.
-- **Saisons et météo** : la terrasse suit la saison (neige, fleurs, barbecue, feuilles). ☰ MENU → MÉTÉO RÉELLE : les fenêtres montrent le vrai temps de ta ville (Open-Meteo, sans clé ; seules les coordonnées de la ville sont envoyées), la température s'affiche à côté de l'heure. Désactivé par défaut. **ChiefOS → 🌦️ Météo** : une carte aux couleurs du ciel et de l'heure (température, conditions, ressenti, max et min), des tuiles (ressenti, humidité, vent et sa direction, indice UV, lever et coucher du soleil, pluie), les 24 prochaines heures et les 7 prochains jours avec leur barre min–max ; la recherche de la ville et l'interrupteur de la météo réelle. Tout vient du même appel Open-Meteo, toutes les 15 min.
-
-### Les outils du chef (ChiefOS)
-
-**Mode simple (par défaut)** : ChiefOS s'ouvre sur ☀️ **Aujourd'hui** (ce qui t'attend, ce qui tourne, ce qui a été livré, chacun à un clic de son détail) et ne montre que le travail de tous les jours : 📥 **À traiter** (les questions des agents, les alertes avec leur action et les notifications de travail non lues, en une seule liste, les plus urgentes d'abord), **Code & CI** (🧭 Vue d'ensemble d'abord : MR à relire, mes MR, pipelines rouges et alertes en prod en quatre compteurs colorés, puis « À faire maintenant », la liste de ce qui t'attend, la plus urgente d'abord, chaque ligne avec son action — corriger la CI avec un agent, relire, traiter les retours, voir l'erreur, merger — ; puis GitLab, Pipelines, Livraisons, Erreurs en onglets), **Tickets** (Tickets, Planning, Planification), **Bilan** (jour, semaine, débriefs, tableau de bord, coûts) et ⚙️ Réglages. ⚙️ Réglages → **Mode : Avancé** affiche tout le reste (atelier, équipe, outils, et Questions / Alertes / Notifications séparées) ; Réglages montre aussi combien de fois chaque application a été ouverte sur cette machine, pour savoir ce qui sert vraiment.
-
-Le style par défaut, **ChiefOS**, a son propre système de design (`app/web/css/11-chiefos-design.css` : tokens de couleurs, typo Inter, espacements, rayons, ombres, durées ; boutons secondaire / principal ambre / destructif rouge, champs, contrôles segmentés, compteurs, états vides, erreurs qui disent comment corriger, chargements, focus clavier visible, animations courtes coupées si le système demande moins de mouvement) : barre du haut (Activités, date et heure, ⏻ Quitter), dock à gauche avec le nom de chaque dossier (icônes seules sur un écran étroit), chaque outil dans une fenêtre dont le titre dit où l'on est (dossier › application ; – réduit vers Activités, ▢ agrandit, × ferme) ; ⚙️ Réglages est découpé en sections (Général, Intégrations, Performances, Autres) et les messages « non relié » mènent droit à Intégrations. Activités affiche les applications comme l'écran d'accueil d'un iPhone, avec une recherche (Entrée ouvre la première ; le nom d'un dossier trouve toutes ses applications). Les applications sont rangées en **dossiers** : l'icône d'un dossier est la sienne (ses premières applications en mini-grille dans les autres styles), son badge fait la somme des leurs ; un clic (dock ou Activités) l'ouvre par-dessus l'écran, et une application ouverte affiche celles de son dossier en onglets. Dossiers par défaut : Boîte de réception (Questions, Alertes, Notifications, Support, Messages), Code & CI (GitLab, Merge requests, Pipelines, Livraisons), Travail (Tickets, Planning, Planification), Bilans (Rapport du jour, Semaine, Débriefs, Tableau de bord, Coûts), Atelier (Skills & agents, Blueprints, Leçons, Idées, Process, Compétences, MMX), Équipe (Équipe, Comptes, Réseau), Outils (Terminal, Navigateur, Météo) ; ⚙️ Réglages reste seul. Comme sur iPhone, dans Activités : glisse une application sur un dossier pour l'y ranger, sur une autre application pour créer un dossier, hors d'un dossier ouvert pour l'en sortir ; clic sur le nom d'un dossier ouvert pour le renommer ; clic droit → Défaire le dossier / Sortir du dossier ; un dossier vide disparaît (⚙️ Réglages → Dock → « Dossiers par défaut »). Le dock montre les dossiers (une application peut aussi y être épinglée seule ; une application hors du dock s'y ajoute le temps de l'utiliser). Pour le modifier : clic droit sur une icône (dock ou Activités) → épingler, retirer, monter, descendre ; glisser-déposer pour réordonner (ou depuis Activités pour épingler) ; ou ⚙️ Réglages → Dock (avec « Dock par défaut »). Un ancien dock est converti en dossiers.
-
-- **🚨 Alertes** : un agent qui relit le même fichier en boucle, la même erreur chez plusieurs agents, une MR sans review depuis plus de 2 h, un agent qui tourne en rond ; chacune avec son action (relancer avec une consigne, lancer une review, voir l'écran). Toast et notification à l'apparition.
-- **📅 Planning** : choisis des tickets du backlog et un agent pour chacun, le nombre d'agents à la fois, puis « Lancer la journée » : le chef les lance l'un après l'autre (le lancement habituel, avec un terminal), 2 min au moins entre deux, jamais plus que le nombre choisi.
-- **🧾 Débriefs** : chaque mission livrée a sa fiche (mission, fichiers modifiés, commandes clés, erreurs, durée, coût, tests, MR), copiable en Markdown pour la MR ou le ticket ; aussi 🧾 sur la carte de la mission.
-- **💸 Coûts** (`app/office/spend.py`, `/api/spend`) : toutes les conversations comptent, sessions principales et sous-agents, sur 7, 30 ou 90 jours. Tuiles : le coût de la période et sa tendance face à la période d'avant (dite « incomplète » quand Claude Code a déjà effacé ces transcripts), la projection sur 30 jours, ce que le cache a économisé, la part des sous-agents, le nombre de conversations. Puis le coût par jour (sous-agents et sessions empilés ; une conversation compte le jour de sa dernière activité), par modèle (Opus, Sonnet, Haiku, Fable), par type de token (entrée, écrit en cache, lu du cache, sortie), par projet, par agent, les conversations les plus chères, et les tickets des sous-agents découpés selon l'issue de leurs runs, les « gouffres » 🕳️ signalés (plus du double de la médiane, ou bloqué deux fois). Tout est une estimation au tarif de l'API : sur abonnement, rien n'est facturé au token.
-- **🗓️ Semaine** : le rapport de la semaine (livré, MR, To Verify, bloqués, temps, par jour), copiable en Markdown ; prêt le vendredi à 17 h (toast et notification).
-- **⚙️ Réglages → 🔌 Intégrations** : tous les services externes au même endroit, connectés d'un côté, disponibles de l'autre. Pour chacun : son état (connecté, jeton refusé, expiré, droits insuffisants, injoignable), le compte ou l'instance reliée, ce qu'il permet, les applications qui s'en servent, **Vérifier** (un appel réel), **Modifier** et **Déconnecter** (deux clics). Le formulaire vient du connecteur du service (`app/office/integrations.py`) : ajouter un service, c'est déclarer un connecteur, sans toucher au reste. Un jeton expiré ne supprime aucune application : elles attendent qu'il soit reconnecté.
-- **Sécurité des intégrations** : chaque connexion, déconnexion, vérification et changement d'application est noté dans un journal (🔌 Intégrations → Journal ; `~/.claude/agent-office/integrations-audit.jsonl`, lisible par toi seul, sans aucun jeton ni valeur de champ). `"integration_hosts": ["gitlab.mon-entreprise.fr", "*.mon-entreprise.fr"]` dans `~/.claude/agent-office.json` limite les adresses qu'une connexion peut utiliser (refusée à l'enregistrement et avant chaque appel). Un service qui répond 429 n'est plus appelé jusqu'à la fin de son délai (Retry-After, 60 s sinon) : l'état « limite de débit atteinte » dit dans combien de temps réessayer.
-- **📁 Projet en cours** (barre en haut de 🧭 Vue d'ensemble, 🦊 GitLab, 🔴 Pipelines, 🐞 Erreurs et des applications générées) : choisis un projet GitLab une fois, toutes ces vues se filtrent dessus (les compteurs de 🐞 Erreurs aussi) ; « ✕ » revient à tous les projets. Son projet Sentry est trouvé seul quand son nom (ou le service qu'il surveille, lu dans 🚚 Livraisons) est la fin du chemin GitLab ; sinon « Associer » le choisit, ou aucun (les erreurs ne sont alors pas filtrées, la barre le dit). Les projets proposés sont ceux de tes MR et de tes pipelines rouges ; le choix reste dans ce navigateur.
-- **Applications générées** (🔌 Intégrations → une carte → Applications) : chaque service propose des modèles, sans code à écrire : GitLab → MR à relire, Mes MR, Pipelines rouges ; Sentry → Erreurs du jour, Nouvelles erreurs ; Slack → Fil du channel. « Créer l'application » l'ajoute à Activités (un tableau, la première colonne mène à la source, ↻ Actualiser) ; on la renomme, la désactive ou la supprime (deux clics) au même endroit. Elle ne lit que ce que son modèle déclare, par la connexion du service (`~/.claude/agent-office/apps.json` ne garde que son nom, son icône et son modèle) ; si la connexion tombe, elle reste installée, dit pourquoi et propose « Reconnecter ».
-- **🔌 Intégrations → GitLab** : l'adresse de ton GitLab (gitlab.com ou une instance d'entreprise) et un jeton personnel au droit `read_api` (lien « Créer un jeton » prérempli), testés à l'enregistrement. Le jeton reste sur ta machine, chiffré (`~/.claude/agent-office/gitlab.json`, lisible par toi seul ; un jeton qui peut écrire est refusé) : la page ne le revoit jamais et il n'est pas dans la sauvegarde ; le serveur interroge GitLab lui-même (lecture seule, cache 60 s).
-- **🦊 GitLab** : tes merge requests en onglets (à relire, les miennes, assignées, toutes) avec recherche, CI, labels, commentaires, approbations, conflits. Clic sur une MR : sa page complète, avec le widget de fusion (pipeline, approbations, discussions, conflits, brouillon) et quatre onglets — Aperçu (description, relecteurs, assignés, labels), Discussions (fils sur le code ou généraux, résolus ou non, filtre « non résolues »), Pipeline (stages et jobs, la fin du log d'un job au clic) et Fichiers (fichiers modifiés, +/−, diff coloré). Actions : ouvrir dans GitLab, lancer une review, « Traiter les retours » (un agent reçoit les discussions non résolues), « Corriger la CI » (un agent reçoit le log du job en échec).
-- **🔀 Merge requests** : celles des agents de la session, et un accès à 🦊 GitLab.
-- **🧩 Blueprints** : crée un skill ou un agent Claude Code visuellement, façon Blueprint d'Unreal. L'éditeur suit le style ChiefOS : barre d'outils regroupée (type, nom, Ouvrir / Enregistrer, Aperçu / Tester, Publier), palette avec recherche et une pastille de couleur par catégorie, canevas à points, blocs en cartes (bande de couleur, icône, résumé, sorties), zoom en pourcentage et compteur de blocs et de liens, inspecteur avec l'en-tête du bloc choisi et les outils en pastilles à cocher. Des blocs prêts à l'emploi (Départ « quand l'utiliser » et rôle, arguments, lire des fichiers, chercher dans le code, lire une page web, lancer une commande, modifier du code, créer un fichier, déléguer à un agent, utiliser un skill, demander à l'utilisateur, Git, vérifier ; condition si/sinon, pour chaque, en parallèle, arrêter ; fonctions et appels ; résultat et règles), reliés par des fils (sortie ● → entrée), sur un canevas à grille (déplacer, zoomer, recadrer ⤢, Suppr pour effacer). Un clic sur un bloc de la palette l'ajoute après le bloc choisi, déjà relié. Inspecteur à droite pour régler chaque bloc, et pour l'agent : modèle, couleur, outils. Modèles de départ (revue de MR, livrer un ticket), 💾 enregistrer / 📂 ouvrir, 👁 aperçu du Markdown généré (frontmatter compris). 🚀 Publier : choisis le `.claude` (global `~/.claude`, celui d'un projet récent, ou un autre dossier de ton home), puis « ✨ Laisser Claude l'écrire » (un `claude` interactif s'ouvre dans ce dossier, lit le blueprint et écrit `skills/<nom>/SKILL.md` ou `agents/<nom>.md` au bon format ; tu valides comme d'habitude) ou « ✍️ Écrire le brouillon directement ». Un fichier existant n'est écrasé qu'après un second clic.
-  - **🪝 Hooks** : le troisième type de blueprint crée un hook Claude Code. Choisis l'événement (PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop, SessionStart, Notification, PreCompact), le matcher (ex. `Bash`, `Edit|Write`) et un délai ; les blocs « Lire un champ de l'événement » (jq), « Commande shell », « Si (test shell) », « Message à Claude » et « Bloquer l'action » (code 2) produisent un script bash. L'aperçu montre le script et l'entrée ajoutée à `.claude/settings.json`. « Écrire directement » crée `.claude/hooks/<nom>.sh` (exécutable) et ajoute l'entrée une seule fois, après une copie de sauvegarde de `settings.json` (`~/.claude/agent-office/backups`). Modèle prêt à l'emploi : « pas de push sur main ». Il faut `jq` ; sous Windows, Claude Code lance les hooks avec Git Bash.
-  - **🧪 Tester** : avant de publier, ouvre un `claude` dans le dossier choisi qui lit le brouillon (rien n'est écrit dans `.claude`), le suit une fois sur ton exemple (pour un hook : le script est lancé sur un événement d'exemple) et te dit ce qui est flou ou manquant.
-- **💻 Terminal** : un vrai shell (ton `$SHELL`, avec tes droits) dans le dossier choisi (dossier personnel ou un projet récent), façon GNOME Terminal : onglets, couleurs, programmes plein écran (vim, htop, `claude`), copier-coller, raccourcis ✳ claude / git status. Les terminaux continuent de tourner si tu fermes ChiefOS ou recharges la page (6 au plus, fermés après 3 h sans activité). Linux et macOS ; pas sous Windows (pas de pseudo-terminal dans Python).
-- **📝 Skills & agents** : les skills, agents et commandes déjà présents dans `~/.claude` et dans les `.claude` de tes projets récents, groupés par endroit, avec recherche et filtre. Modifier (Ctrl+S ; si le fichier a changé sur le disque entre-temps, rien n'est écrasé sans ton accord, et l'ancienne version est gardée dans `~/.claude/agent-office/backups`), aperçu, dupliquer sous un autre nom, corbeille (déplacé dans `~/.claude/agent-office/trash`, jamais effacé), ou « 🧩 Ouvrir en Blueprint » pour le retravailler en blocs.
-- **🧠 MMX** : la mémoire MMX en entier : modules en onglets, recherche (texte, id, tag), filtre de priorité, fiche détaillée (priorité, confiance, source, liens), et les propositions en attente à valider une à une ou toutes.
-- **📊 Tableau de bord** : sur 7, 30 ou 90 jours : runs, livrés, bloqués, coût et temps ; graphique par jour ; par type d'agent (taux de réussite, coût moyen, durée moyenne, erreurs) ; et pourquoi ils bloquent (permission, tests, délai, réseau, boucle…).
-- **Graphiques du Bilan** (`app/web/js/ui/charts.js`, SVG sans bibliothèque) : 📊 Tableau de bord = période en haut, tuiles avec leur courbe (runs, taux de livraison, bloqués, coût, temps), runs par jour en colonnes empilées (livrés, bloqués, autres ; chaque jour de la période, même calme), coût par jour en courbe, types d'agents et causes de blocage en barres ; 💸 Coûts = tuiles, puis projets et tickets en barres dont la longueur est le coût, découpée selon l'issue des runs (🕳️ gouffres signalés) ; 🗓️ Semaine = tuiles et colonnes jour par jour, le Markdown à partager en dessous ; 🧾 Débriefs = une fiche par mission (mission, chiffres, fichiers, commandes, erreurs) et les pièges rencontrés en barres. Survol ou Tab sur une barre ou un point = info-bulle ; « Voir les données » = le tableau ; couleurs vérifiées pour les daltoniens sur le fond de ChiefOS (bleu livré, orange bloqué, vert d'eau coût).
-- **Code & CI, santé du code** : 🧭 Vue d'ensemble ajoute, sous « À faire maintenant », la CI de tes MR (mes MR et à relire : verte, rouge, en cours, sans CI), les erreurs de production heure par heure sur 24 h (Sentry, filtrées par le projet en cours) et les reviews qui attendent, les plus anciennes d'abord (clic = la MR). 🔴 Pipelines : une carte par pipeline rouge (projet, branche, MR, job et étape, depuis quand), la fin du log dans un terminal (erreurs en rouge, avertissements en jaune, l'heure seule à la place de l'horodatage de GitLab ; « Voir les N dernières lignes »), « Corriger avec un agent » et « Ouvrir le job dans GitLab ».
-- **🔔 Notifications** : l'historique des toasts et alertes (gardé 30 jours, 400 au plus), filtrable (agents, bureau, outils) et cherchable, avec « Depuis ta dernière visite » (missions livrées et gains, notifications, questions en attente). Le nombre de non-lues s'affiche sur l'icône.
-- **⏰ Planification** : des agents lancés à heure fixe (ex. chaque lundi à 9 h, `youtrack-board-cleaner` avec sa mission, dans le dossier choisi). Le serveur de l'Office les lance dans un terminal comme d'habitude (tu valides les permissions) ; il doit tourner à ce moment-là : une heure manquée de plus de 15 min est sautée. ▶ lance tout de suite ; pause, modification, journal des derniers lancements. Gardé dans `~/.claude/agent-office/schedules.json`.
-- **🌐 Navigateur** (façon Firefox) : onglets, précédent / suivant / recharger / accueil, barre d'adresse (une adresse ou une recherche Google, Bing ou Wikipédia), favoris (☆, barre et tuiles de la page d'accueil), ↗ pour ouvrir la page dans un vrai onglet. Beaucoup de sites (GitLab, GitHub, DuckDuckGo…) interdisent d'être affichés dans une autre page : le serveur lit leurs en-têtes avant (`/api/framecheck`, protégé par le jeton) et le navigateur propose alors de les ouvrir dans un vrai onglet. Les pages sont isolées (iframe sandbox) ; aucun proxy, pour qu'aucune page tierce ne s'exécute sur l'origine du bureau. Les vidéos passent par le lecteur intégré de leur site : un lien YouTube (vidéo, Short, playlist, direct, avec `t=`), Vimeo, Spotify ou Twitch se lit dans le navigateur ; youtube.com lui-même (qui refuse les cadres) ouvre une page où coller un lien, avec les dernières vidéos vues.
-- **🔴 Pipelines** : les pipelines rouges de tes projets récents (branche par défaut) et de tes MR, avec la fin du log du job en échec ; « 🔁 Relancer un agent avec ce log » préremplit une mission de correction.
-- **🚚 Livraisons** : chaque MR mergée des 14 derniers jours, de la fusion à la prod : la première release (tag) qui la contient, le pipeline de cette release (l'image), puis chaque environnement où elle tourne (dev, staging, prod), lus dans ton dépôt de déploiement (`deploy_repo`, valeurs Helm `applications/<app>/<env>/*.yaml` : le tag d'image de chaque env est un tag git du projet qui la construit). Onglets : 🎫 Tickets (les MR groupées par ticket avec l'état YouTrack, filtres « les miennes » et « écarts seulement »), 🧱 Services (le tag de chaque env, depuis quand, combien de MR attendent), 🚀 Prochaine prod (ce que la prochaine mise en prod emportera, copiable en Markdown, avec ce qu'il faut vérifier avant : les risques de chaque MR d'après son diff — migration de base, variables d'environnement lues par le nouveau code, fichiers de config ou de build, dépendances —, les commits entre le tag en prod et celui de chaque autre env avec un lien « Comparer dans GitLab », et les réglages des valeurs Helm d'un env absents de celles de la prod : une variable ou un secret à reporter). Quand une de tes MR arrive en staging ou en prod : toast et notification. Écarts signalés : mergée mais dans aucune release après 2 j, release en échec, pas en staging après 3 j, en staging mais pas en prod après 7 j, ticket vérifié ou terminé mais déployé nulle part ; le badge compte les tiens. Lecture seule (GitLab, cache 60 s, ↻ pour relire) : ne déploie rien, ne change aucun ticket.
-- **🐞 Erreurs** (dossier Code & CI) : les erreurs Sentry de ton organisation (sentry.io ou instance auto-hébergée), en lecture seule. ⚙️ Réglages → 🔌 Intégrations → Sentry : l'adresse, un jeton (droits `org:read`, `project:read`, `event:read`, lien « Créer un jeton » prérempli), l'organisation (trouvée seule s'il n'y en a qu'une) et les environnements à suivre (vide = tous) ; testés à l'enregistrement, le jeton reste sur ta machine, chiffré (`~/.claude/agent-office/sentry.json`, lisible par toi seul). Vérification automatique toutes les 2 min, même app fermée : **pic** (la dernière heure d'un projet à au moins ×3 sa moyenne du jour, 10 erreurs au moins), **nouvelle erreur** (apparue dans les 24 h), **après une mise en prod** (un service passé en prod depuis moins de 72 h d'après 🚚 Livraisons, son projet Sentry lu dans le DSN de ses valeurs Helm : les erreurs apparues depuis et le nombre d'erreurs par heure avant et après). Chaque alerte sonne une fois (toast et notification), onglet **Alertes**. Onglet **Tableau de bord** : chaque projet avec des erreurs dans les 24 h (ses 24 dernières heures, pic éventuel, le service qu'il surveille), découpé par environnement (production, staging, dev… côte à côte) avec ses problèmes ouverts, les plus fréquents d'abord. Un clic sur une erreur : **Analyser avec Haiku 5** envoie à Claude Haiku son dernier événement (l'exception, les lignes de code en cause, l'environnement, la version ; jamais l'utilisateur, la requête ni le fil d'Ariane) par la clé `ANTHROPIC_API_KEY` ou, à défaut, la commande `claude` de ton abonnement (quota partagé avec les répliques des devs) ; il rend un résumé, la cause probable, le correctif, une sévérité, une priorité, l'agent adapté et le brouillon d'un Bug YouTrack (en anglais : Context, Tech changes, Success criteria), modifiable. « Créer le ticket YouTrack » demande un second clic de confirmation, puis crée le Bug (projet APP, Production ou Dev selon l'environnement, Maintenance, assigné à toi, Subsystem du service si YouTrack le connaît), une seule fois par erreur Sentry ; « Lancer l'agent » ouvre le formulaire de lancement prérempli (tu valides avant qu'il démarre).
-- **Mémoire des échecs** : un agent bloqué, abandonné ou qui tourne en rond laisse sa cause (délai, permission, dépendance, tests, réseau, boucle) ; au lancement suivant du même type d'agent, le formulaire propose la consigne qui évite le piège (➕ Ajouter la consigne).
-
-### La sauvegarde
-
-La partie (argent, objets, constructions, amitiés, compétences, envies, humeurs…) est sauvegardée dans `~/.claude/agent-office/save.json` toutes les 30 secondes et à la fermeture de la page ; à l'ouverture, la sauvegarde la plus récente l'emporte (navigateur ou fichier). Menu : 💾 SAUVEGARDER, 📤 EXPORTER (un fichier à garder ou emporter sur une autre machine), 📥 IMPORTER.
-
-### L'argent (§)
-
-Chaque mission livrée par un agent rapporte un salaire au foyer, d'autant plus gros qu'elle est complexe : type d'agent, outils utilisés, fichiers modifiés, durée, tokens, tests verts, merge request (les erreurs en retirent un peu ; +10 % si le dev est de bonne humeur). La complexité est notée de ★ à ★★★★★. La carte de la mission affiche le salaire estimé pendant le travail, puis le montant versé ; à la livraison, le montant s'envole au-dessus du bureau du dev. L'argent paie la BOUTIQUE et les courses pour cuisiner. Gardé dans le navigateur, jamais en mode démo ; les missions déjà livrées à la première ouverture ne sont pas payées.
-- **En bas au centre** : jour, date, heure, et le soleil ou la lune qui suit l'heure réelle.
-- **En bas à droite** : le bouton rond 💎 BESOINS.
-
-### Les options du menu
-
-| Bouton | Rôle |
-|---|---|
-| 🕘 CHRONOLOGIE | Chronologie de la session (questions, tests, push, MR), au-dessus de l'horloge |
-| 🧱 MUR | Toutes les sessions actives en mini-bureaux |
-| 📊 STATS | Statistiques par spécialité |
-| 💬 RÉPONSES | Journal des questions des agents et de tes réponses |
-| 🔎 RECHERCHE | Qui a touché à quel fichier, quelle commande, sur 7 jours |
-| 📋 RAPPORT | Ce que les agents ont fait aujourd'hui (copie en Markdown) |
-| 👥 ÉQUIPE | Fatigue, ennui, moral ; modifier l'équipe |
-| 🏆 SUCCÈS · 🛒 BOUTIQUE | Niveaux, succès ; la boutique ouvre le mode achat (ci-dessous) |
-| 🎨 DÉCO | Murs, sol, bois des meubles, tapis, rideaux et porte, pour le bureau et la salle de repos (type + couleur, gardé dans le navigateur) |
-| 💎 BESOINS (bouton rond en bas à droite) | Fenêtre façon Sims 4 : besoins du chef ou d'un dev, compétence cuisine, relations, foyer |
-| 🔔 ALERTES | Notifications du navigateur : question, blocage, livraison, MR, boucle, budget dépassé |
-| 🎯 FOCUS | Coupe les animations d'ambiance |
-| 🔊 Sons | Sons 8-bit (coupés par défaut) |
-
-### Raccourcis clavier
-
-`?` aide · `A` question en attente · `M` mur · `S` stats · `R` rapport · `J` réponses · `/` recherche · `L` salle de repos · `B` besoins · `D` déco · `E` émotions · `F` focus · `Échap` fermer
-
-### Tes agents et tes skills
-
-Le bureau détecte tout seul les agents :
-
-- de `~/.claude/agents/` ;
-- du dossier `.claude/agents/` de tes projets ;
-- de tes plugins installés.
-
-Chaque agent prend la couleur (`color:`) définie dans son fichier. Pour changer son libellé ou sa couleur dans le bureau, voir la clé `agents` de la configuration.
-
-Les agents intégrés (Explore, Plan, general-purpose…) sont reconnus aussi.
-
-### Questions bloquantes posées dans le bureau (optionnel)
-
-Un agent peut te poser une question dans le bureau et attendre ta réponse. Le dev va voir le chef, et tu réponds dans l'interface ou depuis la notification. Ajoute à tes agents une consigne de ce genre :
-
-```
-Pour une question bloquante à l'utilisateur, lance :
-python3 -I ~/.claude/agent-office/ask.py "Question ?" --option "A" --option "B" --context "pourquoi" --from "ABC-123 build"
-puis lis la ligne ANSWER: <réponse>.
-```
-
-Le chemin `~/.claude/agent-office/` ne change pas d'une version du plugin à l'autre.
-
-## 5. Configuration (optionnelle)
-
-Sans configuration, tout marche avec les valeurs par défaut. Pour personnaliser, crée `~/.claude/agent-office.json`. Un exemple complet est dans `agent-office.example.json`.
-
-| Clé | Rôle | Défaut |
-|---|---|---|
-| `port`, `window_minutes`, `open_browser` | Port du serveur, durée d'affichage d'une session inactive, ouverture automatique du navigateur | `8765`, `120`, `true` |
-| `exclude` | Fragments de chemin des projets à ne jamais afficher | `[]` |
-| `ticket_regex` | Format des tickets lus dans la mission des agents | `ABC-123` |
-| `chief_name`, `team` | Valeurs proposées au premier lancement (ensuite, c'est l'équipe enregistrée qui compte) | `Chef`, noms par défaut |
-| `agents` | `{"mon-agent": {"label": "DÉVELOPPEUR", "color": "#5aa9ff"}}` | nom et couleur du fichier d'agent |
-| `phases` | Étapes de progression par agent : `[[libellé, regex], …]` | Exploration / Modification / Vérification / Rapport |
-| `launch_dir` | Dossier où s'ouvrent les agents lancés depuis le bureau | `~` |
-| `mmx` | Dossier d'une mémoire MMX : active l'armoire et la validation des propositions | désactivé |
-| `youtrack_tools`, `youtrack_backlog_query` | Dossier contenant un client `yt.py` : état des tickets YouTrack et colonne TO DO (une requête, ou une liste de requêtes dont les résultats sont fusionnés) | désactivé |
-| `gitlab_tools` | Dossier contenant un client `gl.py` : état de la CI et de la fusion des MR ouvertes par les agents | désactivé |
-| `audit_log` | Fichier `audit-log.json` d'audit sécurité : les failles trouvées donnent de l'XP | désactivé |
-| `deploy_repo` | Chemin GitLab du dépôt de déploiement (ex. `groupe/devops/k8s-deployments`) : active ChiefOS → 🚚 Livraisons | désactivé |
-| `deploy_path` | Dossier des valeurs `<app>/<env>/*.yaml` dans ce dépôt | `applications` |
-| `deploy_ref` | Branche lue | branche par défaut |
-| `deploy_projects` | `{"<app>": "<projet GitLab>"}` quand le chemin de l'image ne dit pas quel projet la construit | `{}` |
-| `deliveries_days` | Jours de MR mergées suivis (1 à 60) | `14` |
-| `network` | `{"enabled": true}` autorise ChiefOS → Réseau (bureau ouvert sur le réseau interne, découverte des autres bureaux) ; sinon le serveur refuse de l'ouvrir et n'écoute rien sur le réseau | `{"enabled": false}` |
-| `to_verify_regex` | Commande qui compte comme « ticket passé en To Verify » | `yt.py command … to verify` |
-
-
-Après une modification, redémarre le serveur : `python3 -I ~/.claude/agent-office/office.py stop`, puis `/office`.
-
-## 6. Mettre à jour et désinstaller
-
-```
-/plugin marketplace update agent-office      # récupère la dernière version
-/plugin uninstall agent-office@agent-office  # désinstalle
-```
-
-Après une mise à jour, arrête le serveur pour qu'il redémarre sur la nouvelle version : `python3 -I ~/.claude/agent-office/office.py stop`.
-
-Ton équipe, ton logo, tes scores et tes réglages restent dans `~/.claude/agent-office/` et `~/.claude/agent-office.json`. Supprime-les pour repartir de zéro.
-
-## 7. Dépannage
-
-| Problème | Solution |
-|---|---|
-| Le bureau ne s'ouvre pas | Lance `/office`. Vérifie que `python3 --version` donne 3.9 ou plus. Regarde `~/.claude/agent-office/server.log`. |
-| Windows : `Command 'git' not found` à l'ajout de la marketplace | Installe Git for Windows, rouvre Claude Code, relance `/plugin marketplace add Taikoz/Office-Agent`. |
-| Windows : rien ne se passe, aucun serveur | Installe Python depuis python.org en cochant « Add python.exe to PATH », puis redémarre Claude Code. |
-| « port déjà utilisé » ou mauvaise appli sur le port | Choisis un autre port : `{"port": 8790}` dans `~/.claude/agent-office.json`. |
-| Aucun dev n'apparaît | Seules les sessions actives depuis moins de `window_minutes` s'affichent. Après un `/clear`, seules les nouvelles activités apparaissent. Vérifie que le projet n'est pas dans `exclude`. |
-| « pas de terminal graphique disponible » au lancement d'un agent | Installe l’un des terminaux listés dans les prérequis. Sous Windows, il faut la version native de Claude Code (`claude.exe`). |
-| Le bouton 🚀 Lancer échoue après un redémarrage du serveur | Recharge la page (F5) : le jeton de sécurité change à chaque démarrage. |
-| Les notifications n'arrivent pas | Clique sur 🔔 ALERTES et autorise les notifications pour `127.0.0.1` dans le navigateur. |
-
-Commandes utiles :
-
-```
-# sous Windows, remplace python3 par python ou py -3
-python3 -I ~/.claude/agent-office/office.py open     # démarre si besoin et ouvre la page
-python3 -I ~/.claude/agent-office/office.py status   # état du serveur
-python3 -I ~/.claude/agent-office/office.py stop     # arrête le serveur
-```
-
-## 8. Confidentialité et sécurité
-
-- **Lecture seule** : le serveur ne modifie jamais tes transcripts.
-- **Local uniquement** : il écoute seulement sur `127.0.0.1`.
-- **Actions protégées** : lancer un agent, répondre à une question ou valider la mémoire MMX n'est accepté que depuis la page du bureau (même origine + jeton propre à chaque démarrage).
-- **Pas de lancement en arrière-plan** : un agent lancé depuis le bureau s'ouvre dans un terminal interactif, et tu valides toi-même chaque permission, comme d'habitude.
-- **Coûts estimés** : ce sont des équivalents API, à titre indicatif.
-- **Terminal et fichiers** : le terminal intégré, l'éditeur de skills et la planification passent par des routes protégées par le jeton, n'acceptent que des dossiers de ton dossier personnel, et l'éditeur ne touche qu'aux fichiers `skills/<nom>/SKILL.md`, `agents/<nom>.md` et `commands/<nom>.md` des `.claude` connus. Le serveur vérifie aussi l'en-tête `Host` (protection contre le DNS rebinding).
-- **Toutes les lectures protégées** : chaque route `/api/` (transcripts, MR, mémoire, recherche…) exige le jeton de la page, sauf `/api/viewer` (version et inactivité, pour le plugin).
-- **Page cloisonnée** : Content-Security-Policy stricte (seuls les scripts du bureau s'exécutent, jamais un titre de MR, un log ou un message), aucune page tierce ne peut l'afficher dans un cadre ni charger ses réponses ; le navigateur intégré n'affiche jamais le bureau lui-même dans un cadre.
-- **Fichiers privés** : `~/.claude/agent-office/` en 0700, tout ce qu'il contient en 0600 (y compris ce qu'avait laissé une version précédente).
-- **Jetons GitLab, Sentry et Slack chiffrés** : jamais en clair sur le disque ; la clé (`~/.local/share/agent-office/vault.key`, liée à la machine) est hors de `~/.claude`, donc une copie de `~/.claude` n'ouvre rien. Un jeton n'est envoyé qu'à son propre serveur : une redirection vers un autre hôte est refusée. Pour que tes agents ne lisent pas ces dossiers, ajoute à `~/.claude/settings.json` : `"permissions": {"deny": ["Read(~/.claude/agent-office/**)", "Read(~/.local/share/agent-office/**)"]}`.
-- **Pas de sonde du réseau interne** : la vérification des cadres du navigateur ne contacte que des adresses publiques (jamais cette machine, le réseau interne ni 169.254.169.254, redirections comprises).
-- **Grafana** : la session qui pilote Chrome ne reçoit que le service, l'environnement, la version et l'heure de l'erreur, jamais son message ni sa route, que n'importe qui peut écrire. Restreins aussi l'extension Claude in Chrome à ton Grafana (autorisations par site).
-
-### Windows et macOS
-
-| Fonction | Linux | macOS | Windows |
+| Feature | Linux | macOS | Windows |
 |---|---|---|---|
-| 💻 Terminal intégré | ✅ | ✅ (pty, ton zsh) | ❌ message « indisponible » (pas de pseudo-terminal dans Python) |
-| Lancer un agent / ✨ Laisser Claude l'écrire / 🧪 Tester / ⏰ Planification | ✅ gnome-terminal, konsole, xterm | ✅ Terminal.app (dans le bon dossier) | ✅ nouvelle console, avec `claude.exe` (version native) |
-| 🪝 Hooks | ✅ | ✅ | ✅ avec Git Bash et `jq` |
-| 📝 Skills & agents, 🧠 MMX, 📊, 🔔 | ✅ | ✅ | ✅ |
+| 💻 Built-in terminal | ✅ | ✅ (pty, your shell) | ❌ shows "unavailable" (Python has no pseudo-terminal on Windows) |
+| Launch an agent, ✨ let Claude write it, 🧪 test, ⏰ scheduling | ✅ gnome-terminal, konsole, xterm | ✅ Terminal.app, in the right folder | ✅ new console, with `claude.exe` (native build) |
+| 🪝 Hooks | ✅ | ✅ | ✅ with Git Bash and `jq` |
+| 📝 Skills & agents, 🧠 MMX, 📊 dashboard, 🔔 notifications | ✅ | ✅ | ✅ |
 
-## Développement
+## 3. First run: create your team
+
+The first time you open the office, a welcome screen asks for:
+
+- your first name (you are the chief)
+- the names of the 8 devs, one per desk (🎲 picks random names)
+- a name for the office cat and a name for your office
+- your logo, if you want one (PNG, JPEG, WebP or SVG, 300 KB max). It appears on the wall sign, in the header and in the browser tab.
+
+Everything is saved in `~/.claude/agent-office/`. To change it later: **👥 ÉQUIPE** (team) → **« Modifier l'équipe et le logo »** (edit team and logo).
+
+To design the chief's look: **☰ MENU → 👑 CRÉER TON CHEF** (create your chief), or ✏️ next to their portrait. It works like Create-a-Sim: face, hair, outfit, accessories, two personality traits and a catchphrase. 🎲 picks a random chief.
+
+## 4. Using the office
+
+### The office opens on its own
+
+You don't need to start anything. When a Claude Code session launches a subagent (the `Agent` tool), the plugin starts the server and opens the office, unless it's already open in a tab. You can also open it at any time with `/office`.
+
+If the office is open in several tabs, only the one you're looking at runs. The others sleep (no drawing, no requests) until you come back.
+
+| In Claude Code | In the office |
+|---|---|
+| A subagent starts | A dev walks in through the break-room door and sits at a desk |
+| The subagent finishes | The dev leaves |
+| The main session works without a subagent | A dev comes in to work for the chief |
+| An agent waits for a permission in its terminal | The dev raises their arms with a 🔐 bubble, their card jumps to the top and blinks, and an alert goes out. It clears as soon as you answer. |
+| You run `/clear` | Old sessions are cleared from the office |
+
+### Screen layout
+
+The scene fills the window; everything else floats on top:
+
+- **Top:** office name, sessions, **📋 MISSIONS** (collapsible right panel: agents on mission, usage, quests) and **☰ MENU** (all options).
+- **Bottom left:** the chief, their mood, their action queue (current action with progress, then pending orders; click to cancel) and the household money (click for the salary and expense statement).
+- **Bottom center:** day, date, time, and the sun or moon following the real time.
+- **Bottom right:** the round **💎 BESOINS** (needs) button and the round **🛒** buy-mode button.
+
+### What you can do
+
+| Action | Result |
+|---|---|
+| Click a dev at their desk | See their screen: an editor with the diff of changed files and a terminal with their commands and output. **DÉTAILS** opens the side panel. You can also bring them a coffee, cheer them up, or, if they're stuck or going in circles, give them a hint or relaunch the agent with an instruction. |
+| Read a card in the **EN MISSION** (on mission) panel | Status, current action, skills, estimated cost and salary, time left, MR link, alerts. |
+| Click a free desk | Launch an agent: pick the project, the agent and its mission, click **🚀 Lancer** (launch), then confirm. A terminal opens with `claude --agent …`. |
+| Drag a ticket from the board onto a free desk | Same as above, with the mission already filled in for that ticket. |
+| Click a ticket on the board | See the ticket's history over the last 30 days. |
+| Scroll a board column with more than 5 cards | Use ◀ ▶ or the mouse wheel to change pages. |
+| Click the floor | The chief walks there. Objects (coffee machine, console, fridge, lamp…) each have their own actions. |
+| Open the **SALLE DE REPOS** (break room, key `L`) | See the idle devs. Click one for a circular action menu: chat, joke, hug, tease, argue, cook together, or challenge them at ping-pong, foosball or darts. |
+
+### Separate worktree per agent
+
+When you launch an agent from the office (free desk, dragged ticket or 📅 Planning) in a git repo, **🌿 Worktree séparé** (separate worktree, checked by default) runs `claude --agent … --worktree <ticket>-<agent>`. The agent works in `.claude/worktrees/<name>` on its own branch, so parallel agents don't touch the same files.
+
+- The card and the desk show 🌿 the worktree and ⎇ the branch.
+- 🔁 Relaunch resumes in the same worktree.
+- When the session ends, Claude Code offers to keep or remove the worktree.
+- Add `.claude/worktrees/` to your project's `.gitignore`.
+
+### Menu options
+
+| Button | What it does |
+|---|---|
+| 🕘 CHRONOLOGIE (timeline) | Session timeline (questions, tests, push, MR), above the clock |
+| 🧱 MUR (wall) | All active sessions as mini offices |
+| 📊 STATS | Statistics per specialty |
+| 💬 RÉPONSES (answers) | Log of agent questions and your answers |
+| 🔎 RECHERCHE (search) | Who touched which file and ran which command, over 7 days |
+| 📋 RAPPORT (report) | What the agents did today, copyable as Markdown |
+| 👥 ÉQUIPE (team) | Fatigue, boredom and morale; edit the team |
+| 🏆 SUCCÈS · 🛒 BOUTIQUE (achievements · shop) | Levels and achievements; the shop opens buy mode |
+| 🎨 DÉCO | Walls, floor, furniture wood, rugs, curtains and door for the office and break room |
+| 💎 BESOINS (needs) | Sims 4-style window: needs of the chief or a dev, cooking skill, relationships, household |
+| 🔔 ALERTES (alerts) | Browser notifications: question, blocked agent, delivery, MR, agent going in circles, budget exceeded |
+| 🎯 FOCUS | Turns off ambient animations |
+| 🔊 Sons (sounds) | 8-bit sounds (off by default) |
+| 💾 SAUVEGARDER · 📤 EXPORTER · 📥 IMPORTER | Save, export or import your game (see [Save](#save)) |
+| 🌦️ MÉTÉO RÉELLE (real weather) | Windows show your city's real weather (off by default) |
+
+### Keyboard shortcuts
+
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `?` | Help | `L` | Break room |
+| `A` | Pending question | `B` | Needs |
+| `M` | Wall | `D` | Decoration |
+| `S` | Stats | `E` | Emotions |
+| `R` | Report | `F` | Focus |
+| `J` | Answers | `Esc` | Close |
+| `/` | Search | | |
+
+## 5. ChiefOS: the chief's tools
+
+ChiefOS opens from the chief's desk (next to the podium) or from the menu. It looks like a desktop OS: a dock on the left, apps in windows, and **Activités** (activities), an iPhone-style home screen with search.
+
+### Simple and advanced mode
+
+**Simple mode (default)** opens on ☀️ **Aujourd'hui** (today): what's waiting for you, what's running, what was delivered. It only shows everyday work:
+
+| App | What it shows |
+|---|---|
+| 📥 **À traiter** (to do) | Agent questions, alerts with their action, and unread work notifications, in one list, most urgent first |
+| **Code & CI** | 🧭 Overview, then GitLab, Pipelines, Deliveries and Errors as tabs |
+| **Tickets** | Tickets, Planning, Scheduling |
+| **Bilan** (review) | Day, week, debriefs, dashboard, costs |
+| ⚙️ **Réglages** (settings) | Mode, appearance, dock, integrations, performance |
+
+**⚙️ Réglages → Mode : Avancé** (advanced) shows everything else: workshop, team, tools, and separate Questions / Alerts / Notifications. Settings also show how often you opened each app on this machine.
+
+### Organizing apps
+
+Apps are grouped in **folders**: Inbox, Code & CI, Work, Reports, Workshop, Team, Tools. As on an iPhone, in Activités:
+
+- drag an app onto a folder to move it there, onto another app to create a folder, or out of an open folder to remove it
+- click an open folder's name to rename it
+- right-click → ungroup folder / remove from folder
+- right-click an icon (dock or Activités) → pin, unpin, move up, move down; or drag and drop
+- reset with ⚙️ Réglages → Dock → « Dossiers par défaut » / « Dock par défaut »
+
+### Code & CI
+
+- **🧭 Overview:** four color-coded counters (MRs to review, my MRs, red pipelines, production alerts), then **"À faire maintenant"** (do now): what's waiting for you, most urgent first, each with its action (fix CI with an agent, review, address feedback, see the error, merge). Below: CI status of your MRs, production errors per hour over 24 h, and the oldest waiting reviews.
+- **🦊 GitLab:** your merge requests in tabs (to review, mine, assigned, all) with search, CI, labels, comments, approvals and conflicts. Click an MR for its full page: merge widget plus Overview, Discussions, Pipeline (stages, jobs, end of a job's log) and Files (colored diff). Actions: open in GitLab, start a review, **"Traiter les retours"** (an agent receives the unresolved discussions), **"Corriger la CI"** (an agent receives the failed job's log).
+- **🔀 Merge requests:** the MRs of this session's agents.
+- **🔴 Pipelines:** one card per red pipeline (project, branch, MR, job, stage, since when), the end of the log in a terminal view, **"Corriger avec un agent"** (fix with an agent) and a link to the job in GitLab.
+- **🚚 Livraisons** (deliveries): every MR merged in the last 14 days, from merge to production: the first release tag containing it, its pipeline, then each environment running it (dev, staging, prod), read from your deployment repo (`deploy_repo`, Helm values). Tabs:
+  - 🎫 Tickets: MRs grouped by ticket with their YouTrack state
+  - 🧱 Services: each environment's tag, since when, how many MRs are waiting
+  - 🚀 Next prod: what the next production release will ship, copyable as Markdown, with what to check first (migrations, new environment variables, config or build files, dependencies, Helm settings missing from prod)
+
+  You get a notification when one of your MRs reaches staging or prod. Gaps are flagged (merged but not released after 2 days, not in staging after 3 days, not in prod after 7 days…). Read-only: it never deploys anything or changes a ticket.
+- **🐞 Erreurs** (errors): your Sentry errors, read-only. Checked every 2 minutes, even with the app closed, for **spikes**, **new errors** and **errors after a production release**. Each alert notifies you once. Click an error, then **"Analyser avec Haiku 5"**: Claude Haiku gets the latest event (exception, code lines, environment, version; never the user, the request or breadcrumbs) and returns a summary, likely cause, fix, severity, priority, the right agent and a draft YouTrack Bug. **"Créer le ticket YouTrack"** asks for a second click, then creates the Bug once per Sentry error. **"Lancer l'agent"** opens a pre-filled launch form.
+- **📁 Current project:** pick a GitLab project once and Overview, GitLab, Pipelines, Errors and generated apps all filter on it. ✕ goes back to all projects. The matching Sentry project is found automatically when possible, otherwise **"Associer"** (link) lets you choose.
+
+### Tickets and planning
+
+- **📅 Planning:** pick backlog tickets and an agent for each, how many agents may run at once, then **"Lancer la journée"** (start the day). The chief launches them one after another, at least 2 minutes apart.
+- **⏰ Planification** (scheduling): agents launched at fixed times (e.g. every Monday at 9:00, `youtrack-board-cleaner` with its mission, in a chosen folder). The office server must be running then: a run missed by more than 15 minutes is skipped. ▶ runs it now. Saved in `~/.claude/agent-office/schedules.json`.
+
+### Reports
+
+- **📊 Tableau de bord** (dashboard): over 7, 30 or 90 days: runs, delivered, blocked, cost and time; per-day chart; per agent type (success rate, average cost and duration, errors); and why agents get blocked (permission, tests, timeout, network, loop…).
+- **💸 Coûts** (costs): every conversation, main sessions and subagents, over 7, 30 or 90 days. Total and trend, 30-day projection, cache savings, subagent share; then cost per day, model, token type, project, agent, the most expensive conversations, and ticket "money pits" 🕳️ (more than twice the median, or blocked twice). All figures are estimates at API prices: on a subscription, nothing is billed per token.
+- **🗓️ Semaine** (week): the weekly report (delivered, MRs, To Verify, blocked, time, per day), copyable as Markdown, ready on Friday at 5 pm.
+- **🧾 Débriefs:** one sheet per delivered mission (mission, changed files, key commands, errors, duration, cost, tests, MR), copyable as Markdown for the MR or the ticket.
+- **🚨 Alertes:** an agent re-reading the same file in a loop, the same error across several agents, an MR without review for more than 2 hours, an agent going in circles. Each comes with its action.
+- **🔔 Notifications:** history of toasts and alerts (30 days, 400 max), filterable and searchable, with "since your last visit".
+- **Failure memory:** a blocked, abandoned or looping agent leaves its cause. Next time you launch the same agent type, the form suggests the instruction that avoids the trap (➕ add the instruction).
+
+Charts are plain SVG: hover or Tab on a bar for a tooltip, **"Voir les données"** (see data) for the table. Colors are checked for color blindness.
+
+### Workshop and tools
+
+- **🧩 Blueprints:** build a Claude Code skill, agent or hook visually, Unreal Blueprint style. Drag ready-made blocks (read files, search code, run a command, edit code, delegate to an agent, ask the user, if/else, for each, in parallel…), wire them together, set the model, color and tools, and preview the generated Markdown.
+  - **🚀 Publier** (publish): pick the target `.claude` folder, then **"✨ Laisser Claude l'écrire"** (an interactive `claude` writes the file in the right format; you approve as usual) or write the draft directly. An existing file is overwritten only after a second click.
+  - **🪝 Hooks:** pick the event, matcher and timeout; blocks produce a bash script. "Write directly" creates `.claude/hooks/<name>.sh` and adds the entry to `.claude/settings.json` (after backing it up). Needs `jq`.
+  - **🧪 Tester** (test): a `claude` reads the draft, follows it once on your example, and tells you what is unclear or missing. Nothing is written to `.claude`.
+- **📝 Skills & agents:** the skills, agents and commands in `~/.claude` and your recent projects' `.claude` folders. Edit (Ctrl+S; never overwrites a file changed on disk without asking, and keeps a backup), preview, duplicate, trash (moved, never deleted), or open as a Blueprint.
+- **🧠 MMX:** the full MMX memory (if configured): modules, search, priority filter, details, and pending proposals to approve one by one or all at once.
+- **💻 Terminal:** a real shell (your `$SHELL`) in your home folder or a recent project, with tabs, colors and full-screen programs (vim, htop, `claude`). Terminals keep running if you close ChiefOS or reload the page (6 max, closed after 3 hours idle). Linux and macOS only.
+- **🌐 Navigateur** (browser): tabs, address bar, bookmarks. Sites that refuse to be framed (GitLab, GitHub…) are detected and offered in a real tab instead. YouTube, Vimeo, Spotify and Twitch links play in the built-in player.
+- **🌦️ Météo** (weather): current conditions, details, next 24 hours and 7 days, from Open-Meteo (no key; only the city's coordinates are sent).
+
+### Integrations
+
+**⚙️ Réglages → 🔌 Intégrations** lists every external service: connected ones on one side, available ones on the other. For each: its state (connected, token refused, expired, insufficient rights, unreachable), the linked account, the apps that use it, and **Vérifier** (a real call), **Modifier** (edit) and **Déconnecter** (disconnect, two clicks). An expired token removes nothing: apps wait for you to reconnect.
+
+| Service | You provide | Enables |
+|---|---|---|
+| GitLab | URL (gitlab.com or self-hosted) and a personal token with `read_api` only (a token that can write is refused) | GitLab, Pipelines, Deliveries, Overview |
+| Sentry | URL, a token with `org:read`, `project:read`, `event:read`, organization, environments | Errors and their alerts |
+| Slack | Token | Channel feed app |
+
+Tokens are tested when saved, stored encrypted on your machine, never sent back to the page, and not included in the save file.
+
+**Generated apps:** each service offers ready-made apps, no code needed (GitLab → MRs to review, My MRs, Red pipelines; Sentry → Today's errors, New errors; Slack → Channel feed). **"Créer l'application"** adds it to Activités. You can rename, disable or delete it in the same place.
+
+### Appearance
+
+ChiefOS has seven styles (**⚙️ Réglages → Général → Apparence**): ChiefOS (default), HOLO, Grimoire, Crypte, Galion, Zen and Tropical, each with its own opening sequence. In **Auto**, the style follows the chief's desk: placing a themed desk (holographic command post, headmaster's desk, organ, ship's wheel, sensei platform, lifeguard chair) switches to the matching style.
+
+## 6. Office life (the game side)
+
+Everything here is game only: it never affects your agents. Progress comes from your agents' real work.
+
+### Skills, careers and money
+
+- **Skills:** each delivered mission raises one skill of the dev who did it, depending on the agent type: 💻 Development, 🧪 Tests, 🛡️ Security, 🔍 Review, 🧭 Steering, 📋 Organization, 🔭 Exploration (levels 1 to 10; complex missions with green tests and an MR count more). For each new agent, the chief sends the free dev with the best matching skill, then the least tired one.
+- **Careers:** Junior → Confirmed → Senior → Expert → Lead. A promotion means cake and a raise. A dev unhappy for an hour thinks about leaving; after three hours, they quit (never mid-mission). Hire someone in ChiefOS → Team (§ 1,500).
+- **Money (§):** each delivered mission pays the household a salary based on its complexity (★ to ★★★★★): agent type, tools, changed files, duration, tokens, green tests, MR, mood. Fast, error-free or thrifty missions earn bonuses; looping or over-budget ones earn less, and an agent going in circles costs § 10 per minute. Money buys shop items and groceries. Missions delivered before your first visit aren't paid.
+
+### People
+
+- **Traits:** each team member has two traits (foodie, party animal, loner, perfectionist, coffee addict, chatty, zen, sporty, early bird, ambitious) that change their needs and reactions.
+- **Needs and moods:** hunger, energy, fun, social, coffee and mood, Sims-style. Temporary moodlets mostly come from real agent work: red tests, green tests at last, broken or green CI, MR opened, merged or rejected, blocked, delivered, overtime.
+- **Wants:** each dev has three current wants (eat a dish, play foosball, chat with a colleague, deliver a mission…). Fulfilling one earns money and satisfaction points, spent on rewards in the needs window.
+- **Relationships:** devs visit each other and make friends on their own. Rivals bicker when they work at the same time; close pairs motivate each other; each newcomer gets a mentor for two weeks.
+- **Pets:** Brume the cat needs food and cuddles. Adopt Biscuit the dog (🐾 in buy mode).
+
+### The workday
+
+- The team arrives at 8 am and leaves at 7 pm (8 pm on Friday); only devs on a mission stay. The break room is empty in the evening and at weekends.
+- Friday at 5 pm: afterwork. After a week with at least 5 delivered missions, it's the weekly party with a team bonus.
+- Random events: power cut (reset the breaker), client visit (greet them before they leave), pizza delivery, birthdays.
+- Preview in the URL: `?hour=18&day=5`, `?event=power|client|pizza|birthday`, `?season=`.
+
+### Buy and build mode (🛒)
+
+- **Buy:** desks with computers, lamps, fridges, stoves, plants, posters, rugs, aquarium, jukebox, a full bar, the chief's wardrobe… Each item comes in several styles. **Placer** (place): the item follows the mouse, green where it fits, click to drop (right-click or Esc to cancel). Click a placed item to restyle, move or sell it (75% of the price).
+- **Every item does something**, in every room: lamps light up, the fridge feeds people, the stove cooks, the jukebox plays, the bar serves drinks and cocktails.
+- **Desks are items:** a dev whose desk was sold works on a cardboard box with a laptop, and isn't happy about it.
+- **Cooking:** recipes use what's in the fridge. **"🛒 Faire les courses…"** (go shopping) buys the ingredients with §. Devs only cook what's in the fridge and ask for groceries when it's empty.
+- **Build (🏗️):** extend the open space (10 then 12 desks, with new hires), meeting room, terrace, windows on any wall.
+
+### Themes (🛒 → 🎭 Thèmes)
+
+Six full collections: walls, windows, floors, rugs, lighting, seating, tables, desks, decorations and outfits. Many themed items show the real state of your agents:
+
+| Theme | Examples tied to real work |
+|---|---|
+| 🪄 Wizard school | Floating candles, crystal ball, owl perch (send an owl to a dev), sorting hat |
+| 🚀 Space station | Holographic table showing agent state, futuristic computers showing the dev's work, teleporters, robot assistant reporting on agents |
+| 🦇 Haunted manor | Ghost jar (one ghost per blocked or looping agent), grandfather clock chiming CI status, raven croaking MRs waiting for review |
+| 🏴‍☠️ Pirate ship | Chart table (one island per ticket in progress), treasure chest filling with each delivery, cannon salvo per merged MR, kraken barrel (one tentacle per red CI) |
+| ⛩️ Japanese house | Tokonoma scroll writing the office mood in one kanji, daruma per agent, koi pond (golden carp per delivery), torii lighting up when all CIs are green |
+| 🏖️ Beach club | Pool (a swimmer per working agent), sand castle washed away by red CI, swim flag green/orange/red by CI, DJ decks following agent activity |
+
+The view outside a themed room follows the theme and the real time of day. The terrace also has a rooftop bar with Marcel the bartender, whose gossip comes from real blocked agents, red CIs and waiting MRs.
+
+### Seasons and weather
+
+The terrace follows the season (snow, flowers, barbecue, leaves). With **MÉTÉO RÉELLE** on, windows show your city's real weather and the temperature appears next to the clock.
+
+### Save
+
+Your game (money, items, buildings, friendships, skills, wants, moods…) is saved to `~/.claude/agent-office/save.json` every 30 seconds and when you close the page. On load, the most recent save wins (browser or file). Use **📤 EXPORTER** to move it to another machine.
+
+## 7. Your agents
+
+The office finds your agents automatically in:
+
+- `~/.claude/agents/`
+- each project's `.claude/agents/` folder
+- your installed plugins
+
+Built-in agents (Explore, Plan, general-purpose…) are recognized too.
+
+Each agent uses the `color:` set in its file. To change an agent's label or color in the office, use the `agents` key in the [configuration](#8-configuration-optional).
+
+### Let agents ask you questions in the office (optional)
+
+An agent can ask you a question in the office and wait for your answer. Its dev walks over to the chief, and you answer in the office or straight from the notification.
+
+Add an instruction like this to your agent files:
 
 ```
-cd app && python3 -I -m unittest discover -s tests   # tests
-# front : web/index.html, web/css/*.css (un fichier par zone, chargés dans l'ordre), web/js/ en modules ES :
-#   index.js importe tous les modules dans l'ordre où ils construisent le bureau (main.js en dernier) ; chaque module
-#   importe ce qu'il utilise des modules chargés avant lui. Ce qu'il utilise d'un module chargé après lui (toujours
-#   dans une fonction) et les variables qu'il modifie dans un autre module passent par hub (js/hub.js) : le module
-#   propriétaire les fournit avec provide({ … }) en fin de fichier — la liste des dépendances qui restent à inverser.
-# web/js/ : index.js (point d'entrée), main.js (démarrage), hub.js ; les systèmes par domaine :
-#   core/ (état, /api/state, démo, premier lancement, notifications), agents/ (le vrai travail : devs au bureau,
-#   lancement, questions, tickets, budgets, rapport, chronologie, écran du dev, MMX, stats), sims/ (jauges, besoins,
-#   humeurs, envies, compétences, carrières, journée, argent, XP), social/ (relations, cuisine, gens, interactions,
-#   autonomie), world/ (pièces, décor, mode achat et construction, chef, chat, animaux, saisons, boutique),
-#   ui/ (HUD, raccourcis, panneau et clics, menu circulaire, file d'actions, ChiefOS, client GitLab) ;
-# un dossier par famille d'éléments, chacun avec sa classe de base dans base.js et une sous-classe par élément :
-#   svg/          SvgArt (StaticArt, Sprite, Figure) : les dessins, enregistrés dans ART / SPRITES. Ex. : ART.arcade.draw(x, y, { frame, playing })
-#   apps/         OsApp : les applications de ChiefOS (render, mount, badge, live, click/input/change) et leurs dossiers (OsApp.SPACES, façon iPhone : dock, Activités, onglets)
-#   items/        Item (Appliance) : les objets du mode achat (CATALOG : état du dessin, menu, actions, dessin autour)
-#   activities/   Activity : les activités de la salle de repos (ACTS : emplacements, pose, besoins, chef, envie, dessin)
-#   incidents/    Incident : les incidents du bureau à régler d'un clic (panne, flaque, croissants, plante)
-#   happenings/   Happening : les événements de la journée (coupure de courant, visite client, pizzas)
-#   rooms/        Room : les pièces (bureau, salle de repos, réunion, terrasse, écran de mini-jeu) : dessin, clic, sol
-#   games/        MiniGame : les mini-jeux (ping-pong, baby-foot, fléchettes) et le tournoi
-#   save/         SaveSlot (Flag) : l'état gardé dans le navigateur (version, migrations) et le fichier de sauvegarde
-claude plugin validate .                             # validation du plugin
+For a blocking question to the user, run:
+python3 -I ~/.claude/agent-office/ask.py "Question?" --option "A" --option "B" --context "why" --from "ABC-123 build"
+then read the line ANSWER: <answer>.
 ```
 
-Licence MIT — Adrien Quennehen.
+The path `~/.claude/agent-office/` stays the same across plugin versions.
+
+## 8. Configuration (optional)
+
+Everything works with the defaults. To customize, create `~/.claude/agent-office.json`. See `agent-office.example.json` for a full example.
+
+### General
+
+| Key | Purpose | Default |
+|---|---|---|
+| `port` | Server port | `8765` |
+| `window_minutes` | How long an inactive session stays visible | `120` |
+| `open_browser` | Open the browser automatically | `true` |
+| `exclude` | Path fragments of projects never to show | `[]` |
+| `ticket_regex` | Ticket ID format read from agent missions | `ABC-123` style |
+| `chief_name`, `team` | Names suggested on first run (after that, the saved team is used) | `Chef`, default names |
+| `agents` | Label and color per agent, e.g. `{"my-agent": {"label": "DEVELOPER", "color": "#5aa9ff"}}` | Name and color from the agent file |
+| `phases` | Progress steps per agent: `[[label, regex], …]` | Exploration / Editing / Checks / Report |
+| `launch_dir` | Folder where agents launched from the office start | `~` |
+| `network` | `{"enabled": true}` allows ChiefOS → Network (office open on the internal network, discovery of other offices). Otherwise the server refuses it and listens on nothing but `127.0.0.1`. | `{"enabled": false}` |
+| `integration_hosts` | Allowed hosts for integrations, e.g. `["gitlab.my-company.com", "*.my-company.com"]` | any |
+
+### Tools and deliveries
+
+| Key | Purpose | Default |
+|---|---|---|
+| `mmx` | Folder of an MMX memory: enables the filing cabinet and approval of proposals | off |
+| `youtrack_tools`, `youtrack_backlog_query` | Folder with a `yt.py` client: YouTrack ticket state and the TO DO column (one query, or a list whose results are merged) | off |
+| `gitlab_tools` | Folder with a `gl.py` client: CI and merge state of the agents' MRs | off |
+| `audit_log` | Security audit `audit-log.json` file: findings earn XP | off |
+| `to_verify_regex` | Command that counts as "ticket moved to To Verify" | `yt.py command … to verify` |
+| `deploy_repo` | GitLab path of the deployment repo (e.g. `group/devops/k8s-deployments`): enables 🚚 Deliveries | off |
+| `deploy_path` | Folder of the `<app>/<env>/*.yaml` values in that repo | `applications` |
+| `deploy_ref` | Branch to read | default branch |
+| `deploy_projects` | `{"<app>": "<GitLab project>"}` when the image path doesn't say which project builds it | `{}` |
+| `deliveries_days` | Days of merged MRs to track (1 to 60) | `14` |
+
+After changing the file, restart the server:
+
+```
+python3 -I ~/.claude/agent-office/office.py stop
+```
+
+then run `/office`.
+
+## 9. Update and uninstall
+
+```
+/plugin marketplace update agent-office      # get the latest version
+/plugin uninstall agent-office@agent-office  # uninstall
+```
+
+After an update, stop the server so it restarts on the new version:
+
+```
+python3 -I ~/.claude/agent-office/office.py stop
+```
+
+Your team, logo, save and settings stay in `~/.claude/agent-office/` and `~/.claude/agent-office.json`. Delete them to start from scratch.
+
+## 10. Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| The office doesn't open | Run `/office`. Check that `python3 --version` shows 3.9 or later. Read `~/.claude/agent-office/server.log`. |
+| Windows: `Command 'git' not found` when adding the marketplace | Install Git for Windows, reopen Claude Code, run `/plugin marketplace add Taikoz/Office-Agent` again. |
+| Windows: nothing happens, no server | Install Python from python.org with "Add python.exe to PATH" ticked, then restart Claude Code. |
+| "Port already in use", or another app answers on the port | Pick another port: `{"port": 8790}` in `~/.claude/agent-office.json`. |
+| No devs appear | Only sessions active in the last `window_minutes` are shown. After `/clear`, only new activity appears. Check that the project isn't listed in `exclude`. |
+| "No graphical terminal available" when launching an agent | Install one of the terminals listed in [Requirements](#2-requirements). On Windows, use the native Claude Code build (`claude.exe`). |
+| **🚀 Lancer** (launch) fails after a server restart | Reload the page (F5). The security token changes each time the server starts. |
+| Notifications don't show up | Click **🔔 ALERTES** and allow notifications for `127.0.0.1` in your browser. |
+
+Useful commands (on Windows, replace `python3` with `python` or `py -3`):
+
+```
+python3 -I ~/.claude/agent-office/office.py open     # start if needed and open the page
+python3 -I ~/.claude/agent-office/office.py status   # server status
+python3 -I ~/.claude/agent-office/office.py stop     # stop the server
+```
+
+## 11. Privacy and security
+
+- **Read-only:** the server never changes your transcripts.
+- **Local only:** it listens on `127.0.0.1` only, unless you enable `network`. It also checks the `Host` header (DNS rebinding protection).
+- **Every API route needs the page token:** `/api/` routes (transcripts, MRs, memory, search…) require the page's token, which changes at each server start. The only exception is `/api/viewer` (version and idle state, used by the plugin).
+- **Protected actions:** launching an agent, answering a question or approving MMX memory is accepted only from the office page (same origin plus token).
+- **No background launches:** an agent launched from the office opens in an interactive terminal, and you approve each permission yourself, as usual.
+- **Terminal and files:** the built-in terminal, the skills editor and scheduling only accept folders inside your home folder. The editor only touches `skills/<name>/SKILL.md`, `agents/<name>.md` and `commands/<name>.md` in known `.claude` folders.
+- **Isolated page:** a strict Content Security Policy means only the office's own scripts run, never an MR title, log or message. No third-party page can frame the office or read its responses.
+- **Private files:** `~/.claude/agent-office/` is `0700` and everything inside it `0600`.
+- **Encrypted tokens:** GitLab, Sentry and Slack tokens are never stored in plain text. The key (`~/.local/share/agent-office/vault.key`, tied to the machine) lives outside `~/.claude`, so a copy of `~/.claude` opens nothing. A token is only sent to its own server; redirects to another host are refused. Every connect, disconnect and check is logged in `~/.claude/agent-office/integrations-audit.jsonl` (no tokens or field values).
+- **Keep agents out of these folders** by adding this to `~/.claude/settings.json`:
+  ```json
+  "permissions": {"deny": ["Read(~/.claude/agent-office/**)", "Read(~/.local/share/agent-office/**)"]}
+  ```
+- **No internal network probing:** the browser's frame check only contacts public addresses (never this machine, the internal network or `169.254.169.254`, redirects included).
+- **Rate limits respected:** a service that answers 429 isn't called again until its delay ends (Retry-After, or 60 s).
+- **Error analysis:** "Analyser avec Haiku 5" sends only the exception, code lines, environment and version, using `ANTHROPIC_API_KEY` or, failing that, your `claude` subscription.
+- **Grafana:** the session driving Chrome only receives the error's service, environment, version and time, never its message or route. Also restrict the Claude in Chrome extension to your Grafana (per-site permissions).
+- **Costs are estimates:** they show the API-equivalent price, for reference only.
+
+## 12. Development
+
+```
+cd app && python3 -I -m unittest discover -s tests   # run the tests
+claude plugin validate .                             # validate the plugin
+```
+
+### Front-end layout
+
+`app/web/index.html`, `app/web/css/*.css` (one file per area, loaded in order) and `app/web/js/` as ES modules.
+
+- `index.js` imports every module in the order they build the office (`main.js` last). Each module imports what it needs from modules loaded before it.
+- Anything a module needs from a module loaded **after** it (always inside a function), and any variable it changes in another module, goes through `hub.js`: the owning module exposes it with `provide({ … })` at the end of the file. That list is the dependencies still to invert.
+
+Domain systems in `web/js/`:
+
+| Folder | Contents |
+|---|---|
+| `core/` | State, `/api/state`, demo, first run, notifications |
+| `agents/` | Real work: devs at desks, launching, questions, tickets, budgets, report, timeline, dev screen, MMX, stats |
+| `sims/` | Gauges, needs, moods, wants, skills, careers, workday, money, XP |
+| `social/` | Relationships, cooking, people, interactions, autonomy |
+| `world/` | Rooms, decor, buy and build mode, chief, cat, pets, seasons, shop |
+| `ui/` | HUD, shortcuts, panel and clicks, circular menu, action queue, ChiefOS, GitLab client |
+
+One folder per element family, each with its base class in `base.js` and one subclass per element:
+
+| Folder | Base class | Contents |
+|---|---|---|
+| `svg/` | `SvgArt` (`StaticArt`, `Sprite`, `Figure`) | Drawings, registered in `ART` / `SPRITES`, e.g. `ART.arcade.draw(x, y, { frame, playing })` |
+| `apps/` | `OsApp` | ChiefOS apps (`render`, `mount`, `badge`, `live`, click/input/change) and their folders (`OsApp.SPACES`) |
+| `items/` | `Item` (`Appliance`) | Buy-mode items (`CATALOG`: drawing state, menu, actions) |
+| `activities/` | `Activity` | Break-room activities (`ACTS`: spots, pose, needs, chief, want, drawing) |
+| `incidents/` | `Incident` | One-click office incidents (breakdown, puddle, croissants, plant) |
+| `happenings/` | `Happening` | Daily events (power cut, client visit, pizza) |
+| `rooms/` | `Room` | Rooms (office, break room, meeting room, terrace, mini-game screen): drawing, clicks, floor |
+| `games/` | `MiniGame` | Mini-games (ping-pong, foosball, darts) and the tournament |
+| `save/` | `SaveSlot` (`Flag`) | Browser state (version, migrations) and the save file |
+
+ChiefOS design system: `app/web/css/11-chiefos-design.css` (color tokens, Inter font, spacing, radii, shadows, durations). Architecture notes: [`docs/ARCHITECTURE-chiefos.md`](docs/ARCHITECTURE-chiefos.md).
+
+MIT License — Adrien Quennehen.
